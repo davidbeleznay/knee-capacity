@@ -166,7 +166,7 @@
                         </div>
 
                         <div class="tracker-item" id="hold-tracker">
-                            <label>Hold Time (s)</label>
+                            <label>Hold (sec)</label>
                             <div class="stepper">
                                 <button class="stepper-btn" onclick="adjustValue('hold-time', -5)">−5</button>
                                 <input type="number" id="hold-time" value="0" class="stepper-input" readonly>
@@ -217,27 +217,73 @@
             </div>
         </div>
 
-        <!-- History View -->
+        <!-- Analytics View (NEW - Replaces simple History) -->
         <div id="history-view" class="view">
-            <h2>Recovery History</h2>
+            <h2>Analytics</h2>
             
+            <!-- Period Selector -->
             <div class="filter-buttons">
                 <button class="filter-btn active" data-days="7">7 Days</button>
                 <button class="filter-btn" data-days="14">14 Days</button>
                 <button class="filter-btn" data-days="30">30 Days</button>
             </div>
 
-            <!-- Trend Visualization -->
+            <!-- Summary Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-workouts">0</div>
+                    <div class="stat-label">Workouts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-exercises">0</div>
+                    <div class="stat-label">Exercises</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="avg-pain">0</div>
+                    <div class="stat-label">Avg Pain</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="green-days">0</div>
+                    <div class="stat-label">Green Days</div>
+                </div>
+            </div>
+
+            <!-- Swelling Trend Chart -->
             <div class="card">
-                <h3>Swelling Trend</h3>
+                <h3>📊 Swelling Trend</h3>
                 <div id="swelling-chart"></div>
             </div>
 
+            <!-- Pain Trend Chart -->
             <div class="card">
-                <h3>Pain Trend</h3>
+                <h3>📊 Pain Trend</h3>
                 <div id="pain-chart"></div>
             </div>
 
+            <!-- Workout Frequency -->
+            <div class="card">
+                <h3>📊 Workout Frequency</h3>
+                <div id="workout-frequency-chart"></div>
+            </div>
+
+            <!-- Exercise Breakdown -->
+            <div class="card">
+                <h3>💪 Most Logged Exercises</h3>
+                <div id="exercise-breakdown"></div>
+            </div>
+
+            <!-- Individual Exercise Analytics -->
+            <div class="card">
+                <h3>📈 Exercise Progress</h3>
+                <p class="subtitle">Select an exercise to see detailed trends</p>
+                <select id="analytics-exercise-select" class="exercise-select">
+                    <option value="">Choose exercise...</option>
+                </select>
+                <div id="exercise-analytics" style="margin-top: 16px;"></div>
+            </div>
+
+            <!-- Daily Log -->
+            <h3 style="margin-top: 24px; margin-bottom: 12px;">Daily Log</h3>
             <div id="history-list"></div>
             
             <button id="export-data" class="secondary-button">📤 Export for Specialist</button>
@@ -270,7 +316,7 @@
         </button>
         <button class="nav-btn" data-view="history">
             <span class="nav-icon">📊</span>
-            <span class="nav-label">Trends</span>
+            <span class="nav-label">Analytics</span>
         </button>
         <button class="nav-btn" data-view="exercises">
             <span class="nav-icon">💪</span>
