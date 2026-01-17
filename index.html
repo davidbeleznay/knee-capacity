@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KneeCapacity</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>💪 KneeCapacity</h1>
+        <div id="streak-display" class="streak-badge">
+            <span>Streak:</span>
+            <span id="streak-count">0</span>
+            <span>🔥</span>
+        </div>
+    </header>
+
+    <main id="app-content">
+        <div id="home-view" class="view active">
+            
+            <section id="rest-status" class="status-card text-center">
+                <div class="status-icon">✅</div>
+                <h2>Ready to Train</h2>
+                <p>Your connective tissue has recovered</p>
+            </section>
+
+            <section class="card">
+                <h2>Training Session</h2>
+                
+                <div class="button-group">
+                    <button class="preset-btn" data-duration="300">5 min</button>
+                    <button class="preset-btn" data-duration="420">7 min</button>
+                    <button class="preset-btn active" data-duration="600">10 min</button>
+                </div>
+
+                <div class="timer-display">
+                    <span id="timer-minutes">10</span>:<span id="timer-seconds">00</span>
+                </div>
+
+                <div class="progress-bar">
+                    <div id="timer-progress-fill" class="progress-fill"></div>
+                </div>
+
+                <button id="timer-action" class="primary-button">Start Session</button>
+                
+                <p class="timer-info">Keith Barr: 5-10 min loading + 6-8 hr rest</p>
+            </section>
+
+            <section class="card">
+                <h2>Today's Check-In</h2>
+                
+                <div class="form-group">
+                    <label>Swelling Level</label>
+                    <div class="button-group swelling-group">
+                        <button class="swelling-btn" data-level="none">None</button>
+                        <button class="swelling-btn" data-level="mild">Mild</button>
+                        <button class="swelling-btn" data-level="moderate">Moderate</button>
+                        <button class="swelling-btn" data-level="severe">Severe</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Pain: <span id="pain-value">0</span>/10</label>
+                    <input type="range" id="pain-slider" min="0" max="10" value="0" class="slider">
+                </div>
+
+                <div class="form-group">
+                    <label>Activities</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" value="volleyball"> 🏐 Volleyball
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" value="peloton"> 🚴 Peloton
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" value="rowing"> 🚣 Rowing
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="checkin-notes" rows="3" placeholder="How did your knee feel?"></textarea>
+                </div>
+
+                <button id="save-checkin" class="primary-button">Save Check-In</button>
+            </section>
+
+        </div>
+
+        <div id="history-view" class="view">
+            <h2>History</h2>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-days="7">7 Days</button>
+                <button class="filter-btn" data-days="14">14 Days</button>
+                <button class="filter-btn" data-days="30">30 Days</button>
+            </div>
+            <div id="history-list"></div>
+            <button id="export-data" class="secondary-button">📤 Export Data</button>
+        </div>
+
+        <div id="exercises-view" class="view">
+            <h2>Exercise Library</h2>
+            <p class="subtitle">Keith Barr's protocols</p>
+            <div id="exercise-list"></div>
+        </div>
+    </main>
+
+    <nav id="bottom-nav">
+        <button class="nav-btn active" data-view="home">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-label">Home</span>
+        </button>
+        <button class="nav-btn" data-view="history">
+            <span class="nav-icon">📊</span>
+            <span class="nav-label">History</span>
+        </button>
+        <button class="nav-btn" data-view="exercises">
+            <span class="nav-icon">💪</span>
+            <span class="nav-label">Exercises</span>
+        </button>
+    </nav>
+
+    <script src="exercises.js"></script>
+    <script src="data.js"></script>
+    <script src="timer.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
