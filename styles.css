@@ -1,4 +1,4 @@
-/* KneeCapacity - Enhanced Visual Design */
+/* KneeCapacity - Enhanced Analytics Design */
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -25,7 +25,6 @@ body {
     line-height: 1.6;
 }
 
-/* Header */
 header {
     background: linear-gradient(135deg, var(--primary) 0%, #388E3C 100%);
     color: white;
@@ -53,7 +52,6 @@ header h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
     backdrop-filter: blur(10px);
 }
 
-/* Main Content */
 main { padding: 16px; max-width: 600px; margin: 0 auto; }
 
 .view { display: none; }
@@ -77,7 +75,6 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
     color: var(--gray-900);
 }
 
-/* Cards */
 .card, .status-card {
     background: white;
     border-radius: 16px;
@@ -107,7 +104,6 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
     background: linear-gradient(to right, rgba(244, 67, 54, 0.08), white);
 }
 .status-unknown { border-left: 6px solid var(--gray-300); }
-
 .status-ready { border-left: 6px solid var(--primary); }
 .status-resting { border-left: 6px solid var(--orange); }
 
@@ -119,6 +115,38 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
     color: var(--orange);
     margin: 12px 0;
     font-variant-numeric: tabular-nums;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, var(--primary), #43A047);
+    color: white;
+    padding: 20px;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+}
+
+.stat-value {
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+
+.stat-label {
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 /* Timer */
@@ -153,7 +181,6 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
     text-align: center;
     font-size: 14px;
     color: var(--gray-600);
-    margin-top: 8px;
 }
 
 /* Buttons */
@@ -208,10 +235,6 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
     box-shadow: 0 6px 16px rgba(46, 125, 50, 0.4);
 }
 
-.primary-button:active {
-    transform: translateY(0);
-}
-
 .secondary-button {
     background: white;
     color: var(--primary);
@@ -225,19 +248,18 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
     cursor: pointer;
 }
 
-/* Swelling Buttons - Enhanced Visual */
+/* Swelling Buttons */
 .swelling-group { gap: 8px; }
 
 .swelling-btn {
     flex: 1;
-    padding: 12px 8px;
+    padding: 10px 6px;
     background: white;
     border: 2px solid var(--gray-300);
     border-radius: 12px;
-    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
-    min-height: 64px;
+    min-height: 68px;
     transition: all 0.2s;
     display: flex;
     flex-direction: column;
@@ -246,8 +268,8 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
     gap: 4px;
 }
 
-.btn-icon { font-size: 24px; }
-.btn-label { font-size: 12px; }
+.btn-icon { font-size: 26px; line-height: 1; }
+.btn-label { font-size: 11px; }
 
 .swelling-btn[data-level="none"].active {
     background: var(--green);
@@ -294,7 +316,7 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
 
 .value-display {
     color: var(--primary);
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 800;
 }
 
@@ -381,7 +403,6 @@ textarea {
     font-size: 15px;
     font-family: inherit;
     resize: vertical;
-    min-height: 80px;
 }
 
 textarea:focus {
@@ -405,7 +426,7 @@ textarea:focus {
     padding: 16px;
     cursor: pointer;
     transition: all 0.2s;
-    min-height: 120px;
+    min-height: 130px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -417,13 +438,10 @@ textarea:focus {
     box-shadow: 0 8px 16px rgba(0,0,0,0.12);
 }
 
-.exercise-tile:active {
-    transform: translateY(-2px);
-}
-
 .tile-icon {
-    font-size: 32px;
-    margin-bottom: 8px;
+    font-size: 36px;
+    margin-bottom: 10px;
+    line-height: 1;
 }
 
 .tile-name {
@@ -435,18 +453,20 @@ textarea:focus {
 }
 
 .tile-meta {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--gray-600);
-    margin-top: auto;
+    font-weight: 600;
+    margin-bottom: 6px;
 }
 
 .tile-phase-badge {
     display: inline-block;
-    padding: 2px 6px;
-    border-radius: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
     font-size: 10px;
     font-weight: 700;
-    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .badge-calm { background: rgba(76, 175, 80, 0.2); color: var(--green); }
@@ -459,6 +479,7 @@ textarea:focus {
     border-radius: 20px;
     font-size: 13px;
     font-weight: 700;
+    letter-spacing: 0.5px;
 }
 
 .mode-green { background: var(--green); color: white; }
@@ -475,17 +496,17 @@ textarea:focus {
 
 .tracker-item {
     background: var(--gray-50);
-    padding: 12px;
+    padding: 14px;
     border-radius: 12px;
     text-align: center;
 }
 
 .tracker-item label {
     display: block;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     color: var(--gray-600);
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -522,9 +543,9 @@ textarea:focus {
 
 .stepper-input {
     width: 60px;
-    height: 40px;
+    height: 42px;
     text-align: center;
-    font-size: 24px;
+    font-size: 26px;
     font-weight: 800;
     border: none;
     background: transparent;
@@ -546,6 +567,8 @@ textarea:focus {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--gray-200);
 }
 
 .close-btn {
@@ -564,34 +587,26 @@ textarea:focus {
 .close-btn:hover {
     background: var(--red);
     color: white;
+    transform: rotate(90deg);
 }
 
 /* Exercise Log Items */
 .exercise-log-item {
     background: linear-gradient(to right, rgba(46, 125, 50, 0.05), white);
-    padding: 14px;
+    padding: 16px;
     border-radius: 12px;
     margin-bottom: 10px;
     border-left: 4px solid var(--primary);
 }
 
-.exercise-log-item:last-child {
-    margin-bottom: 0;
-}
-
-/* Trend Charts */
-#swelling-chart, #pain-chart, #trend-chart {
-    min-height: 200px;
-    padding: 20px 0;
-}
-
+/* Charts */
 .chart-row {
     display: flex;
     align-items: flex-end;
-    height: 140px;
+    height: 160px;
     gap: 4px;
     margin: 20px 0;
-    padding-bottom: 30px;
+    padding: 0 4px 35px 4px;
     border-bottom: 2px solid var(--gray-300);
     position: relative;
 }
@@ -599,42 +614,47 @@ textarea:focus {
 .chart-bar {
     flex: 1;
     background: var(--primary);
-    border-radius: 4px 4px 0 0;
+    border-radius: 6px 6px 0 0;
     transition: all 0.3s;
     position: relative;
     cursor: pointer;
+    min-height: 8px;
 }
 
 .chart-bar:hover {
     opacity: 0.8;
-    transform: translateY(-2px);
+    transform: translateY(-3px);
 }
 
 .chart-label {
     position: absolute;
-    bottom: -25px;
+    bottom: -28px;
     left: 50%;
     transform: translateX(-50%);
     font-size: 11px;
     color: var(--gray-600);
-    font-weight: 600;
+    font-weight: 700;
 }
 
 .chart-value {
     position: absolute;
-    top: -25px;
+    top: -22px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 800;
     color: var(--gray-900);
+    background: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
 }
 
 /* History */
 .filter-buttons { 
     display: flex; 
     gap: 8px; 
-    margin-bottom: 16px;
+    margin-bottom: 20px;
 }
 
 .filter-btn {
@@ -661,11 +681,6 @@ textarea:focus {
     padding: 18px;
     border-radius: 12px;
     border-left: 6px solid var(--gray-300);
-    transition: all 0.2s;
-}
-
-.history-item:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 .history-item.swelling-none { border-left-color: var(--green); }
@@ -706,7 +721,7 @@ textarea:focus {
     border-color: var(--primary);
 }
 
-/* Exercise Library Cards */
+/* Exercise Library */
 .exercise-card {
     background: white;
     padding: 24px;
@@ -718,9 +733,47 @@ textarea:focus {
 
 .exercise-card h3 { 
     color: var(--primary); 
-    margin-bottom: 8px;
     font-size: 20px;
     font-weight: 800;
+}
+
+.exercise-category {
+    color: var(--gray-600);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.duration-badge {
+    background: #E8F5E9;
+    color: var(--primary);
+    padding: 6px 12px;
+    border-radius: 8px;
+    display: inline-block;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.tempo-badge {
+    background: #FFF3E0;
+    color: #F57C00;
+    padding: 6px 12px;
+    border-radius: 8px;
+    display: inline-block;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.exercise-select {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid var(--gray-300);
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: inherit;
+    background: white;
 }
 
 details {
@@ -747,7 +800,7 @@ details[open] summary {
 }
 
 details[open] {
-    padding: 8px;
+    padding: 12px;
     background: var(--gray-50);
     border-radius: 12px;
 }
@@ -793,7 +846,7 @@ details[open] {
 .nav-icon { font-size: 22px; margin-bottom: 4px; }
 .nav-label { font-size: 11px; font-weight: 700; }
 
-/* Utility */
+/* Utilities */
 .text-center { text-align: center; }
 .subtitle { 
     color: var(--gray-600); 
@@ -801,21 +854,16 @@ details[open] {
     margin-bottom: 16px;
 }
 
-/* Loading States */
-.loading {
-    text-align: center;
-    padding: 40px;
-    color: var(--gray-600);
-}
-
-/* Responsive Adjustments */
+/* Responsive */
 @media (min-width: 768px) {
     main { padding: 24px; }
     .card, .status-card { padding: 32px; }
     .exercise-tiles { grid-template-columns: repeat(3, 1fr); }
+    .stats-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
 @media (max-width: 380px) {
     .exercise-tiles { grid-template-columns: 1fr; }
     .activity-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr; }
 }
