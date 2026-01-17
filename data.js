@@ -1,4 +1,4 @@
-// KneeCapacity - Enhanced Data Management with Exercise Tracking
+// KneeCapacity - Data Management with Custom Workouts
 
 const DataManager = {
     
@@ -6,10 +6,11 @@ const DataManager = {
         if (!localStorage.getItem('sessions')) localStorage.setItem('sessions', JSON.stringify([]));
         if (!localStorage.getItem('checkIns')) localStorage.setItem('checkIns', JSON.stringify([]));
         if (!localStorage.getItem('exerciseLogs')) localStorage.setItem('exerciseLogs', JSON.stringify([]));
+        if (!localStorage.getItem('customWorkouts')) localStorage.setItem('customWorkouts', JSON.stringify([]));
         if (!localStorage.getItem('streak')) localStorage.setItem('streak', '0');
     },
     
-    // Sessions (overall training sessions)
+    // Sessions
     saveSession(sessionData) {
         const sessions = this.getSessions();
         sessions.push({
@@ -25,7 +26,7 @@ const DataManager = {
         return JSON.parse(localStorage.getItem('sessions') || '[]');
     },
     
-    // Exercise Logs (individual exercise tracking with sets/reps/time)
+    // Exercise Logs
     saveExerciseLog(exerciseData) {
         const logs = this.getExerciseLogs();
         logs.push({
@@ -50,7 +51,6 @@ const DataManager = {
         return this.getExerciseLogsByDate(today);
     },
     
-    // Get exercise history for a specific exercise
     getExerciseHistory(exerciseId, days = 30) {
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - days);
@@ -60,7 +60,39 @@ const DataManager = {
             .sort((a, b) => new Date(b.date) - new Date(a.date));
     },
     
-    // Check-ins (daily status)
+    // Custom Workouts
+    saveCustomWorkout(workoutData) {
+        const workouts = this.getCustomWorkouts();
+        workouts.push({
+            ...workoutData,
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString(),
+            date: new Date().toISOString().split('T')[0]
+        });
+        localStorage.setItem('customWorkouts', JSON.stringify(workouts));
+    },
+    
+    getCustomWorkouts() {
+        return JSON.parse(localStorage.getItem('customWorkouts') || '[]');
+    },
+    
+    getCustomWorkoutsByDate(date) {
+        return this.getCustomWorkouts().filter(w => w.date === date);
+    },
+    
+    getTodaysCustomWorkouts() {
+        const today = new Date().toISOString().split('T')[0];
+        return this.getCustomWorkoutsByDate(today);
+    },
+    
+    getCustomWorkoutHistory(category, limit = 10) {
+        return this.getCustomWorkouts()
+            .filter(w => w.workoutCategory === category)
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, limit);
+    },
+    
+    // Check-ins
     saveCheckIn(checkInData) {
         const checkIns = this.getCheckIns();
         const today = new Date().toISOString().split('T')[0];
@@ -139,7 +171,7 @@ const DataManager = {
         return parseInt(localStorage.getItem('streak') || '0');
     },
     
-    // Traffic light status (Green/Yellow/Red)
+    // Traffic light status
     getKneeStatus() {
         const today = new Date().toISOString().split('T')[0];
         const checkIn = this.getCheckIn(today);
@@ -148,22 +180,11 @@ const DataManager = {
         
         const { swelling, pain } = checkIn;
         
-        // Red: Significant swelling or high pain
-        if (swelling === 'severe' || (swelling === 'moderate' && pain >= 6)) {
-            return 'red';
-        }
+        if (swelling === 'severe' || (swelling === 'moderate' && pain >= 6)) return 'red';
+        if (swelling === 'moderate' || pain >= 4 || (swelling === 'mild' && pain >= 3)) return 'yellow';
+        if (swelling === 'none' || (swelling === 'mild' && pain <= 2)) return 'green';
         
-        // Yellow: Mild-moderate issues
-        if (swelling === 'moderate' || pain >= 4 || swelling === 'mild' && pain >= 3) {
-            return 'yellow';
-        }
-        
-        // Green: Minimal or no issues
-        if (swelling === 'none' || (swelling === 'mild' && pain <= 2)) {
-            return 'green';
-        }
-        
-        return 'yellow'; // Default to caution
+        return 'yellow';
     },
     
     getKneeStatusMessage() {
@@ -178,35 +199,43 @@ const DataManager = {
             yellow: {
                 icon: '⚠️',
                 title: 'YELLOW - Proceed with Caution',
-                message: 'Modify intensity. Lighter loads, controlled movements.',
-                action: 'Build mode (light) or recovery exercises only'
+                message: 'Modify intensity. Lighter loads.',
+                action: 'Build mode (light) or Calm exercises only'
             },
             red: {
                 icon: '🛑',
                 title: 'RED - Stop and Recover',
                 message: 'Knee needs rest. Focus on recovery.',
-                action: 'Calm mode only: gentle ROM, isometrics, ice, rest'
+                action: 'Calm mode only: gentle ROM, isometrics, ice'
             },
             unknown: {
                 icon: '❓',
                 title: 'Complete Check-In First',
-                message: 'Log today\'s swelling and pain to determine status',
+                message: 'Log swelling and pain to see status',
                 action: 'Go to Home tab and complete Daily Check-In'
             }
         };
-        
         return messages[status];
     },
     
-    // Export comprehensive data for specialists
+    getKneeStatusForCheckIn(checkIn) {
+        const { swelling, pain } = checkIn;
+        if (swelling === 'severe' || (swelling === 'moderate' && pain >= 6)) return 'RED';
+        if (swelling === 'moderate' || pain >= 4) return 'YELLOW';
+        if (swelling === 'none' || (swelling === 'mild' && pain <= 2)) return 'GREEN';
+        return 'YELLOW';
+    },
+    
+    // Export
     exportData() {
         const checkIns = this.getCheckIns();
         const sessions = this.getSessions();
         const exerciseLogs = this.getExerciseLogs();
+        const customWorkouts = this.getCustomWorkouts();
         
-        // Calculate summary stats
         const recentCheckIns = this.getRecentCheckIns(30);
-        const avgPain = recentCheckIns.reduce((sum, c) => sum + (c.pain || 0), 0) / recentCheckIns.length;
+        const avgPain = recentCheckIns.length > 0 ? 
+            (recentCheckIns.reduce((sum, c) => sum + (c.pain || 0), 0) / recentCheckIns.length).toFixed(1) : 0;
         const swellingDays = recentCheckIns.filter(c => c.swelling !== 'none').length;
         
         const data = {
@@ -217,13 +246,14 @@ const DataManager = {
             },
             summary: {
                 totalSessions: sessions.length,
-                totalExercisesLogged: exerciseLogs.length,
+                totalExercises: exerciseLogs.length,
+                totalCustomWorkouts: customWorkouts.length,
                 currentStreak: this.getCurrentStreak(),
                 longestStreak: parseInt(localStorage.getItem('longestStreak') || '0'),
                 last30Days: {
-                    averagePain: avgPain.toFixed(1),
+                    averagePain: avgPain,
                     daysWithSwelling: swellingDays,
-                    totalSessions: sessions.filter(s => {
+                    workoutDays: sessions.filter(s => {
                         const d = new Date(s.timestamp);
                         return (new Date() - d) / (1000*60*60*24) <= 30;
                     }).length
@@ -232,6 +262,7 @@ const DataManager = {
             dailyCheckIns: checkIns,
             trainingSessions: sessions,
             exerciseDetails: exerciseLogs,
+            customWorkouts: customWorkouts,
             kneeStatusLog: checkIns.map(c => ({
                 date: c.date,
                 status: this.getKneeStatusForCheckIn(c),
@@ -244,16 +275,8 @@ const DataManager = {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `knee-capacity-specialist-report-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `knee-capacity-specialist-${new Date().toISOString().split('T')[0]}.json`;
         a.click();
         URL.revokeObjectURL(url);
-    },
-    
-    getKneeStatusForCheckIn(checkIn) {
-        const { swelling, pain } = checkIn;
-        if (swelling === 'severe' || (swelling === 'moderate' && pain >= 6)) return 'RED';
-        if (swelling === 'moderate' || pain >= 4) return 'YELLOW';
-        if (swelling === 'none' || (swelling === 'mild' && pain <= 2)) return 'GREEN';
-        return 'YELLOW';
     }
 };
