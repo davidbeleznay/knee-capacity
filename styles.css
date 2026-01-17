@@ -1,4 +1,4 @@
-/* KneeCapacity - Mobile-First Styles */
+/* KneeCapacity - Enhanced Mobile-First Styles */
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -48,7 +48,13 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.card h2 { font-size: 20px; margin-bottom: 16px; }
+.card h2, .card h3 { font-size: 20px; margin-bottom: 16px; }
+
+/* Traffic Light Status Cards */
+.status-green { border-left: 4px solid #4CAF50; }
+.status-yellow { border-left: 4px solid #FF9800; }
+.status-red { border-left: 4px solid #F44336; }
+.status-unknown { border-left: 4px solid #9E9E9E; }
 
 .status-ready { border-left: 4px solid #2E7D32; }
 .status-resting { border-left: 4px solid #F57C00; }
@@ -88,7 +94,7 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
 
 .button-group { display: flex; gap: 8px; margin: 12px 0; }
 
-.preset-btn, .swelling-btn, .filter-btn {
+.preset-btn, .swelling-btn, .filter-btn, .phase-filter {
     flex: 1;
     padding: 12px;
     background: white;
@@ -101,7 +107,7 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
     transition: all 0.2s;
 }
 
-.preset-btn.active, .filter-btn.active {
+.preset-btn.active, .filter-btn.active, .phase-filter.active {
     background: #2E7D32;
     color: white;
     border-color: #2E7D32;
@@ -144,6 +150,7 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
 .form-group { margin: 20px 0; }
 .form-group label { display: block; font-weight: 600; margin-bottom: 8px; }
 
+/* Form Inputs */
 .slider {
     width: 100%;
     height: 8px;
@@ -158,6 +165,30 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
     border-radius: 50%;
     background: #2E7D32;
     cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #2E7D32;
+    cursor: pointer;
+    border: none;
+}
+
+.exercise-select, .number-input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #E0E0E0;
+    border-radius: 8px;
+    font-size: 16px;
+    font-family: inherit;
+}
+
+.number-input {
+    text-align: center;
+    font-weight: 600;
+    font-size: 20px;
 }
 
 .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
@@ -180,8 +211,63 @@ textarea {
     border-radius: 8px;
     font-size: 16px;
     font-family: inherit;
+    resize: vertical;
 }
 
+textarea:focus, .exercise-select:focus, .number-input:focus {
+    outline: none;
+    border-color: #2E7D32;
+}
+
+/* Exercise Cards */
+.exercise-card {
+    background: white;
+    padding: 20px;
+    margin-bottom: 16px;
+    border-radius: 12px;
+    border-left: 4px solid #2E7D32;
+}
+
+.exercise-card h3 { color: #2E7D32; margin-bottom: 8px; }
+
+.exercise-category, .target {
+    color: #757575;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.duration-badge {
+    background: #E8F5E9;
+    color: #2E7D32;
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: inline-block;
+    font-weight: 600;
+    margin: 8px 8px 8px 0;
+    font-size: 14px;
+}
+
+.tempo-badge {
+    background: #FFF3E0;
+    color: #F57C00;
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: inline-block;
+    font-weight: 600;
+    margin: 8px 0;
+    font-size: 14px;
+}
+
+/* Exercise Log Items */
+.exercise-log-item {
+    background: #F5F5F5;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border-left: 3px solid #2E7D32;
+}
+
+/* History */
 .history-list { display: flex; flex-direction: column; gap: 12px; }
 
 .history-item {
@@ -196,14 +282,9 @@ textarea {
 .history-item.swelling-moderate { border-left-color: #FF9800; }
 .history-item.swelling-severe { border-left-color: #F44336; }
 
-.exercise-card {
-    background: white;
-    padding: 20px;
-    margin-bottom: 16px;
-    border-radius: 12px;
-    border-left: 4px solid #2E7D32;
-}
+.history-date { font-weight: 700; margin-bottom: 8px; }
 
+/* Bottom Nav */
 #bottom-nav {
     position: fixed;
     bottom: 0;
@@ -214,6 +295,7 @@ textarea {
     border-top: 1px solid #E0E0E0;
     padding: 8px;
     box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+    z-index: 100;
 }
 
 .nav-btn {
@@ -221,7 +303,7 @@ textarea {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 8px;
+    padding: 6px;
     background: none;
     border: none;
     cursor: pointer;
@@ -230,8 +312,31 @@ textarea {
 }
 
 .nav-btn.active { color: #2E7D32; }
-.nav-icon { font-size: 24px; margin-bottom: 4px; }
-.nav-label { font-size: 12px; font-weight: 600; }
+.nav-icon { font-size: 20px; margin-bottom: 4px; }
+.nav-label { font-size: 11px; font-weight: 600; }
 
 .text-center { text-align: center; }
 .subtitle { color: #757575; font-size: 14px; margin-bottom: 16px; }
+
+/* Details/Summary Enhancement */
+details {
+    cursor: pointer;
+}
+
+details summary {
+    padding: 8px;
+    background: #F5F5F5;
+    border-radius: 6px;
+    margin-bottom: 4px;
+}
+
+details[open] summary {
+    margin-bottom: 12px;
+    background: #E8F5E9;
+}
+
+/* Responsive */
+@media (min-width: 768px) {
+    main { padding: 24px; }
+    .card, .status-card { padding: 32px; }
+}
