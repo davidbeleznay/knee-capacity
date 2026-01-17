@@ -10,9 +10,8 @@
     <header>
         <h1>💪 KneeCapacity</h1>
         <div id="streak-display" class="streak-badge">
-            <span>Streak:</span>
-            <span id="streak-count">0</span>
             <span>🔥</span>
+            <span id="streak-count">0</span>
         </div>
     </header>
 
@@ -20,19 +19,21 @@
         <!-- Home View -->
         <div id="home-view" class="view active">
             
-            <!-- Traffic Light Status -->
+            <!-- Traffic Light Status (Primary) -->
             <section id="knee-status-card" class="status-card text-center">
-                <!-- Populated by app.js based on check-in data -->
+                <div class="status-icon">❓</div>
+                <h2>Complete Check-In</h2>
+                <p>Log swelling + pain to see your status</p>
             </section>
             
-            <!-- Rest Status Card -->
+            <!-- Rest Status -->
             <section id="rest-status" class="status-card text-center">
                 <div class="status-icon">✅</div>
                 <h2>Ready to Train</h2>
-                <p>Your connective tissue has recovered</p>
+                <p>Tissue recovered (6+ hours rest)</p>
             </section>
 
-            <!-- Session Timer Card -->
+            <!-- Session Timer -->
             <section class="card">
                 <h2>Training Session</h2>
                 
@@ -55,56 +56,67 @@
                 <p class="timer-info">Keith Barr: 5-10 min loading + 6-8 hr rest</p>
             </section>
 
-            <!-- Daily Check-In Card -->
+            <!-- Daily Check-In -->
             <section class="card">
-                <h2>Today's Check-In</h2>
+                <h2>Daily Check-In</h2>
                 
                 <div class="form-group">
                     <label>Swelling Level</label>
                     <div class="button-group swelling-group">
-                        <button class="swelling-btn" data-level="none">None</button>
-                        <button class="swelling-btn" data-level="mild">Mild</button>
-                        <button class="swelling-btn" data-level="moderate">Moderate</button>
-                        <button class="swelling-btn" data-level="severe">Severe</button>
+                        <button class="swelling-btn" data-level="none">
+                            <div class="btn-icon">🟢</div>
+                            <div class="btn-label">None</div>
+                        </button>
+                        <button class="swelling-btn" data-level="mild">
+                            <div class="btn-icon">🟡</div>
+                            <div class="btn-label">Mild</div>
+                        </button>
+                        <button class="swelling-btn" data-level="moderate">
+                            <div class="btn-icon">🟠</div>
+                            <div class="btn-label">Moderate</div>
+                        </button>
+                        <button class="swelling-btn" data-level="severe">
+                            <div class="btn-icon">🔴</div>
+                            <div class="btn-label">Severe</div>
+                        </button>
                     </div>
-                    <small style="color: #757575; display: block; margin-top: 4px;">
-                        None=no swelling | Mild=slight puff | Moderate=visible | Severe=major swelling
-                    </small>
                 </div>
 
                 <div class="form-group">
-                    <label>Pain: <span id="pain-value">0</span>/10</label>
+                    <label>Pain Level: <span id="pain-value" class="value-display">0</span>/10</label>
                     <input type="range" id="pain-slider" min="0" max="10" value="0" class="slider">
-                    <small style="color: #757575; display: block; margin-top: 4px;">
-                        0=none | 3=mild | 5=moderate | 7=bad | 10=worst
-                    </small>
                 </div>
 
                 <div class="form-group">
-                    <label>Activities</label>
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" value="volleyball"> 🏐 Volleyball
+                    <label>Activities Today</label>
+                    <div class="activity-grid">
+                        <label class="activity-chip">
+                            <input type="checkbox" value="volleyball">
+                            <span class="chip-content">🏐 Volleyball</span>
                         </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" value="peloton"> 🚴 Peloton
+                        <label class="activity-chip">
+                            <input type="checkbox" value="peloton">
+                            <span class="chip-content">🚴 Peloton</span>
                         </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" value="rowing"> 🚣 Rowing
+                        <label class="activity-chip">
+                            <input type="checkbox" value="rowing">
+                            <span class="chip-content">🚣 Rowing</span>
                         </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" value="walking"> 🚶 Walking/Hiking
+                        <label class="activity-chip">
+                            <input type="checkbox" value="walking">
+                            <span class="chip-content">🚶 Walking</span>
                         </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" value="strength"> 🏋️ Strength Training
+                        <label class="activity-chip">
+                            <input type="checkbox" value="strength">
+                            <span class="chip-content">🏋️ Strength</span>
                         </label>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>Notes</label>
-                    <textarea id="checkin-notes" rows="3" 
-                        placeholder="Knee feel? Any clicking, instability, giving way, or concerns?"></textarea>
+                    <label>Notes (optional)</label>
+                    <textarea id="checkin-notes" rows="2" 
+                        placeholder="Knee feel? Clicking, instability, concerns?"></textarea>
                 </div>
 
                 <button id="save-checkin" class="primary-button">Save Check-In</button>
@@ -112,72 +124,96 @@
 
         </div>
 
-        <!-- Log Exercise View (NEW) -->
+        <!-- Log Exercise View -->
         <div id="log-view" class="view">
-            <h2>Log Exercise</h2>
-            <p class="subtitle">Track individual exercises with sets/reps/time</p>
+            <div class="view-header">
+                <h2>Log Exercise</h2>
+                <div id="current-mode-badge" class="mode-badge">
+                    <!-- Populated based on knee status -->
+                </div>
+            </div>
             
-            <div class="form-group">
-                <label>Select Exercise</label>
-                <select id="exercise-select" class="exercise-select">
-                    <option value="">Choose exercise...</option>
-                </select>
+            <!-- Exercise Tiles (Filtered by Mode) -->
+            <div id="exercise-tiles" class="exercise-tiles">
+                <!-- Populated by app.js based on knee status -->
             </div>
 
-            <div id="exercise-detail-card" class="card" style="display: none;">
-                <!-- Populated when exercise selected -->
-            </div>
-
-            <div id="exercise-log-form" style="display: none;">
+            <!-- Exercise Logging Form (Shows when exercise selected) -->
+            <div id="exercise-log-form" class="log-form" style="display: none;">
                 <div class="card">
-                    <h3>Log This Exercise</h3>
+                    <div class="form-header">
+                        <h3 id="selected-exercise-name"></h3>
+                        <button id="close-form" class="close-btn">×</button>
+                    </div>
                     
-                    <div class="form-group">
-                        <label>Sets Completed</label>
-                        <input type="number" id="sets-completed" min="1" max="10" value="3" class="number-input">
-                    </div>
+                    <div class="dosage-tracker">
+                        <div class="tracker-item">
+                            <label>Sets</label>
+                            <div class="stepper">
+                                <button class="stepper-btn" onclick="adjustValue('sets-completed', -1)">−</button>
+                                <input type="number" id="sets-completed" value="3" class="stepper-input" readonly>
+                                <button class="stepper-btn" onclick="adjustValue('sets-completed', 1)">+</button>
+                            </div>
+                        </div>
 
-                    <div class="form-group">
-                        <label>Reps Per Set</label>
-                        <input type="number" id="reps-completed" min="1" max="30" value="10" class="number-input">
-                    </div>
+                        <div class="tracker-item">
+                            <label>Reps/Set</label>
+                            <div class="stepper">
+                                <button class="stepper-btn" onclick="adjustValue('reps-completed', -1)">−</button>
+                                <input type="number" id="reps-completed" value="10" class="stepper-input" readonly>
+                                <button class="stepper-btn" onclick="adjustValue('reps-completed', 1)">+</button>
+                            </div>
+                        </div>
 
-                    <div class="form-group" id="hold-time-group">
-                        <label>Hold Time (seconds)</label>
-                        <input type="number" id="hold-time" min="0" max="120" value="0" class="number-input">
-                    </div>
+                        <div class="tracker-item" id="hold-tracker">
+                            <label>Hold Time (s)</label>
+                            <div class="stepper">
+                                <button class="stepper-btn" onclick="adjustValue('hold-time', -5)">−5</button>
+                                <input type="number" id="hold-time" value="0" class="stepper-input" readonly>
+                                <button class="stepper-btn" onclick="adjustValue('hold-time', 5)">+5</button>
+                            </div>
+                        </div>
 
-                    <div class="form-group">
-                        <label>Weight Used (lbs) - optional</label>
-                        <input type="number" id="weight-used" min="0" max="500" value="0" step="5" class="number-input">
-                        <small style="color: #757575;">Enter 0 for bodyweight</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label>How It Felt (RPE 1-10)</label>
-                        <input type="range" id="rpe-slider" min="1" max="10" value="5" class="slider">
-                        <div style="display: flex; justify-content: space-between; font-size: 12px; color: #757575;">
-                            <span>Easy (1)</span>
-                            <span id="rpe-value">5</span>
-                            <span>Max (10)</span>
+                        <div class="tracker-item">
+                            <label>Weight (lbs)</label>
+                            <div class="stepper">
+                                <button class="stepper-btn" onclick="adjustValue('weight-used', -5)">−5</button>
+                                <input type="number" id="weight-used" value="0" class="stepper-input" readonly>
+                                <button class="stepper-btn" onclick="adjustValue('weight-used', 5)">+5</button>
+                            </div>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label>Notes (optional)</label>
+                        <label>How Hard? <span id="rpe-value" class="value-display">5</span>/10</label>
+                        <input type="range" id="rpe-slider" min="1" max="10" value="5" class="slider">
+                        <div class="rpe-labels">
+                            <span>Easy</span>
+                            <span>Moderate</span>
+                            <span>Hard</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notes</label>
                         <textarea id="exercise-notes" rows="2" 
-                            placeholder="Any pain? Form issues? Modifications made?"></textarea>
+                            placeholder="Pain? Form issues? Modifications?"></textarea>
                     </div>
 
                     <button id="save-exercise" class="primary-button">✅ Log Exercise</button>
                 </div>
 
-                <div id="todays-logs" class="card" style="margin-top: 16px;">
-                    <h3>Today's Logged Exercises</h3>
-                    <div id="todays-exercise-list">
-                        <!-- Populated with today's exercises -->
-                    </div>
+                <!-- Exercise History Trends -->
+                <div id="exercise-trends" class="card">
+                    <h3>Your Progress</h3>
+                    <div id="trend-chart"></div>
                 </div>
+            </div>
+
+            <!-- Today's Summary -->
+            <div id="todays-summary" class="card">
+                <h3>Today's Training</h3>
+                <div id="todays-exercise-list"></div>
             </div>
         </div>
 
@@ -191,28 +227,38 @@
                 <button class="filter-btn" data-days="30">30 Days</button>
             </div>
 
+            <!-- Trend Visualization -->
+            <div class="card">
+                <h3>Swelling Trend</h3>
+                <div id="swelling-chart"></div>
+            </div>
+
+            <div class="card">
+                <h3>Pain Trend</h3>
+                <div id="pain-chart"></div>
+            </div>
+
             <div id="history-list"></div>
+            
             <button id="export-data" class="secondary-button">📤 Export for Specialist</button>
         </div>
 
         <!-- Exercises View -->
         <div id="exercises-view" class="view">
             <h2>Exercise Library</h2>
-            <p class="subtitle">Keith Barr + Specialist Protocols</p>
             
-            <!-- Phase Filter -->
-            <div class="filter-buttons" style="margin-bottom: 16px;">
-                <button class="phase-filter active" data-phase="all">All</button>
-                <button class="phase-filter" data-phase="Calm">🟢 Calm</button>
-                <button class="phase-filter" data-phase="Build">🟡 Build</button>
-                <button class="phase-filter" data-phase="Prime">🔴 Prime</button>
+            <div class="phase-tabs">
+                <button class="phase-tab active" data-phase="all">All Exercises</button>
+                <button class="phase-tab" data-phase="Calm">🟢 Calm</button>
+                <button class="phase-tab" data-phase="Build">🟡 Build</button>
+                <button class="phase-tab" data-phase="Prime">🔴 Prime</button>
             </div>
 
-            <div id="exercise-list"></div>
+            <div id="exercise-library"></div>
         </div>
     </main>
 
-    <!-- Bottom Navigation (Updated with Log tab) -->
+    <!-- Bottom Navigation -->
     <nav id="bottom-nav">
         <button class="nav-btn active" data-view="home">
             <span class="nav-icon">🏠</span>
@@ -224,11 +270,11 @@
         </button>
         <button class="nav-btn" data-view="history">
             <span class="nav-icon">📊</span>
-            <span class="nav-label">History</span>
+            <span class="nav-label">Trends</span>
         </button>
         <button class="nav-btn" data-view="exercises">
             <span class="nav-icon">💪</span>
-            <span class="nav-label">Exercises</span>
+            <span class="nav-label">Library</span>
         </button>
     </nav>
 
