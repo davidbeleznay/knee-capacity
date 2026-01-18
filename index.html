@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KneeCapacity - Recovery Tracker</title>
+    <title>KneeCapacity</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="custom-styles.css">
 </head>
@@ -17,14 +17,14 @@
     </header>
 
     <main id="app-content">
-        <!-- Home View (Simplified) -->
+        <!-- Home View -->
         <div id="home-view" class="view active">
             
             <!-- Traffic Light Status -->
             <section id="knee-status-card" class="status-card text-center">
                 <div class="status-icon">❓</div>
                 <h2>Complete Check-In</h2>
-                <p>Log swelling + pain to see your status</p>
+                <p>Log swelling + pain</p>
             </section>
 
             <!-- Daily Check-In -->
@@ -32,7 +32,7 @@
                 <h2>Daily Check-In</h2>
                 
                 <div class="form-group">
-                    <label>Swelling Level</label>
+                    <label>Swelling</label>
                     <div class="button-group swelling-group">
                         <button class="swelling-btn" data-level="none">
                             <div class="btn-icon">🟢</div>
@@ -44,7 +44,7 @@
                         </button>
                         <button class="swelling-btn" data-level="moderate">
                             <div class="btn-icon">🟠</div>
-                            <div class="btn-label">Moderate</div>
+                            <div class="btn-label">Mod</div>
                         </button>
                         <button class="swelling-btn" data-level="severe">
                             <div class="btn-icon">🔴</div>
@@ -54,12 +54,12 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Pain Level: <span id="pain-value" class="value-display">0</span>/10</label>
+                    <label>Pain: <span id="pain-value" class="value-display">0</span>/10</label>
                     <input type="range" id="pain-slider" min="0" max="10" value="0" class="slider">
                 </div>
 
                 <div class="form-group">
-                    <label>Activities Today</label>
+                    <label>Activities</label>
                     <div class="activity-grid">
                         <label class="activity-chip">
                             <input type="checkbox" value="volleyball">
@@ -75,25 +75,20 @@
                         </label>
                         <label class="activity-chip">
                             <input type="checkbox" value="walking">
-                            <span class="chip-content">🚶 Walking</span>
-                        </label>
-                        <label class="activity-chip">
-                            <input type="checkbox" value="strength">
-                            <span class="chip-content">🏋️ Strength</span>
+                            <span class="chip-content">🚶 Walk</span>
                         </label>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>Notes (optional)</label>
-                    <textarea id="checkin-notes" rows="2" 
-                        placeholder="Knee feel? Clicking, instability, concerns?"></textarea>
+                    <label>Notes</label>
+                    <textarea id="checkin-notes" rows="2" placeholder="How's the knee?"></textarea>
                 </div>
 
                 <button id="save-checkin" class="primary-button">Save Check-In</button>
             </section>
 
-            <!-- Quick Stats -->
+            <!-- Week Summary -->
             <section class="card">
                 <h3>This Week</h3>
                 <div id="week-summary"></div>
@@ -101,42 +96,27 @@
 
         </div>
 
-        <!-- Log View (With Timer) -->
+        <!-- Log View -->
         <div id="log-view" class="view">
             <div class="view-header">
                 <h2>Log Workout</h2>
                 <div id="current-mode-badge" class="mode-badge"></div>
             </div>
-            
-            <!-- Rest Status (Moved Here) -->
-            <section id="rest-status-log" class="status-card text-center">
-                <div class="status-icon">✅</div>
-                <h2>Ready to Train</h2>
-                <p>Tissue recovered (6+ hours rest)</p>
-            </section>
 
-            <!-- Session Timer (Moved Here) -->
-            <section class="card timer-card">
-                <h3>Session Timer</h3>
+            <!-- Stopwatch -->
+            <section class="card stopwatch-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h3 style="margin: 0;">⏱️ Stopwatch</h3>
+                    <button id="reset-stopwatch" class="reset-btn" style="display: none;">Reset</button>
+                </div>
                 
-                <div class="button-group">
-                    <button class="preset-btn" data-duration="300">5 min</button>
-                    <button class="preset-btn" data-duration="420">7 min</button>
-                    <button class="preset-btn active" data-duration="600">10 min</button>
-                    <button class="preset-btn" data-duration="0">Custom</button>
-                </div>
-
-                <div class="timer-display">
-                    <span id="timer-minutes">10</span>:<span id="timer-seconds">00</span>
-                </div>
-
-                <div class="progress-bar">
-                    <div id="timer-progress-fill" class="progress-fill"></div>
-                </div>
-
-                <button id="timer-action" class="primary-button">Start Timer</button>
+                <div id="stopwatch-display" class="stopwatch-display">00:00</div>
                 
-                <p class="timer-info">Use for isometric holds, custom workouts, or timed exercises</p>
+                <!-- Milestone Badges -->
+                <div id="milestone-badges" class="milestone-container" style="display: none;"></div>
+                
+                <button id="stopwatch-action" class="primary-button">Start</button>
+                <p class="timer-info">For wall sits, planks, holds - get rewarded at 30s, 45s, 60s!</p>
             </section>
             
             <!-- Workout Type Selector -->
@@ -157,46 +137,22 @@
             <!-- Custom Workout Tiles -->
             <div id="custom-workout-tiles" class="exercise-tiles" style="display: none;">
                 <div class="exercise-tile" onclick="selectCustomWorkout('peloton')">
-                    <div>
-                        <div class="tile-icon">🚴</div>
-                        <div class="tile-name">Peloton Ride</div>
-                    </div>
-                    <div class="tile-meta">Track class + intensity</div>
+                    <div><div class="tile-icon">🚴</div><div class="tile-name">Peloton</div></div>
                 </div>
                 <div class="exercise-tile" onclick="selectCustomWorkout('rowing')">
-                    <div>
-                        <div class="tile-icon">🚣</div>
-                        <div class="tile-name">Rowing</div>
-                    </div>
-                    <div class="tile-meta">Low-impact cardio</div>
+                    <div><div class="tile-icon">🚣</div><div class="tile-name">Rowing</div></div>
                 </div>
                 <div class="exercise-tile" onclick="selectCustomWorkout('core')">
-                    <div>
-                        <div class="tile-icon">🎯</div>
-                        <div class="tile-name">Core Work</div>
-                    </div>
-                    <div class="tile-meta">Planks, abs</div>
+                    <div><div class="tile-icon">🎯</div><div class="tile-name">Core</div></div>
                 </div>
                 <div class="exercise-tile" onclick="selectCustomWorkout('stretch')">
-                    <div>
-                        <div class="tile-icon">🧘</div>
-                        <div class="tile-name">Stretching</div>
-                    </div>
-                    <div class="tile-meta">Mobility</div>
+                    <div><div class="tile-icon">🧘</div><div class="tile-name">Stretch</div></div>
                 </div>
                 <div class="exercise-tile" onclick="selectCustomWorkout('upper')">
-                    <div>
-                        <div class="tile-icon">💪</div>
-                        <div class="tile-name">Upper Body</div>
-                    </div>
-                    <div class="tile-meta">Arms, shoulders</div>
+                    <div><div class="tile-icon">💪</div><div class="tile-name">Upper</div></div>
                 </div>
                 <div class="exercise-tile" onclick="selectCustomWorkout('bike')">
-                    <div>
-                        <div class="tile-icon">🚴</div>
-                        <div class="tile-name">Stationary Bike</div>
-                    </div>
-                    <div class="tile-meta">Gentle cardio</div>
+                    <div><div class="tile-icon">🚴</div><div class="tile-name">Bike</div></div>
                 </div>
             </div>
 
@@ -208,13 +164,6 @@
                         <button id="close-form" class="close-btn">×</button>
                     </div>
                     
-                    <!-- Quick Timer Button for This Exercise -->
-                    <div style="margin-bottom: 20px;">
-                        <button id="quick-timer-btn" class="secondary-button" onclick="startExerciseTimer()">
-                            ⏱️ Start Timer for This Exercise
-                        </button>
-                    </div>
-
                     <div class="dosage-tracker">
                         <div class="tracker-item">
                             <label>Sets</label>
@@ -250,18 +199,17 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>How Hard? <span id="rpe-value" class="value-display">5</span>/10</label>
+                        <label>Effort: <span id="rpe-value" class="value-display">5</span>/10</label>
                         <input type="range" id="rpe-slider" min="1" max="10" value="5" class="slider">
-                        <div class="rpe-labels"><span>Easy</span><span>Moderate</span><span>Hard</span></div>
                     </div>
                     <div class="form-group">
                         <label>Notes</label>
-                        <textarea id="exercise-notes" rows="2" placeholder="Pain? Form issues?"></textarea>
+                        <textarea id="exercise-notes" rows="2" placeholder="How'd it feel?"></textarea>
                     </div>
-                    <button id="save-exercise" class="primary-button">✅ Log Exercise</button>
+                    <button id="save-exercise" class="primary-button">✅ Log</button>
                 </div>
                 <div id="exercise-trends" class="card">
-                    <h3>Your Progress</h3>
+                    <h3>Progress</h3>
                     <div id="trend-chart"></div>
                 </div>
             </div>
@@ -274,16 +222,9 @@
                         <button id="close-custom-form" class="close-btn">×</button>
                     </div>
                     
-                    <!-- Timer Integration for Custom Workouts -->
-                    <div style="margin-bottom: 20px;">
-                        <button id="custom-timer-btn" class="secondary-button" onclick="startCustomTimer()">
-                            ⏱️ Start Timer
-                        </button>
-                    </div>
-
                     <div class="form-group">
-                        <label>Workout Details (optional)</label>
-                        <input type="text" id="custom-workout-type" class="text-input" placeholder="e.g., 30min Power Zone Ride">
+                        <label>Details</label>
+                        <input type="text" id="custom-workout-type" class="text-input" placeholder="e.g., Power Zone with Matt">
                     </div>
 
                     <div class="form-group">
@@ -292,70 +233,56 @@
                             <button class="stepper-btn" onclick="adjustValue('custom-duration', -5)">−5</button>
                             <input type="number" id="custom-duration" value="30" class="stepper-input" readonly>
                             <button class="stepper-btn" onclick="adjustValue('custom-duration', 5)">+5</button>
-                            <span style="margin-left: 8px; font-weight: 600; color: var(--gray-600);">min</span>
+                            <span style="margin-left: 8px; font-weight: 600;">min</span>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label>Intensity <span id="custom-intensity-value" class="value-display">5</span>/10</label>
+                        <label>Intensity: <span id="custom-intensity-value" class="value-display">5</span>/10</label>
                         <input type="range" id="custom-intensity" min="1" max="10" value="5" class="slider">
-                        <div class="rpe-labels"><span>Easy</span><span>Moderate</span><span>All-Out</span></div>
                     </div>
 
                     <div class="form-group">
                         <label>Knee Impact</label>
                         <div class="button-group">
-                            <button class="impact-btn active" data-impact="none">
-                                <div>🟢</div>
-                                <div style="font-size: 11px;">None</div>
-                            </button>
-                            <button class="impact-btn" data-impact="low">
-                                <div>🟡</div>
-                                <div style="font-size: 11px;">Low</div>
-                            </button>
-                            <button class="impact-btn" data-impact="moderate">
-                                <div>🟠</div>
-                                <div style="font-size: 11px;">Moderate</div>
-                            </button>
-                            <button class="impact-btn" data-impact="high">
-                                <div>🔴</div>
-                                <div style="font-size: 11px;">High</div>
-                            </button>
+                            <button class="impact-btn active" data-impact="none"><div>🟢</div></button>
+                            <button class="impact-btn" data-impact="low"><div>🟡</div></button>
+                            <button class="impact-btn" data-impact="moderate"><div>🟠</div></button>
+                            <button class="impact-btn" data-impact="high"><div>🔴</div></button>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label>Notes</label>
-                        <textarea id="custom-notes" rows="3" placeholder="Instructor, class, knee feeling..."></textarea>
+                        <textarea id="custom-notes" rows="2" placeholder="How'd it feel?"></textarea>
                     </div>
 
-                    <button id="save-custom-workout" class="primary-button">✅ Log Workout</button>
+                    <button id="save-custom-workout" class="primary-button">✅ Log</button>
                 </div>
 
                 <div id="custom-workout-history" class="card">
-                    <h3>Recent Sessions</h3>
+                    <h3>Recent</h3>
                     <div id="custom-history-list"></div>
                 </div>
             </div>
 
             <!-- Today's Summary -->
             <div id="todays-summary" class="card">
-                <h3>Today's Training</h3>
+                <h3>Today</h3>
                 <div id="todays-exercise-list"></div>
             </div>
         </div>
 
-        <!-- Analytics View -->
+        <!-- Analytics -->
         <div id="history-view" class="view">
             <h2>Analytics</h2>
             
             <div class="filter-buttons">
-                <button class="filter-btn active" data-days="7">7 Days</button>
-                <button class="filter-btn" data-days="14">14 Days</button>
-                <button class="filter-btn" data-days="30">30 Days</button>
+                <button class="filter-btn active" data-days="7">7d</button>
+                <button class="filter-btn" data-days="14">14d</button>
+                <button class="filter-btn" data-days="30">30d</button>
             </div>
 
-            <!-- Summary Stats -->
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-value" id="total-workouts">0</div>
@@ -376,43 +303,42 @@
             </div>
 
             <div class="card">
-                <h3>📊 Swelling Trend</h3>
+                <h3>📊 Swelling</h3>
                 <div id="swelling-chart"></div>
             </div>
 
             <div class="card">
-                <h3>📊 Pain Trend</h3>
+                <h3>📊 Pain</h3>
                 <div id="pain-chart"></div>
             </div>
 
             <div class="card">
-                <h3>📊 Workout Frequency</h3>
+                <h3>📊 Frequency</h3>
                 <div id="workout-frequency-chart"></div>
             </div>
 
             <div class="card">
-                <h3>💪 Most Logged</h3>
+                <h3>💪 Top Exercises</h3>
                 <div id="exercise-breakdown"></div>
             </div>
 
             <div class="card">
-                <h3>📈 Exercise Deep Dive</h3>
-                <p class="subtitle">Select to see hold time, weight, RPE trends</p>
+                <h3>📈 Deep Dive</h3>
                 <select id="analytics-exercise-select" class="exercise-select">
-                    <option value="">Choose exercise...</option>
+                    <option value="">Choose...</option>
                 </select>
-                <div id="exercise-analytics" style="margin-top: 16px;"></div>
+                <div id="exercise-analytics"></div>
             </div>
 
-            <h3 style="margin: 24px 0 12px 0; font-size: 20px; font-weight: 700;">Daily Log</h3>
+            <h3 style="margin: 24px 0 12px 0;">Daily Log</h3>
             <div id="history-list"></div>
             
-            <button id="export-data" class="secondary-button">📤 Export for Specialist</button>
+            <button id="export-data" class="secondary-button">📤 Export</button>
         </div>
 
-        <!-- Exercises View -->
+        <!-- Library -->
         <div id="exercises-view" class="view">
-            <h2>Exercise Library</h2>
+            <h2>Library</h2>
             
             <div class="phase-tabs">
                 <button class="phase-tab active" data-phase="all">All</button>
@@ -436,7 +362,7 @@
         </button>
         <button class="nav-btn" data-view="history">
             <span class="nav-icon">📊</span>
-            <span class="nav-label">Analytics</span>
+            <span class="nav-label">Stats</span>
         </button>
         <button class="nav-btn" data-view="exercises">
             <span class="nav-icon">💪</span>
@@ -446,7 +372,7 @@
 
     <script src="exercises.js"></script>
     <script src="data.js"></script>
-    <script src="timer.js"></script>
+    <script src="stopwatch.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
