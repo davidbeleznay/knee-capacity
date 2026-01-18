@@ -17,44 +17,14 @@
     </header>
 
     <main id="app-content">
-        <!-- Home View -->
+        <!-- Home View (Simplified) -->
         <div id="home-view" class="view active">
             
-            <!-- Traffic Light Status (Primary) -->
+            <!-- Traffic Light Status -->
             <section id="knee-status-card" class="status-card text-center">
                 <div class="status-icon">❓</div>
                 <h2>Complete Check-In</h2>
                 <p>Log swelling + pain to see your status</p>
-            </section>
-            
-            <!-- Rest Status -->
-            <section id="rest-status" class="status-card text-center">
-                <div class="status-icon">✅</div>
-                <h2>Ready to Train</h2>
-                <p>Tissue recovered (6+ hours rest)</p>
-            </section>
-
-            <!-- Session Timer -->
-            <section class="card">
-                <h2>Training Session</h2>
-                
-                <div class="button-group">
-                    <button class="preset-btn" data-duration="300">5 min</button>
-                    <button class="preset-btn" data-duration="420">7 min</button>
-                    <button class="preset-btn active" data-duration="600">10 min</button>
-                </div>
-
-                <div class="timer-display">
-                    <span id="timer-minutes">10</span>:<span id="timer-seconds">00</span>
-                </div>
-
-                <div class="progress-bar">
-                    <div id="timer-progress-fill" class="progress-fill"></div>
-                </div>
-
-                <button id="timer-action" class="primary-button">Start Session</button>
-                
-                <p class="timer-info">Keith Barr: 5-10 min loading + 6-8 hr rest</p>
             </section>
 
             <!-- Daily Check-In -->
@@ -123,14 +93,51 @@
                 <button id="save-checkin" class="primary-button">Save Check-In</button>
             </section>
 
+            <!-- Quick Stats -->
+            <section class="card">
+                <h3>This Week</h3>
+                <div id="week-summary"></div>
+            </section>
+
         </div>
 
-        <!-- Log View -->
+        <!-- Log View (With Timer) -->
         <div id="log-view" class="view">
             <div class="view-header">
                 <h2>Log Workout</h2>
                 <div id="current-mode-badge" class="mode-badge"></div>
             </div>
+            
+            <!-- Rest Status (Moved Here) -->
+            <section id="rest-status-log" class="status-card text-center">
+                <div class="status-icon">✅</div>
+                <h2>Ready to Train</h2>
+                <p>Tissue recovered (6+ hours rest)</p>
+            </section>
+
+            <!-- Session Timer (Moved Here) -->
+            <section class="card timer-card">
+                <h3>Session Timer</h3>
+                
+                <div class="button-group">
+                    <button class="preset-btn" data-duration="300">5 min</button>
+                    <button class="preset-btn" data-duration="420">7 min</button>
+                    <button class="preset-btn active" data-duration="600">10 min</button>
+                    <button class="preset-btn" data-duration="0">Custom</button>
+                </div>
+
+                <div class="timer-display">
+                    <span id="timer-minutes">10</span>:<span id="timer-seconds">00</span>
+                </div>
+
+                <div class="progress-bar">
+                    <div id="timer-progress-fill" class="progress-fill"></div>
+                </div>
+
+                <button id="timer-action" class="primary-button">Start Timer</button>
+                
+                <p class="timer-info">Use for isometric holds, custom workouts, or timed exercises</p>
+            </section>
             
             <!-- Workout Type Selector -->
             <div class="workout-type-selector">
@@ -201,6 +208,13 @@
                         <button id="close-form" class="close-btn">×</button>
                     </div>
                     
+                    <!-- Quick Timer Button for This Exercise -->
+                    <div style="margin-bottom: 20px;">
+                        <button id="quick-timer-btn" class="secondary-button" onclick="startExerciseTimer()">
+                            ⏱️ Start Timer for This Exercise
+                        </button>
+                    </div>
+
                     <div class="dosage-tracker">
                         <div class="tracker-item">
                             <label>Sets</label>
@@ -260,9 +274,16 @@
                         <button id="close-custom-form" class="close-btn">×</button>
                     </div>
                     
+                    <!-- Timer Integration for Custom Workouts -->
+                    <div style="margin-bottom: 20px;">
+                        <button id="custom-timer-btn" class="secondary-button" onclick="startCustomTimer()">
+                            ⏱️ Start Timer
+                        </button>
+                    </div>
+
                     <div class="form-group">
                         <label>Workout Details (optional)</label>
-                        <input type="text" id="custom-workout-type" class="text-input" placeholder="e.g., 30min Power Zone, Tabata Ride, etc.">
+                        <input type="text" id="custom-workout-type" class="text-input" placeholder="e.g., 30min Power Zone Ride">
                     </div>
 
                     <div class="form-group">
@@ -305,7 +326,7 @@
 
                     <div class="form-group">
                         <label>Notes</label>
-                        <textarea id="custom-notes" rows="3" placeholder="Instructor, class name, how knee felt during/after..."></textarea>
+                        <textarea id="custom-notes" rows="3" placeholder="Instructor, class, knee feeling..."></textarea>
                     </div>
 
                     <button id="save-custom-workout" class="primary-button">✅ Log Workout</button>
@@ -370,7 +391,7 @@
             </div>
 
             <div class="card">
-                <h3>💪 Most Logged Exercises</h3>
+                <h3>💪 Most Logged</h3>
                 <div id="exercise-breakdown"></div>
             </div>
 
