@@ -6,6 +6,7 @@
     <title>KneeCapacity</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="custom-styles.css">
+    <link rel="stylesheet" href="stopwatch-styles.css">
 </head>
 <body>
     <header>
@@ -20,14 +21,12 @@
         <!-- Home View -->
         <div id="home-view" class="view active">
             
-            <!-- Traffic Light Status -->
             <section id="knee-status-card" class="status-card text-center">
                 <div class="status-icon">❓</div>
                 <h2>Complete Check-In</h2>
                 <p>Log swelling + pain</p>
             </section>
 
-            <!-- Daily Check-In -->
             <section class="card">
                 <h2>Daily Check-In</h2>
                 
@@ -48,7 +47,7 @@
                         </button>
                         <button class="swelling-btn" data-level="severe">
                             <div class="btn-icon">🔴</div>
-                            <div class="btn-label">Severe</div>
+                            <div class="btn-label">Bad</div>
                         </button>
                     </div>
                 </div>
@@ -85,10 +84,9 @@
                     <textarea id="checkin-notes" rows="2" placeholder="How's the knee?"></textarea>
                 </div>
 
-                <button id="save-checkin" class="primary-button">Save Check-In</button>
+                <button id="save-checkin" class="primary-button">Save</button>
             </section>
 
-            <!-- Week Summary -->
             <section class="card">
                 <h3>This Week</h3>
                 <div id="week-summary"></div>
@@ -112,14 +110,13 @@
                 
                 <div id="stopwatch-display" class="stopwatch-display">00:00</div>
                 
-                <!-- Milestone Badges -->
                 <div id="milestone-badges" class="milestone-container" style="display: none;"></div>
                 
                 <button id="stopwatch-action" class="primary-button">Start</button>
-                <p class="timer-info">For wall sits, planks, holds - get rewarded at 30s, 45s, 60s!</p>
+                <p class="timer-info">Rewards at 30s, 45s, 60s!</p>
             </section>
             
-            <!-- Workout Type Selector -->
+            <!-- Workout Selector -->
             <div class="workout-type-selector">
                 <button class="workout-type-btn active" data-type="exercises">
                     <span style="font-size: 24px;">💪</span>
@@ -131,10 +128,8 @@
                 </button>
             </div>
 
-            <!-- Exercise Tiles -->
             <div id="exercise-tiles" class="exercise-tiles"></div>
 
-            <!-- Custom Workout Tiles -->
             <div id="custom-workout-tiles" class="exercise-tiles" style="display: none;">
                 <div class="exercise-tile" onclick="selectCustomWorkout('peloton')">
                     <div><div class="tile-icon">🚴</div><div class="tile-name">Peloton</div></div>
@@ -156,7 +151,6 @@
                 </div>
             </div>
 
-            <!-- Exercise Form -->
             <div id="exercise-log-form" class="log-form" style="display: none;">
                 <div class="card">
                     <div class="form-header">
@@ -174,7 +168,7 @@
                             </div>
                         </div>
                         <div class="tracker-item">
-                            <label>Reps/Set</label>
+                            <label>Reps</label>
                             <div class="stepper">
                                 <button class="stepper-btn" onclick="adjustValue('reps-completed', -1)">−</button>
                                 <input type="number" id="reps-completed" value="10" class="stepper-input" readonly>
@@ -182,7 +176,7 @@
                             </div>
                         </div>
                         <div class="tracker-item" id="hold-tracker">
-                            <label>Hold (sec)</label>
+                            <label>Hold (s)</label>
                             <div class="stepper">
                                 <button class="stepper-btn" onclick="adjustValue('hold-time', -5)">−5</button>
                                 <input type="number" id="hold-time" value="0" class="stepper-input" readonly>
@@ -190,7 +184,7 @@
                             </div>
                         </div>
                         <div class="tracker-item">
-                            <label>Weight (lbs)</label>
+                            <label>Weight</label>
                             <div class="stepper">
                                 <button class="stepper-btn" onclick="adjustValue('weight-used', -5)">−5</button>
                                 <input type="number" id="weight-used" value="0" class="stepper-input" readonly>
@@ -214,7 +208,6 @@
                 </div>
             </div>
 
-            <!-- Custom Workout Form -->
             <div id="custom-workout-form" class="log-form" style="display: none;">
                 <div class="card">
                     <div class="form-header">
@@ -224,7 +217,7 @@
                     
                     <div class="form-group">
                         <label>Details</label>
-                        <input type="text" id="custom-workout-type" class="text-input" placeholder="e.g., Power Zone with Matt">
+                        <input type="text" id="custom-workout-type" class="text-input" placeholder="e.g., Power Zone">
                     </div>
 
                     <div class="form-group">
@@ -243,7 +236,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Knee Impact</label>
+                        <label>Impact</label>
                         <div class="button-group">
                             <button class="impact-btn active" data-impact="none"><div>🟢</div></button>
                             <button class="impact-btn" data-impact="low"><div>🟡</div></button>
@@ -266,7 +259,6 @@
                 </div>
             </div>
 
-            <!-- Today's Summary -->
             <div id="todays-summary" class="card">
                 <h3>Today</h3>
                 <div id="todays-exercise-list"></div>
