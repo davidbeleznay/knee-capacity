@@ -1,4 +1,4 @@
-// KneeCapacity - Complete App with All Functions
+// KneeCapacity - Timer Integrated with Logging
 
 let selectedDuration = 600;
 let selectedSwelling = null;
@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateRestStatus();
     updateStreakDisplay();
     updateKneeStatusCard();
+    updateWeekSummary();
     loadTodayCheckIn();
     setupEventListeners();
     setInterval(updateRestStatus, 60000);
@@ -21,23 +22,31 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
+    // Timer presets
     document.querySelectorAll('.preset-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
-            selectedDuration = parseInt(e.target.dataset.duration);
-            updateTimerDisplay(selectedDuration);
+            const duration = parseInt(e.target.dataset.duration);
+            
+            if (duration === 0) {
+                // Custom duration
+                const custom = prompt('Enter duration in minutes:', '15');
+                if (custom && !isNaN(custom)) {
+                    selectedDuration = parseInt(custom) * 60;
+                    updateTimerDisplay(selectedDuration);
+                }
+            } else {
+                selectedDuration = duration;
+                updateTimerDisplay(selectedDuration);
+            }
         });
     });
     
     document.getElementById('timer-action').addEventListener('click', () => {
         if (Timer.isRunning) {
-            if (confirm('Stop session early?')) Timer.stop();
+            if (confirm('Stop timer early?')) Timer.stop();
         } else {
-            if (!DataManager.canTrain()) {
-                alert('⏱️ Rest period not complete.\\n\\nBarr protocol: 6-8 hours between sessions');
-                return;
-            }
             Timer.start(selectedDuration);
         }
     });
@@ -96,7 +105,7 @@ function setupEventListeners() {
     
     document.getElementById('export-data').addEventListener('click', () => {
         DataManager.exportData();
-        alert('✅ Data exported! Share with specialist.');
+        alert('✅ Data exported!');
     });
     
     document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -139,6 +148,85 @@ window.adjustValue = (inputId, delta) => {
     input.value = value;
 };
 
+// Timer Integration Functions
+window.startExerciseTimer = () => {
+    if (!selectedExercise) return;
+    
+    // Calculate recommended duration based on exercise
+    const holdTime = selectedExercise.dosage.holdTime;
+    const sets = selectedExercise.dosage.sets;
+    const rest = selectedExercise.dosage.restBetweenSets;
+    
+    // Total time = (hold time × sets) + (rest × (sets-1))
+    const totalSeconds = (holdTime * sets) + (rest * (sets - 1));
+    
+    if (totalSeconds > 0) {
+        const minutes = Math.ceil(totalSeconds / 60);
+        if (confirm(`Start ${minutes} minute timer for ${selectedExercise.name}?\\n\\n${sets} sets × ${holdTime}s hold + rest`)) {
+            selectedDuration = totalSeconds;
+            updateTimerDisplay(totalSeconds);
+            
+            // Scroll to timer and start
+            document.querySelector('.timer-card').scrollIntoView({ behavior: 'smooth' });
+            setTimeout(() => Timer.start(totalSeconds), 500);
+        }
+    }
+};
+
+window.startCustomTimer = () => {
+    const duration = parseInt(document.getElementById('custom-duration').value) * 60;
+    
+    if (confirm(`Start ${Math.floor(duration/60)} minute timer?`)) {
+        selectedDuration = duration;
+        updateTimerDisplay(duration);
+        
+        // Scroll to timer and start
+        document.querySelector('.timer-card').scrollIntoView({ behavior: 'smooth' });
+        setTimeout(() => Timer.start(duration), 500);
+    }
+};
+
+function updateWeekSummary() {
+    const container = document.getElementById('week-summary');
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Last Sunday
+    
+    const weekData = DataManager.getRecentCheckIns(7);
+    const weekExercises = DataManager.getExerciseLogs().filter(e => {
+        const d = new Date(e.date);
+        return d >= weekStart;
+    });
+    const weekCustom = DataManager.getCustomWorkouts().filter(w => {
+        const d = new Date(w.date);
+        return d >= weekStart;
+    });
+    
+    const greenDays = weekData.filter(c => DataManager.getKneeStatusForCheckIn(c) === 'GREEN').length;
+    const avgPain = weekData.length > 0 ? 
+        (weekData.reduce((sum, c) => sum + (c.pain || 0), 0) / weekData.length).toFixed(1) : 0;
+    
+    container.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+            <div style="text-align: center; padding: 12px; background: var(--gray-50); border-radius: 10px;">
+                <div style="font-size: 24px; font-weight: 800; color: var(--primary);">${greenDays}</div>
+                <div style="font-size: 12px; color: var(--gray-600);">Green Days</div>
+            </div>
+            <div style="text-align: center; padding: 12px; background: var(--gray-50); border-radius: 10px;">
+                <div style="font-size: 24px; font-weight: 800; color: var(--primary);">${avgPain}</div>
+                <div style="font-size: 12px; color: var(--gray-600);">Avg Pain</div>
+            </div>
+            <div style="text-align: center; padding: 12px; background: var(--gray-50); border-radius: 10px;">
+                <div style="font-size: 24px; font-weight: 800; color: var(--primary);">${weekExercises.length}</div>
+                <div style="font-size: 12px; color: var(--gray-600);">Exercises</div>
+            </div>
+            <div style="text-align: center; padding: 12px; background: var(--gray-50); border-radius: 10px;">
+                <div style="font-size: 24px; font-weight: 800; color: var(--primary);">${weekCustom.length}</div>
+                <div style="font-size: 12px; color: var(--gray-600);">Other Workouts</div>
+            </div>
+        </div>
+    `;
+}
+
 function updateKneeStatusCard() {
     const statusInfo = DataManager.getKneeStatusMessage();
     const status = DataManager.getKneeStatus();
@@ -176,11 +264,6 @@ function renderExerciseTiles() {
     const allowedPhases = phaseMap[status] || ['Calm'];
     const filtered = EXERCISES.filter(ex => ex.phase.some(p => allowedPhases.includes(p)));
     
-    if (filtered.length === 0) {
-        container.innerHTML = '<p class="text-center" style="padding: 40px;">Complete check-in first</p>';
-        return;
-    }
-    
     container.innerHTML = filtered.map(ex => {
         const icon = getExerciseIcon(ex.id);
         const holdDisplay = ex.dosage.holdTime > 0 ? `×${ex.dosage.holdTime}s` : '';
@@ -216,6 +299,7 @@ window.selectExerciseForLogging = (exerciseId) => {
     
     document.getElementById('exercise-log-form').style.display = 'block';
     document.getElementById('exercise-tiles').style.display = 'none';
+    document.getElementById('custom-workout-tiles').style.display = 'none';
     
     document.getElementById('selected-exercise-name').textContent = selectedExercise.name;
     document.getElementById('sets-completed').value = selectedExercise.dosage.sets;
@@ -234,7 +318,13 @@ window.selectExerciseForLogging = (exerciseId) => {
 
 function closeExerciseForm() {
     document.getElementById('exercise-log-form').style.display = 'none';
-    document.getElementById('exercise-tiles').style.display = 'grid';
+    // Show appropriate tiles based on active tab
+    const activeType = document.querySelector('.workout-type-btn.active').dataset.type;
+    if (activeType === 'exercises') {
+        document.getElementById('exercise-tiles').style.display = 'grid';
+    } else {
+        document.getElementById('custom-workout-tiles').style.display = 'grid';
+    }
     selectedExercise = null;
 }
 
@@ -272,6 +362,7 @@ window.selectCustomWorkout = (workoutType) => {
     
     selectedCustomWorkout = workoutType;
     document.getElementById('custom-workout-tiles').style.display = 'none';
+    document.getElementById('exercise-tiles').style.display = 'none';
     document.getElementById('custom-workout-form').style.display = 'block';
     document.getElementById('custom-workout-title').textContent = workoutNames[workoutType];
     
@@ -327,6 +418,7 @@ function saveCustomWorkout() {
         btn.style.background = '';
         closeCustomForm();
         renderTodaysSummary();
+        updateWeekSummary();
     }, 1000);
 }
 
@@ -370,7 +462,7 @@ function renderTodaysSummary() {
     const container = document.getElementById('todays-exercise-list');
     
     if (exercises.length === 0 && customWorkouts.length === 0) {
-        container.innerHTML = '<p class="text-center" style="color: var(--gray-600); padding: 30px;">No workouts logged today<br><small>Tap a tile to start</small></p>';
+        container.innerHTML = '<p class="text-center" style="color: var(--gray-600); padding: 30px;">No workouts logged<br><small>Tap a tile to start</small></p>';
         return;
     }
     
@@ -569,7 +661,6 @@ function renderWorkoutFrequency(days) {
         <div class="chart-row" style="height: 100px;">
             ${daysArray.map(d => {
                 const heightPercent = (d.count / maxCount) * 100 || 5;
-                const date = new Date(d.date);
                 const color = d.count === 0 ? 'var(--gray-300)' : 
                              d.count === 1 ? 'var(--green)' : 
                              d.count === 2 ? 'var(--primary)' : 'var(--orange)';
@@ -577,7 +668,7 @@ function renderWorkoutFrequency(days) {
                 return `
                     <div class="chart-bar" style="height: ${heightPercent}%; background: ${color}; min-height: 8px;">
                         ${d.count > 0 ? `<span class="chart-value">${d.count}</span>` : ''}
-                        <span class="chart-label">${date.getDate()}</span>
+                        <span class="chart-label">${new Date(d.date).getDate()}</span>
                     </div>
                 `;
             }).join('')}
@@ -594,7 +685,7 @@ function renderExerciseBreakdown(days) {
     const container = document.getElementById('exercise-breakdown');
     
     if (exercises.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: var(--gray-600); padding: 20px;">No exercises logged yet</p>';
+        container.innerHTML = '<p style="text-align: center; color: var(--gray-600); padding: 20px;">No exercises yet</p>';
         return;
     }
     
@@ -615,7 +706,7 @@ function renderExerciseBreakdown(days) {
                     <span style="font-weight: 600;">${icon} ${ex.name.split('(')[0].trim()}</span>
                     <span style="color: var(--primary); font-weight: 700;">${count}×</span>
                 </div>
-                <div style="height: 8px; background: var(--gray-200); border-radius: 4px; overflow: hidden;">
+                <div style="height: 8px; background: var(--gray-200); border-radius: 4px;">
                     <div style="height: 100%; width: ${widthPercent}%; background: var(--primary); border-radius: 4px;"></div>
                 </div>
             </div>
@@ -632,9 +723,7 @@ function renderIndividualExerciseAnalytics(exerciseId, days) {
         return;
     }
     
-    const ex = window.getExerciseById(exerciseId);
     const icon = getExerciseIcon(exerciseId);
-    
     const totalSessions = history.length;
     const avgSets = (history.reduce((sum, h) => sum + h.setsCompleted, 0) / totalSessions).toFixed(1);
     const avgReps = (history.reduce((sum, h) => sum + h.repsPerSet, 0) / totalSessions).toFixed(1);
@@ -797,7 +886,6 @@ function renderHistory(days) {
                 </div>
                 <div style="font-size: 14px; color: var(--gray-600); margin-top: 10px;">
                     <strong>Swelling:</strong> ${c.swelling} | <strong>Pain:</strong> ${c.pain}/10
-                    ${c.activities && c.activities.length > 0 ? `<br><strong>Activities:</strong> ${c.activities.join(', ')}` : ''}
                 </div>
                 ${exercisesOnDay.length > 0 || customWorkoutsOnDay.length > 0 ? `
                     <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--gray-200);">
@@ -816,7 +904,6 @@ function renderHistory(days) {
                         </div>
                     </div>
                 ` : ''}
-                ${c.notes ? `<div style="font-size: 13px; font-style: italic; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--gray-200);">"${c.notes}"</div>` : ''}
             </div>
         `;
     }).join('');
@@ -830,7 +917,7 @@ function renderExerciseLibrary(phase = 'all') {
         
         return `
             <div class="exercise-card">
-                <div style="display: flex; align-items: start; gap: 12px; margin-bottom: 12px;">
+                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
                     <div style="font-size: 40px;">${icon}</div>
                     <div style="flex: 1;">
                         <h3>${ex.name}</h3>
@@ -854,13 +941,9 @@ function renderExerciseLibrary(phase = 'all') {
                     <summary>📋 Setup & Execution</summary>
                     <div style="margin-top: 12px; font-size: 14px; line-height: 1.8;">
                         <strong>Setup:</strong>
-                        <ol style="margin: 8px 0 16px 20px;">
-                            ${ex.setup.map(s => `<li>${s}</li>`).join('')}
-                        </ol>
+                        <ol style="margin: 8px 0 16px 20px;">${ex.setup.map(s => `<li>${s}</li>`).join('')}</ol>
                         <strong>Execution:</strong>
-                        <ol style="margin: 8px 0 0 20px;">
-                            ${ex.execution.map(e => `<li>${e}</li>`).join('')}
-                        </ol>
+                        <ol style="margin: 8px 0 0 20px;">${ex.execution.map(e => `<li>${e}</li>`).join('')}</ol>
                     </div>
                 </details>
                 
@@ -878,14 +961,15 @@ function renderExerciseLibrary(phase = 'all') {
 function updateRestStatus() {
     const canTrain = DataManager.canTrain();
     const hoursUntil = DataManager.hoursUntilReady();
-    const statusCard = document.getElementById('rest-status');
+    const statusCard = document.getElementById('rest-status-log');
+    if (!statusCard) return;
     
     if (canTrain) {
         statusCard.className = 'status-card status-ready text-center';
         statusCard.innerHTML = `
             <div class="status-icon">✅</div>
-            <h2>Ready to Train</h2>
-            <p>Tissue recovered</p>
+            <h2>Ready for Isometrics</h2>
+            <p>6+ hours since last session</p>
             <small style="color: var(--gray-600);">${getLastSessionTime()}</small>
         `;
     } else {
@@ -949,7 +1033,7 @@ function loadTodayCheckIn() {
 
 function saveCheckIn() {
     if (!selectedSwelling) {
-        alert('⚠️ Please select swelling level');
+        alert('⚠️ Select swelling level');
         return;
     }
     
@@ -959,6 +1043,7 @@ function saveCheckIn() {
     
     DataManager.saveCheckIn({ swelling: selectedSwelling, pain, activities, notes });
     updateKneeStatusCard();
+    updateWeekSummary();
     
     const btn = document.getElementById('save-checkin');
     btn.textContent = '✅ Saved!';
@@ -979,6 +1064,7 @@ function switchView(viewName) {
     if (viewName === 'history') renderAnalytics(currentAnalyticsDays);
     if (viewName === 'exercises') renderExerciseLibrary('all');
     if (viewName === 'log') {
+        updateRestStatus();
         renderExerciseTiles();
         renderTodaysSummary();
     }
