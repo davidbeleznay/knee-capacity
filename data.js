@@ -1,45 +1,217 @@
-// KneeCapacity - Data Management with Custom Workouts
+// KneeCapacity - Enhanced Data Management with Body Measurements
 
 const DataManager = {
     
     init() {
-        if (!localStorage.getItem('sessions')) localStorage.setItem('sessions', JSON.stringify([]));
-        if (!localStorage.getItem('checkIns')) localStorage.setItem('checkIns', JSON.stringify([]));
-        if (!localStorage.getItem('exerciseLogs')) localStorage.setItem('exerciseLogs', JSON.stringify([]));
-        if (!localStorage.getItem('customWorkouts')) localStorage.setItem('customWorkouts', JSON.stringify([]));
-        if (!localStorage.getItem('streak')) localStorage.setItem('streak', '0');
+        try {
+            // Verify localStorage is available
+            if (!this.isLocalStorageAvailable()) {
+                console.error('LocalStorage not available!');
+                alert('⚠️ Storage not available. Data may not persist.');
+                return;
+            }
+            
+            // Initialize all data stores
+            if (!localStorage.getItem('sessions')) localStorage.setItem('sessions', JSON.stringify([]));
+            if (!localStorage.getItem('checkIns')) localStorage.setItem('checkIns', JSON.stringify([]));
+            if (!localStorage.getItem('exerciseLogs')) localStorage.setItem('exerciseLogs', JSON.stringify([]));
+            if (!localStorage.getItem('customWorkouts')) localStorage.setItem('customWorkouts', JSON.stringify([]));
+            if (!localStorage.getItem('bodyMeasurements')) localStorage.setItem('bodyMeasurements', JSON.stringify([]));
+            if (!localStorage.getItem('streak')) localStorage.setItem('streak', '0');
+            if (!localStorage.getItem('longestStreak')) localStorage.setItem('longestStreak', '0');
+            
+            // Add baseline measurement if none exist
+            this.initializeBaselineMeasurement();
+            
+            console.log('✅ DataManager initialized successfully');
+            this.logStorageStatus();
+        } catch (e) {
+            console.error('Init error:', e);
+            alert('Storage error: ' + e.message);
+        }
+    },
+    
+    isLocalStorageAvailable() {
+        try {
+            const test = '__storage_test__';
+            localStorage.setItem(test, test);
+            localStorage.removeItem(test);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    },
+    
+    logStorageStatus() {
+        console.log('📊 Storage Status:');
+        console.log('Check-ins:', this.getCheckIns().length);
+        console.log('Exercise logs:', this.getExerciseLogs().length);
+        console.log('Custom workouts:', this.getCustomWorkouts().length);
+        console.log('Body measurements:', this.getBodyMeasurements().length);
+    },
+    
+    // Body Measurements
+    initializeBaselineMeasurement() {
+        const measurements = this.getBodyMeasurements();
+        if (measurements.length === 0) {
+            const baseline = {
+                id: Date.now().toString(),
+                timestamp: new Date().toISOString(),
+                date: new Date().toISOString().split('T')[0],
+                measurements: {
+                    knee_top_cm: { right: 38.5, left: 37.5, method: '2cm above patella' },
+                    thigh_cm: { right: 50, left: 49, method: 'mid-thigh' },
+                    calf_cm: { right: 38, left: 38, method: 'widest point' },
+                    waist_cm: 92,
+                    weight_lb: 192,
+                    height_cm: 189
+                },
+                posture: 'relaxed/unflexed',
+                notes: 'Baseline - measured at top of knee where effusion shows',
+                type: 'weekly'
+            };
+            
+            const measurements_array = [baseline];
+            localStorage.setItem('bodyMeasurements', JSON.stringify(measurements_array));
+            console.log('✅ Baseline measurement created');
+        }
+    },
+    
+    saveBodyMeasurement(data) {
+        try {
+            const measurements = this.getBodyMeasurements();
+            measurements.push({
+                ...data,
+                id: Date.now().toString(),
+                timestamp: new Date().toISOString(),
+                date: new Date().toISOString().split('T')[0]
+            });
+            localStorage.setItem('bodyMeasurements', JSON.stringify(measurements));
+            console.log('✅ Body measurement saved');
+            return true;
+        } catch (e) {
+            console.error('Save measurement error:', e);
+            return false;
+        }
+    },
+    
+    getBodyMeasurements() {
+        try {
+            return JSON.parse(localStorage.getItem('bodyMeasurements') || '[]');
+        } catch (e) {
+            console.error('Get measurements error:', e);
+            return [];
+        }
+    },
+    
+    getLatestBodyMeasurement() {
+        const measurements = this.getBodyMeasurements();
+        return measurements.length > 0 ? measurements[measurements.length - 1] : null;
+    },
+    
+    getBodyMeasurementHistory(days = 90) {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        
+        return this.getBodyMeasurements()
+            .filter(m => new Date(m.date) >= cutoff)
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
+    },
+    
+    // Derived metrics
+    calculateBMI(weight_lb, height_cm) {
+        const weight_kg = weight_lb * 0.453592;
+        const height_m = height_cm / 100;
+        return (weight_kg / (height_m * height_m)).toFixed(1);
+    },
+    
+    calculateWaistToHeight(waist_cm, height_cm) {
+        return (waist_cm / height_cm).toFixed(3);
+    },
+    
+    getKneeDifference(measurement) {
+        if (!measurement?.measurements?.knee_top_cm) return null;
+        const { right, left } = measurement.measurements.knee_top_cm;
+        return (right - left).toFixed(1);
+    },
+    
+    getSwellingTrend(days = 7) {
+        const checkIns = this.getRecentCheckIns(days);
+        if (checkIns.length < 2) return 'insufficient_data';
+        
+        const swellingValues = { 'none': 0, 'mild': 1, 'moderate': 2, 'severe': 3 };
+        const recent = checkIns.slice(0, 3).map(c => swellingValues[c.swelling] || 0);
+        const older = checkIns.slice(3, 6).map(c => swellingValues[c.swelling] || 0);
+        
+        if (older.length === 0) return 'stable';
+        
+        const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+        const olderAvg = older.reduce((a, b) => a + b, 0) / older.length;
+        
+        if (recentAvg > olderAvg + 0.5) return 'worsening';
+        if (recentAvg < olderAvg - 0.5) return 'improving';
+        return 'stable';
     },
     
     // Sessions
     saveSession(sessionData) {
-        const sessions = this.getSessions();
-        sessions.push({
-            ...sessionData,
-            id: Date.now().toString(),
-            timestamp: new Date().toISOString()
-        });
-        localStorage.setItem('sessions', JSON.stringify(sessions));
-        this.updateStreak();
+        try {
+            const sessions = this.getSessions();
+            sessions.push({
+                ...sessionData,
+                id: Date.now().toString(),
+                timestamp: new Date().toISOString()
+            });
+            localStorage.setItem('sessions', JSON.stringify(sessions));
+            this.updateStreak();
+            console.log('✅ Session saved');
+            return true;
+        } catch (e) {
+            console.error('Save session error:', e);
+            alert('⚠️ Failed to save session: ' + e.message);
+            return false;
+        }
     },
     
     getSessions() {
-        return JSON.parse(localStorage.getItem('sessions') || '[]');
+        try {
+            return JSON.parse(localStorage.getItem('sessions') || '[]');
+        } catch (e) {
+            console.error('Get sessions error:', e);
+            return [];
+        }
     },
     
     // Exercise Logs
     saveExerciseLog(exerciseData) {
-        const logs = this.getExerciseLogs();
-        logs.push({
-            ...exerciseData,
-            id: Date.now().toString(),
-            timestamp: new Date().toISOString(),
-            date: new Date().toISOString().split('T')[0]
-        });
-        localStorage.setItem('exerciseLogs', JSON.stringify(logs));
+        try {
+            const logs = this.getExerciseLogs();
+            const newLog = {
+                ...exerciseData,
+                id: Date.now().toString(),
+                timestamp: new Date().toISOString(),
+                date: new Date().toISOString().split('T')[0]
+            };
+            logs.push(newLog);
+            localStorage.setItem('exerciseLogs', JSON.stringify(logs));
+            console.log('✅ Exercise logged:', exerciseData.exerciseName);
+            this.logStorageStatus();
+            return true;
+        } catch (e) {
+            console.error('Save exercise error:', e);
+            alert('⚠️ Failed to save: ' + e.message);
+            return false;
+        }
     },
     
     getExerciseLogs() {
-        return JSON.parse(localStorage.getItem('exerciseLogs') || '[]');
+        try {
+            const data = localStorage.getItem('exerciseLogs');
+            return JSON.parse(data || '[]');
+        } catch (e) {
+            console.error('Get exercises error:', e);
+            return [];
+        }
     },
     
     getExerciseLogsByDate(date) {
@@ -62,18 +234,30 @@ const DataManager = {
     
     // Custom Workouts
     saveCustomWorkout(workoutData) {
-        const workouts = this.getCustomWorkouts();
-        workouts.push({
-            ...workoutData,
-            id: Date.now().toString(),
-            timestamp: new Date().toISOString(),
-            date: new Date().toISOString().split('T')[0]
-        });
-        localStorage.setItem('customWorkouts', JSON.stringify(workouts));
+        try {
+            const workouts = this.getCustomWorkouts();
+            workouts.push({
+                ...workoutData,
+                id: Date.now().toString(),
+                timestamp: new Date().toISOString(),
+                date: new Date().toISOString().split('T')[0]
+            });
+            localStorage.setItem('customWorkouts', JSON.stringify(workouts));
+            console.log('✅ Custom workout saved:', workoutData.workoutCategory);
+            return true;
+        } catch (e) {
+            console.error('Save custom workout error:', e);
+            return false;
+        }
     },
     
     getCustomWorkouts() {
-        return JSON.parse(localStorage.getItem('customWorkouts') || '[]');
+        try {
+            return JSON.parse(localStorage.getItem('customWorkouts') || '[]');
+        } catch (e) {
+            console.error('Get custom workouts error:', e);
+            return [];
+        }
     },
     
     getCustomWorkoutsByDate(date) {
@@ -94,20 +278,33 @@ const DataManager = {
     
     // Check-ins
     saveCheckIn(checkInData) {
-        const checkIns = this.getCheckIns();
-        const today = new Date().toISOString().split('T')[0];
-        const existingIndex = checkIns.findIndex(c => c.date === today);
-        
-        if (existingIndex >= 0) {
-            checkIns[existingIndex] = { ...checkInData, date: today };
-        } else {
-            checkIns.push({ ...checkInData, date: today });
+        try {
+            const checkIns = this.getCheckIns();
+            const today = new Date().toISOString().split('T')[0];
+            const existingIndex = checkIns.findIndex(c => c.date === today);
+            
+            if (existingIndex >= 0) {
+                checkIns[existingIndex] = { ...checkInData, date: today };
+            } else {
+                checkIns.push({ ...checkInData, date: today });
+            }
+            localStorage.setItem('checkIns', JSON.stringify(checkIns));
+            console.log('✅ Check-in saved for', today);
+            return true;
+        } catch (e) {
+            console.error('Save check-in error:', e);
+            alert('⚠️ Failed to save check-in: ' + e.message);
+            return false;
         }
-        localStorage.setItem('checkIns', JSON.stringify(checkIns));
     },
     
     getCheckIns() {
-        return JSON.parse(localStorage.getItem('checkIns') || '[]');
+        try {
+            return JSON.parse(localStorage.getItem('checkIns') || '[]');
+        } catch (e) {
+            console.error('Get check-ins error:', e);
+            return [];
+        }
     },
     
     getCheckIn(date) {
@@ -120,23 +317,6 @@ const DataManager = {
         return this.getCheckIns()
             .filter(c => new Date(c.date) >= cutoff)
             .sort((a, b) => new Date(b.date) - new Date(a.date));
-    },
-    
-    // Rest period enforcement
-    canTrain() {
-        const sessions = this.getSessions();
-        if (sessions.length === 0) return true;
-        const lastSession = sessions[sessions.length - 1];
-        const hoursSince = (new Date() - new Date(lastSession.timestamp)) / (1000 * 60 * 60);
-        return hoursSince >= 6;
-    },
-    
-    hoursUntilReady() {
-        const sessions = this.getSessions();
-        if (sessions.length === 0) return 0;
-        const lastSession = sessions[sessions.length - 1];
-        const hoursSince = (new Date() - new Date(lastSession.timestamp)) / (1000 * 60 * 60);
-        return Math.max(0, 6 - hoursSince);
     },
     
     // Streak calculation
@@ -193,26 +373,26 @@ const DataManager = {
             green: {
                 icon: '✅',
                 title: 'GREEN - Go for It',
-                message: 'Full training approved. Knee is quiet.',
-                action: 'Proceed with Build or Prime mode exercises'
+                message: 'Full training approved',
+                action: 'Build or Prime exercises'
             },
             yellow: {
                 icon: '⚠️',
-                title: 'YELLOW - Proceed with Caution',
-                message: 'Modify intensity. Lighter loads.',
-                action: 'Build mode (light) or Calm exercises only'
+                title: 'YELLOW - Caution',
+                message: 'Modify intensity',
+                action: 'Build (light) or Calm only'
             },
             red: {
                 icon: '🛑',
-                title: 'RED - Stop and Recover',
-                message: 'Knee needs rest. Focus on recovery.',
-                action: 'Calm mode only: gentle ROM, isometrics, ice'
+                title: 'RED - Recover',
+                message: 'Knee needs rest',
+                action: 'Calm mode: gentle ROM, ice'
             },
             unknown: {
                 icon: '❓',
-                title: 'Complete Check-In First',
-                message: 'Log swelling and pain to see status',
-                action: 'Go to Home tab and complete Daily Check-In'
+                title: 'Check In First',
+                message: 'Log swelling and pain',
+                action: 'Complete Daily Check-In'
             }
         };
         return messages[status];
@@ -228,55 +408,54 @@ const DataManager = {
     
     // Export
     exportData() {
-        const checkIns = this.getCheckIns();
-        const sessions = this.getSessions();
-        const exerciseLogs = this.getExerciseLogs();
-        const customWorkouts = this.getCustomWorkouts();
+        try {
+            const data = {
+                exportDate: new Date().toISOString(),
+                patientInfo: {
+                    note: "44yo severe lateral OA + degenerative meniscus",
+                    goal: "Avoid surgery, continue volleyball"
+                },
+                summary: {
+                    totalExercises: this.getExerciseLogs().length,
+                    totalCustomWorkouts: this.getCustomWorkouts().length,
+                    totalBodyMeasurements: this.getBodyMeasurements().length,
+                    currentStreak: this.getCurrentStreak(),
+                    last30Days: {
+                        avgPain: this.getRecentCheckIns(30).reduce((s, c) => s + (c.pain || 0), 0) / Math.max(this.getRecentCheckIns(30).length, 1)
+                    }
+                },
+                dailyCheckIns: this.getCheckIns(),
+                exerciseDetails: this.getExerciseLogs(),
+                customWorkouts: this.getCustomWorkouts(),
+                bodyMeasurements: this.getBodyMeasurements(),
+                derivedMetrics: this.getDerivedMetrics()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `kneecapacity-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            console.log('✅ Data exported');
+        } catch (e) {
+            console.error('Export error:', e);
+            alert('Export failed: ' + e.message);
+        }
+    },
+    
+    getDerivedMetrics() {
+        const latest = this.getLatestBodyMeasurement();
+        if (!latest) return {};
         
-        const recentCheckIns = this.getRecentCheckIns(30);
-        const avgPain = recentCheckIns.length > 0 ? 
-            (recentCheckIns.reduce((sum, c) => sum + (c.pain || 0), 0) / recentCheckIns.length).toFixed(1) : 0;
-        const swellingDays = recentCheckIns.filter(c => c.swelling !== 'none').length;
+        const m = latest.measurements;
         
-        const data = {
-            exportDate: new Date().toISOString(),
-            patientInfo: {
-                note: "44-year-old with severe lateral compartment OA + degenerative meniscus",
-                goal: "Avoid surgery, continue volleyball, using Keith Barr protocols"
-            },
-            summary: {
-                totalSessions: sessions.length,
-                totalExercises: exerciseLogs.length,
-                totalCustomWorkouts: customWorkouts.length,
-                currentStreak: this.getCurrentStreak(),
-                longestStreak: parseInt(localStorage.getItem('longestStreak') || '0'),
-                last30Days: {
-                    averagePain: avgPain,
-                    daysWithSwelling: swellingDays,
-                    workoutDays: sessions.filter(s => {
-                        const d = new Date(s.timestamp);
-                        return (new Date() - d) / (1000*60*60*24) <= 30;
-                    }).length
-                }
-            },
-            dailyCheckIns: checkIns,
-            trainingSessions: sessions,
-            exerciseDetails: exerciseLogs,
-            customWorkouts: customWorkouts,
-            kneeStatusLog: checkIns.map(c => ({
-                date: c.date,
-                status: this.getKneeStatusForCheckIn(c),
-                swelling: c.swelling,
-                pain: c.pain
-            }))
+        return {
+            bmi: m.weight_lb && m.height_cm ? this.calculateBMI(m.weight_lb, m.height_cm) : null,
+            waistToHeight: m.waist_cm && m.height_cm ? this.calculateWaistToHeight(m.waist_cm, m.height_cm) : null,
+            kneeDifference: this.getKneeDifference(latest),
+            swellingTrend: this.getSwellingTrend(7)
         };
-        
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `knee-capacity-specialist-${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
     }
 };
