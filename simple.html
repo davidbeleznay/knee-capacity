@@ -2,144 +2,257 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KneeCapacity</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding-bottom: 80px; }
-        header { background: #2E7D32; color: white; padding: 16px; text-align: center; }
-        .card { background: white; margin: 16px; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        label { display: block; font-weight: 700; margin-bottom: 12px; font-size: 15px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            background: #f5f5f5; 
+            padding: 70px 0 80px 0;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        header { 
+            position: fixed; top: 0; left: 0; right: 0; 
+            background: #2E7D32; color: white; padding: 20px; 
+            text-align: center; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .card { background: white; margin: 16px; padding: 20px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        h2 { margin-bottom: 20px; font-size: 22px; }
+        label { display: block; font-weight: 700; margin: 20px 0 12px 0; font-size: 16px; color: #333; }
         
-        .btn-group { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0; }
-        .btn-group.three { grid-template-columns: repeat(3, 1fr); }
+        .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         
         button { 
-            padding: 16px; background: white; border: 3px solid #ddd; border-radius: 12px; 
-            font-size: 15px; font-weight: 700; cursor: pointer; min-height: 60px;
-            transition: all 0.2s; font-family: inherit;
+            padding: 18px 10px; 
+            background: #fff; 
+            border: 3px solid #e0e0e0; 
+            border-radius: 14px; 
+            font-size: 16px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            min-height: 70px;
+            -webkit-tap-highlight-color: rgba(0,0,0,0.1);
+            touch-action: manipulation;
+            font-family: inherit;
         }
-        button:active { transform: scale(0.95); }
-        button.active { border-color: #2E7D32; background: #E8F5E9; color: #2E7D32; box-shadow: 0 3px 10px rgba(46,125,50,0.3); }
         
-        .green.active { background: #4CAF50; color: white; border-color: #4CAF50; }
-        .yellow.active { background: #FFC107; color: #333; border-color: #FFC107; }
-        .orange.active { background: #FF9800; color: white; border-color: #FF9800; }
-        .red.active { background: #F44336; color: white; border-color: #F44336; }
+        button:active { transform: scale(0.92); opacity: 0.8; }
         
-        input[type="range"] { width: 100%; height: 40px; margin: 16px 0; }
-        textarea { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 15px; }
+        button.active { 
+            border-width: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
         
-        .save-btn { background: #2E7D32; color: white; width: 100%; padding: 18px; font-size: 17px; border: none; margin-top: 16px; }
-        .save-btn:active { background: #1B5E20; }
+        .none.active { background: #4CAF50; color: white; border-color: #4CAF50; }
+        .mild.active { background: #FFC107; color: #333; border-color: #FFC107; }
+        .mod.active { background: #FF9800; color: white; border-color: #FF9800; }
+        .bad.active { background: #F44336; color: white; border-color: #F44336; }
         
-        #status { margin: 16px; padding: 24px; background: white; border-radius: 12px; text-align: center; font-size: 18px; }
-        .value { font-size: 24px; color: #2E7D32; font-weight: 800; }
-        nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; border-top: 1px solid #ddd; }
-        nav button { flex: 1; border: none; border-radius: 0; min-height: 64px; background: white; }
-        nav button.active { background: #E8F5E9; color: #2E7D32; }
+        .light.active { background: #E8F5E9; border-color: #4CAF50; color: #2E7D32; }
+        .moderate.active { background: #FFF3E0; border-color: #FF9800; color: #F57C00; }
+        .hard.active { background: #FFEBEE; border-color: #F44336; color: #C62828; }
+        
+        .am.active, .pm.active, .eve.active { 
+            background: #2E7D32; color: white; border-color: #2E7D32; 
+        }
+        
+        input[type="range"] { 
+            width: 100%; 
+            height: 50px; 
+            margin: 16px 0;
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        
+        input[type="range"]::-webkit-slider-track {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 32px;
+            height: 32px;
+            background: #2E7D32;
+            border-radius: 50%;
+            cursor: pointer;
+            margin-top: -12px;
+        }
+        
+        textarea { 
+            width: 100%; 
+            padding: 14px; 
+            border: 2px solid #e0e0e0; 
+            border-radius: 12px; 
+            font: inherit; 
+            font-size: 16px;
+        }
+        
+        .big-save { 
+            background: #2E7D32; 
+            color: white; 
+            width: 100%; 
+            padding: 22px; 
+            font-size: 19px; 
+            border: none; 
+            margin-top: 24px;
+            border-radius: 14px;
+        }
+        
+        .big-save:active { background: #1B5E20; }
+        
+        #result { 
+            margin: 16px; 
+            padding: 24px; 
+            background: white; 
+            border-radius: 16px; 
+            text-align: center; 
+            font-size: 20px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .val { font-size: 32px; color: #2E7D32; font-weight: 800; margin: 0 6px; }
     </style>
 </head>
 <body>
     <header><h1>💪 KneeCapacity</h1></header>
 
-    <div id="status">Select swelling to begin</div>
+    <div id="result">Tap a swelling button below</div>
 
     <div class="card">
+        <h2>Daily Check-In</h2>
+        
         <label>Swelling</label>
-        <div class="btn-group">
-            <button class="green" onclick="selectSwelling('none', this)">🟢 None</button>
-            <button class="yellow" onclick="selectSwelling('mild', this)">🟡 Mild</button>
-            <button class="orange" onclick="selectSwelling('moderate', this)">🟠 Mod</button>
-            <button class="red" onclick="selectSwelling('severe', this)">🔴 Bad</button>
+        <div class="grid4">
+            <button class="none" ontouchstart="sel('swelling','none',this)" onclick="sel('swelling','none',this)">🟢<br>None</button>
+            <button class="mild" ontouchstart="sel('swelling','mild',this)" onclick="sel('swelling','mild',this)">🟡<br>Mild</button>
+            <button class="mod" ontouchstart="sel('swelling','moderate',this)" onclick="sel('swelling','moderate',this)">🟠<br>Mod</button>
+            <button class="bad" ontouchstart="sel('swelling','severe',this)" onclick="sel('swelling','severe',this)">🔴<br>Bad</button>
         </div>
 
-        <label>Pain: <span class="value" id="pain-val">0</span>/10</label>
-        <input type="range" id="pain" min="0" max="10" value="0" oninput="document.getElementById('pain-val').textContent = this.value">
+        <label>Pain: <span class="val" id="pval">0</span>/10</label>
+        <input type="range" id="pain" min="0" max="10" value="0" 
+               oninput="this.nextElementSibling.querySelector('.val').textContent=this.value; console.log('Pain:',this.value)">
+        <div style="display:none"><span class="val">0</span></div>
 
-        <label>Activity Level</label>
-        <div class="btn-group three">
-            <button class="active" onclick="selectActivity('light', this)">🚶 Light</button>
-            <button onclick="selectActivity('moderate', this)">🏃 Moderate</button>
-            <button onclick="selectActivity('active', this)">💪 Active</button>
+        <label>Activity</label>
+        <div class="grid3">
+            <button class="light active" ontouchstart="sel('activity','light',this)" onclick="sel('activity','light',this)">🚶<br>Light</button>
+            <button class="moderate" ontouchstart="sel('activity','moderate',this)" onclick="sel('activity','moderate',this)">🏃<br>Moderate</button>
+            <button class="hard" ontouchstart="sel('activity','active',this)" onclick="sel('activity','active',this)">💪<br>Active</button>
         </div>
 
         <label>Time</label>
-        <div class="btn-group three">
-            <button class="active" onclick="selectTime('morning', this)">🌅 AM</button>
-            <button onclick="selectTime('afternoon', this)">☀️ PM</button>
-            <button onclick="selectTime('evening', this)">🌙 Eve</button>
+        <div class="grid3">
+            <button class="am active" ontouchstart="sel('time','morning',this)" onclick="sel('time','morning',this)">🌅<br>AM</button>
+            <button class="pm" ontouchstart="sel('time','afternoon',this)" onclick="sel('time','afternoon',this)">☀️<br>PM</button>
+            <button class="eve" ontouchstart="sel('time','evening',this)" onclick="sel('time','evening',this)">🌙<br>Eve</button>
         </div>
 
         <label>Notes</label>
-        <textarea id="notes" rows="2" placeholder="How's the knee?"></textarea>
+        <textarea id="notes" rows="3" placeholder="How's the knee?"></textarea>
 
-        <button class="save-btn" onclick="saveCheckIn()">Save Check-In</button>
+        <button class="big-save" ontouchstart="this.style.opacity='0.8'" ontouchend="this.style.opacity='1';save()" onclick="save()">
+            💾 Save Check-In
+        </button>
     </div>
 
-    <nav>
-        <button class="active">🏠 Home</button>
-        <button>📝 Log</button>
-        <button>📊 Stats</button>
-        <button>💪 Library</button>
-    </nav>
-
     <script>
-        let swelling = null, activity = 'light', time = 'morning';
+        const state = { swelling: null, activity: 'light', time: 'morning' };
 
-        function selectSwelling(level, btn) {
-            console.log('Swelling:', level);
-            document.querySelectorAll('.btn-group button').forEach(b => {
-                if (b.parentElement === btn.parentElement) b.classList.remove('active');
-            });
+        function sel(type, val, btn) {
+            console.log(type + ':', val);
+            
+            // Remove active from siblings
+            const parent = btn.parentElement;
+            parent.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            
+            // Add active to clicked
             btn.classList.add('active');
-            swelling = level;
-            document.getElementById('status').innerHTML = `Selected: <span class="value">${level}</span>`;
+            
+            // Update state
+            state[type] = val;
+            
+            // Update display
+            if (type === 'swelling') {
+                document.getElementById('result').innerHTML = 
+                    `Swelling: <span class="val">${val}</span>`;
+            }
+            
+            return false; // Prevent any event bubbling
         }
 
-        function selectActivity(level, btn) {
-            console.log('Activity:', level);
-            btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            activity = level;
-        }
-
-        function selectTime(t, btn) {
-            console.log('Time:', t);
-            btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            time = t;
-        }
-
-        function saveCheckIn() {
-            if (!swelling) {
-                alert('⚠️ Select swelling first');
-                return;
+        function save() {
+            console.log('SAVE CLICKED');
+            
+            if (!state.swelling) {
+                alert('⚠️ Select swelling');
+                return false;
             }
             
             const data = {
-                swelling: swelling,
-                pain: parseInt(document.getElementById('pain').value),
-                activity: activity,
-                time: time,
+                swelling: state.swelling,
+                pain: parseInt(document.getElementById('pain').value) || 0,
+                activity: state.activity,
+                time: state.time,
                 notes: document.getElementById('notes').value,
-                date: new Date().toISOString().split('T')[0]
+                date: new Date().toISOString().split('T')[0],
+                timestamp: new Date().toISOString()
             };
             
-            console.log('Saving:', data);
-            localStorage.setItem('lastCheckIn', JSON.stringify(data));
-            alert('✅ Saved! Check console to verify.');
+            console.log('Saving:', JSON.stringify(data, null, 2));
             
-            // Verify it saved
-            const saved = localStorage.getItem('lastCheckIn');
-            console.log('Verified:', saved);
+            try {
+                localStorage.setItem('check_in', JSON.stringify(data));
+                console.log('✅ SAVED TO STORAGE');
+                
+                // Verify
+                const verify = localStorage.getItem('check_in');
+                console.log('Verified:', verify);
+                
+                alert('✅ Saved!\n\nSwelling: ' + data.swelling + '\nPain: ' + data.pain);
+                
+                document.getElementById('result').innerHTML = 
+                    `✅ Saved! Swelling: <span class="val">${data.swelling}</span> Pain: <span class="val">${data.pain}</span>`;
+                    
+            } catch(e) {
+                console.error('SAVE ERROR:', e);
+                alert('❌ Error: ' + e.message);
+            }
+            
+            return false;
         }
 
-        // Load on start
-        const saved = localStorage.getItem('lastCheckIn');
+        // Test on load
+        console.log('Testing localStorage...');
+        try {
+            localStorage.setItem('test', 'works');
+            const test = localStorage.getItem('test');
+            console.log('localStorage test:', test);
+            if (test === 'works') {
+                console.log('✅ localStorage WORKS');
+            } else {
+                console.error('❌ localStorage FAILED');
+            }
+        } catch(e) {
+            console.error('❌ localStorage ERROR:', e);
+            alert('⚠️ Storage blocked!\n\nGo to Settings → Safari\nTurn OFF: Prevent Cross-Site Tracking');
+        }
+
+        // Load existing
+        const saved = localStorage.getItem('check_in');
         if (saved) {
+            console.log('Found saved data:', saved);
             const data = JSON.parse(saved);
-            console.log('Found saved:', data);
+            document.getElementById('result').innerHTML = 
+                `Last: <span class="val">${data.swelling}</span> pain <span class="val">${data.pain}</span>`;
         }
     </script>
 </body>
