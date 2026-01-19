@@ -1,0 +1,108 @@
+/* Activity Level & Time of Day Buttons */
+
+.activity-level-btn, .time-btn {
+    flex: 1;
+    padding: 14px 8px;
+    background: white;
+    border: 2px solid var(--gray-300);
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 64px;
+}
+
+.activity-level-btn:active, .time-btn:active {
+    transform: scale(0.97);
+}
+
+.activity-level-btn[data-level="light"].active {
+    background: #E8F5E9;
+    border-color: var(--green);
+    color: var(--green);
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+}
+
+.activity-level-btn[data-level="moderate"].active {
+    background: #FFF3E0;
+    border-color: var(--orange);
+    color: var(--orange);
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.2);
+}
+
+.activity-level-btn[data-level="active"].active {
+    background: #FFEBEE;
+    border-color: var(--red);
+    color: var(--red);
+    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.2);
+}
+
+.time-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(46, 125, 50, 0.3);
+}
+
+/* Workout Type Toggle - Enhanced Clickability */
+.workout-type-selector {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+    background: white;
+    padding: 8px;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.workout-type-btn {
+    padding: 16px;
+    background: var(--gray-50);
+    border: 2px solid var(--gray-200);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--gray-600);
+    min-height: 80px;
+    position: relative;
+}
+
+.workout-type-btn:active {
+    transform: scale(0.98);
+}
+
+.workout-type-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+    transform: translateY(-2px);
+}
+
+.workout-type-btn div {
+    pointer-events: none;
+}
+
+/* Modal click handling */
+.modal-content {
+    position: relative;
+    pointer-events: auto;
+}
+
+/* Better tap targets for mobile */
+button, .exercise-tile, .activity-chip, 
+.swelling-btn, .activity-level-btn, .time-btn {
+    -webkit-tap-highlight-color: rgba(0,0,0,0.1);
+    touch-action: manipulation;
+}
