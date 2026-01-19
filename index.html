@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="custom-styles.css">
     <link rel="stylesheet" href="stopwatch-styles.css">
     <link rel="stylesheet" href="measurement-styles.css">
+    <link rel="stylesheet" href="toggle-fix.css">
 </head>
 <body>
     <header>
@@ -47,19 +48,19 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Activity Level Today</label>
+                    <label>Activity Level Before Check-In</label>
                     <div class="button-group">
                         <button class="activity-level-btn active" data-level="light">
-                            <div style="font-size: 20px;">🚶</div>
-                            <div style="font-size: 12px;">Light</div>
+                            <div style="font-size: 24px;">🚶</div>
+                            <div>Light</div>
                         </button>
                         <button class="activity-level-btn" data-level="moderate">
-                            <div style="font-size: 20px;">🏃</div>
-                            <div style="font-size: 12px;">Moderate</div>
+                            <div style="font-size: 24px;">🏃</div>
+                            <div>Moderate</div>
                         </button>
                         <button class="activity-level-btn" data-level="active">
-                            <div style="font-size: 20px;">💪</div>
-                            <div style="font-size: 12px;">Active</div>
+                            <div style="font-size: 24px;">💪</div>
+                            <div>Active</div>
                         </button>
                     </div>
                 </div>
@@ -67,15 +68,15 @@
                 <div class="form-group">
                     <label>Time of Day</label>
                     <div class="button-group">
-                        <button class="time-btn active" data-time="morning">🌅 AM</button>
-                        <button class="time-btn" data-time="afternoon">☀️ PM</button>
-                        <button class="time-btn" data-time="evening">🌙 Eve</button>
+                        <button class="time-btn active" data-time="morning">🌅 Morning</button>
+                        <button class="time-btn" data-time="afternoon">☀️ Afternoon</button>
+                        <button class="time-btn" data-time="evening">🌙 Evening</button>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Notes</label>
-                    <textarea id="checkin-notes" rows="2" placeholder="How's the knee feeling?"></textarea>
+                    <textarea id="checkin-notes" rows="2" placeholder="How's the knee? Clicking? Stiffness?"></textarea>
                 </div>
 
                 <button id="save-checkin" class="primary-button">Save Check-In</button>
@@ -120,15 +121,15 @@
                 <p class="timer-info">Rewards at 30s, 45s, 60s!</p>
             </section>
             
-            <!-- Workout Type Selector (FIXED) -->
+            <!-- Workout Type Selector -->
             <div class="workout-type-selector">
                 <button class="workout-type-btn active" data-type="exercises">
-                    <div style="font-size: 28px; margin-bottom: 4px;">💪</div>
-                    <div style="font-weight: 700;">Exercises</div>
+                    <div style="font-size: 32px; margin-bottom: 4px;">💪</div>
+                    <div style="font-weight: 700; font-size: 15px;">Exercises</div>
                 </button>
                 <button class="workout-type-btn" data-type="custom">
-                    <div style="font-size: 28px; margin-bottom: 4px;">🎯</div>
-                    <div style="font-weight: 700;">Custom</div>
+                    <div style="font-size: 32px; margin-bottom: 4px;">🎯</div>
+                    <div style="font-weight: 700; font-size: 15px;">Custom</div>
                 </button>
             </div>
 
@@ -150,53 +151,16 @@
                     </div>
                     
                     <div class="dosage-tracker">
-                        <div class="tracker-item">
-                            <label>Sets</label>
-                            <div class="stepper">
-                                <button class="stepper-btn" onclick="adjustValue('sets-completed', -1)">−</button>
-                                <input type="number" id="sets-completed" value="3" class="stepper-input" readonly>
-                                <button class="stepper-btn" onclick="adjustValue('sets-completed', 1)">+</button>
-                            </div>
-                        </div>
-                        <div class="tracker-item">
-                            <label>Reps</label>
-                            <div class="stepper">
-                                <button class="stepper-btn" onclick="adjustValue('reps-completed', -1)">−</button>
-                                <input type="number" id="reps-completed" value="10" class="stepper-input" readonly>
-                                <button class="stepper-btn" onclick="adjustValue('reps-completed', 1)">+</button>
-                            </div>
-                        </div>
-                        <div class="tracker-item" id="hold-tracker">
-                            <label>Hold (s)</label>
-                            <div class="stepper">
-                                <button class="stepper-btn" onclick="adjustValue('hold-time', -5)">−5</button>
-                                <input type="number" id="hold-time" value="0" class="stepper-input" readonly>
-                                <button class="stepper-btn" onclick="adjustValue('hold-time', 5)">+5</button>
-                            </div>
-                        </div>
-                        <div class="tracker-item">
-                            <label>Weight</label>
-                            <div class="stepper">
-                                <button class="stepper-btn" onclick="adjustValue('weight-used', -5)">−5</button>
-                                <input type="number" id="weight-used" value="0" class="stepper-input" readonly>
-                                <button class="stepper-btn" onclick="adjustValue('weight-used', 5)">+5</button>
-                            </div>
-                        </div>
+                        <div class="tracker-item"><label>Sets</label><div class="stepper"><button class="stepper-btn" onclick="adjustValue('sets-completed', -1)">−</button><input type="number" id="sets-completed" value="3" class="stepper-input" readonly><button class="stepper-btn" onclick="adjustValue('sets-completed', 1)">+</button></div></div>
+                        <div class="tracker-item"><label>Reps</label><div class="stepper"><button class="stepper-btn" onclick="adjustValue('reps-completed', -1)">−</button><input type="number" id="reps-completed" value="10" class="stepper-input" readonly><button class="stepper-btn" onclick="adjustValue('reps-completed', 1)">+</button></div></div>
+                        <div class="tracker-item" id="hold-tracker"><label>Hold (s)</label><div class="stepper"><button class="stepper-btn" onclick="adjustValue('hold-time', -5)">−5</button><input type="number" id="hold-time" value="0" class="stepper-input" readonly><button class="stepper-btn" onclick="adjustValue('hold-time', 5)">+5</button></div></div>
+                        <div class="tracker-item"><label>Weight</label><div class="stepper"><button class="stepper-btn" onclick="adjustValue('weight-used', -5)">−5</button><input type="number" id="weight-used" value="0" class="stepper-input" readonly><button class="stepper-btn" onclick="adjustValue('weight-used', 5)">+5</button></div></div>
                     </div>
-                    <div class="form-group">
-                        <label>Effort: <span id="rpe-value" class="value-display">5</span>/10</label>
-                        <input type="range" id="rpe-slider" min="1" max="10" value="5" class="slider">
-                    </div>
-                    <div class="form-group">
-                        <label>Notes</label>
-                        <textarea id="exercise-notes" rows="2" placeholder="How'd it feel?"></textarea>
-                    </div>
+                    <div class="form-group"><label>Effort: <span id="rpe-value" class="value-display">5</span>/10</label><input type="range" id="rpe-slider" min="1" max="10" value="5" class="slider"></div>
+                    <div class="form-group"><label>Notes</label><textarea id="exercise-notes" rows="2" placeholder="How'd it feel?"></textarea></div>
                     <button id="save-exercise" class="primary-button">✅ Log</button>
                 </div>
-                <div id="exercise-trends" class="card">
-                    <h3>Progress</h3>
-                    <div id="trend-chart"></div>
-                </div>
+                <div id="exercise-trends" class="card"><h3>Progress</h3><div id="trend-chart"></div></div>
             </div>
 
             <div id="custom-workout-form" class="log-form" style="display: none;">
@@ -206,48 +170,17 @@
                         <button id="close-custom-form" class="close-btn">×</button>
                     </div>
                     
-                    <div class="form-group">
-                        <label>Details</label>
-                        <input type="text" id="custom-workout-type" class="text-input" placeholder="e.g., Power Zone with Matt">
-                    </div>
-                    <div class="form-group">
-                        <label>Duration</label>
-                        <div class="stepper" style="justify-content: center;">
-                            <button class="stepper-btn" onclick="adjustValue('custom-duration', -5)">−5</button>
-                            <input type="number" id="custom-duration" value="30" class="stepper-input" readonly>
-                            <button class="stepper-btn" onclick="adjustValue('custom-duration', 5)">+5</button>
-                            <span style="margin-left: 8px; font-weight: 600;">min</span>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Intensity: <span id="custom-intensity-value" class="value-display">5</span>/10</label>
-                        <input type="range" id="custom-intensity" min="1" max="10" value="5" class="slider">
-                    </div>
-                    <div class="form-group">
-                        <label>Knee Impact</label>
-                        <div class="button-group">
-                            <button class="impact-btn active" data-impact="none"><div>🟢</div></button>
-                            <button class="impact-btn" data-impact="low"><div>🟡</div></button>
-                            <button class="impact-btn" data-impact="moderate"><div>🟠</div></button>
-                            <button class="impact-btn" data-impact="high"><div>🔴</div></button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Notes</label>
-                        <textarea id="custom-notes" rows="2" placeholder="How'd it feel?"></textarea>
-                    </div>
+                    <div class="form-group"><label>Details</label><input type="text" id="custom-workout-type" class="text-input" placeholder="e.g., Power Zone"></div>
+                    <div class="form-group"><label>Duration</label><div class="stepper" style="justify-content: center;"><button class="stepper-btn" onclick="adjustValue('custom-duration', -5)">−5</button><input type="number" id="custom-duration" value="30" class="stepper-input" readonly><button class="stepper-btn" onclick="adjustValue('custom-duration', 5)">+5</button><span style="margin-left: 8px; font-weight: 600;">min</span></div></div>
+                    <div class="form-group"><label>Intensity: <span id="custom-intensity-value" class="value-display">5</span>/10</label><input type="range" id="custom-intensity" min="1" max="10" value="5" class="slider"></div>
+                    <div class="form-group"><label>Impact</label><div class="button-group"><button class="impact-btn active" data-impact="none"><div>🟢</div></button><button class="impact-btn" data-impact="low"><div>🟡</div></button><button class="impact-btn" data-impact="moderate"><div>🟠</div></button><button class="impact-btn" data-impact="high"><div>🔴</div></button></div></div>
+                    <div class="form-group"><label>Notes</label><textarea id="custom-notes" rows="2" placeholder="How'd it feel?"></textarea></div>
                     <button id="save-custom-workout" class="primary-button">✅ Log</button>
                 </div>
-                <div id="custom-workout-history" class="card">
-                    <h3>Recent</h3>
-                    <div id="custom-history-list"></div>
-                </div>
+                <div id="custom-workout-history" class="card"><h3>Recent</h3><div id="custom-history-list"></div></div>
             </div>
 
-            <div id="todays-summary" class="card">
-                <h3>Today</h3>
-                <div id="todays-exercise-list"></div>
-            </div>
+            <div id="todays-summary" class="card"><h3>Today</h3><div id="todays-exercise-list"></div></div>
         </div>
 
         <!-- Analytics -->
@@ -268,10 +201,9 @@
                 <div class="stat-card"><div class="stat-value" id="green-days">0</div><div class="stat-label">Green Days</div></div>
             </div>
 
-            <!-- Measurements Summary -->
             <div class="card" style="border-left: 4px solid #1976D2; cursor: pointer;" onclick="openMeasurementModal()">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                    <h3 style="margin: 0; color: #1976D2;">📏 Body Measurements</h3>
+                    <h3 style="margin: 0; color: #1976D2;">📏 Measurements</h3>
                     <div style="font-size: 28px; color: #1976D2;">+</div>
                 </div>
                 <div id="measurement-summary"></div>
@@ -280,20 +212,13 @@
             <div class="card"><h3>📊 Swelling</h3><div id="swelling-chart"></div></div>
             <div class="card"><h3>📊 Pain</h3><div id="pain-chart"></div></div>
             <div class="card"><h3>📊 Frequency</h3><div id="workout-frequency-chart"></div></div>
-            <div class="card"><h3>💪 Top Exercises</h3><div id="exercise-breakdown"></div></div>
-
-            <div class="card">
-                <h3>📈 Deep Dive</h3>
-                <select id="analytics-exercise-select" class="exercise-select">
-                    <option value="">Choose...</option>
-                </select>
-                <div id="exercise-analytics"></div>
-            </div>
+            <div class="card"><h3>💪 Top</h3><div id="exercise-breakdown"></div></div>
+            <div class="card"><h3>📈 Deep Dive</h3><select id="analytics-exercise-select" class="exercise-select"><option value="">Choose...</option></select><div id="exercise-analytics"></div></div>
 
             <h3 style="margin: 24px 0 12px 0;">Daily Log</h3>
             <div id="history-list"></div>
             
-            <button id="export-data" class="secondary-button">📤 Export All Data</button>
+            <button id="export-data" class="secondary-button">📤 Export</button>
         </div>
 
         <!-- Library -->
@@ -319,46 +244,28 @@
             
             <div class="modal-body">
                 <h4 style="margin-top: 0; color: var(--primary);">Knee Circumference</h4>
-                <p style="font-size: 13px; color: var(--gray-600); margin-bottom: 12px;">Measure 2cm above patella (effusion zone)</p>
+                <p style="font-size: 13px; color: var(--gray-600); margin-bottom: 12px;">2cm above patella (effusion zone)</p>
                 
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px;">
                     <div class="form-group">
-                        <label>Right Knee (cm)</label>
+                        <label>Right (cm)</label>
                         <input type="number" id="knee-right" step="0.1" class="text-input" placeholder="38.5">
                     </div>
                     <div class="form-group">
-                        <label>Left Knee (cm)</label>
+                        <label>Left (cm)</label>
                         <input type="number" id="knee-left" step="0.1" class="text-input" placeholder="37.5">
                     </div>
                 </div>
 
                 <details>
-                    <summary style="cursor: pointer; padding: 12px; background: var(--gray-100); border-radius: 8px; font-weight: 600;">➕ Optional Measurements</summary>
+                    <summary style="cursor: pointer; padding: 12px; background: var(--gray-100); border-radius: 8px; font-weight: 600;">➕ Optional</summary>
                     <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
-                        <div class="form-group">
-                            <label>R Thigh (cm)</label>
-                            <input type="number" id="thigh-right" step="0.1" class="text-input" placeholder="50">
-                        </div>
-                        <div class="form-group">
-                            <label>L Thigh (cm)</label>
-                            <input type="number" id="thigh-left" step="0.1" class="text-input" placeholder="49">
-                        </div>
-                        <div class="form-group">
-                            <label>R Calf (cm)</label>
-                            <input type="number" id="calf-right" step="0.1" class="text-input" placeholder="38">
-                        </div>
-                        <div class="form-group">
-                            <label>L Calf (cm)</label>
-                            <input type="number" id="calf-left" step="0.1" class="text-input" placeholder="38">
-                        </div>
-                        <div class="form-group">
-                            <label>Waist (cm)</label>
-                            <input type="number" id="waist" step="0.1" class="text-input" placeholder="92">
-                        </div>
-                        <div class="form-group">
-                            <label>Weight (lbs)</label>
-                            <input type="number" id="weight" step="0.1" class="text-input" placeholder="192">
-                        </div>
+                        <div class="form-group"><label>R Thigh (cm)</label><input type="number" id="thigh-right" step="0.1" class="text-input" placeholder="50"></div>
+                        <div class="form-group"><label>L Thigh (cm)</label><input type="number" id="thigh-left" step="0.1" class="text-input" placeholder="49"></div>
+                        <div class="form-group"><label>R Calf (cm)</label><input type="number" id="calf-right" step="0.1" class="text-input" placeholder="38"></div>
+                        <div class="form-group"><label>L Calf (cm)</label><input type="number" id="calf-left" step="0.1" class="text-input" placeholder="38"></div>
+                        <div class="form-group"><label>Waist (cm)</label><input type="number" id="waist" step="0.1" class="text-input" placeholder="92"></div>
+                        <div class="form-group"><label>Weight (lbs)</label><input type="number" id="weight" step="0.1" class="text-input" placeholder="192"></div>
                     </div>
                 </details>
 
@@ -372,10 +279,10 @@
 
                 <div class="form-group">
                     <label>Notes</label>
-                    <textarea id="measurement-notes" rows="2" placeholder="Measurement conditions, observations..."></textarea>
+                    <textarea id="measurement-notes" rows="2" placeholder="Conditions, observations..."></textarea>
                 </div>
 
-                <button id="save-measurement" class="primary-button">💾 Save Measurements</button>
+                <button id="save-measurement" class="primary-button">💾 Save</button>
             </div>
         </div>
     </div>
