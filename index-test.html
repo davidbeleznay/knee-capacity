@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KneeCapacity - Button Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="toggle-fix.css">
+</head>
+<body>
+    <header>
+        <h1>💪 KneeCapacity</h1>
+        <div class="streak-badge"><span>🔥</span><span id="streak-count">0</span></div>
+    </header>
+
+    <main id="app-content">
+        <div id="home-view" class="view active">
+            
+            <section id="knee-status-card" class="status-card text-center">
+                <div class="status-icon">❓</div>
+                <h2>Complete Check-In</h2>
+            </section>
+
+            <section class="card">
+                <h2>Daily Check-In</h2>
+                
+                <div class="form-group">
+                    <label>Swelling</label>
+                    <div class="swelling-group">
+                        <button class="swelling-btn" data-level="none">🟢 None</button>
+                        <button class="swelling-btn" data-level="mild">🟡 Mild</button>
+                        <button class="swelling-btn" data-level="moderate">🟠 Mod</button>
+                        <button class="swelling-btn" data-level="severe">🔴 Bad</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Pain: <span id="pain-value" class="value-display">0</span>/10</label>
+                    <input type="range" id="pain-slider" min="0" max="10" value="0" class="slider">
+                </div>
+
+                <div class="form-group">
+                    <label>Activity Level</label>
+                    <div class="activity-group">
+                        <button class="activity-level-btn active" data-level="light">🚶 Light</button>
+                        <button class="activity-level-btn" data-level="moderate">🏃 Moderate</button>
+                        <button class="activity-level-btn" data-level="active">💪 Active</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Time</label>
+                    <div class="time-group">
+                        <button class="time-btn active" data-time="morning">🌅 AM</button>
+                        <button class="time-btn" data-time="afternoon">☀️ PM</button>
+                        <button class="time-btn" data-time="evening">🌙 Eve</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="checkin-notes" rows="2" placeholder="How's the knee?"></textarea>
+                </div>
+
+                <button id="save-checkin" class="primary-button">Save Check-In</button>
+            </section>
+
+        </div>
+
+        <div id="log-view" class="view">
+            <h2>Log Workout</h2>
+            
+            <div class="toggle-container">
+                <button id="toggle-exercises" class="toggle-btn active">💪 Exercises</button>
+                <button id="toggle-custom" class="toggle-btn">🎯 Custom</button>
+            </div>
+
+            <div id="exercise-tiles">Exercise tiles here</div>
+            <div id="custom-workout-tiles" style="display: none;">Custom tiles here</div>
+        </div>
+
+        <div id="history-view" class="view"><h2>Stats</h2></div>
+        <div id="exercises-view" class="view"><h2>Library</h2></div>
+    </main>
+
+    <div id="measurement-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Test Modal</h2>
+            <button onclick="closeMeasurementModal()">Close</button>
+        </div>
+    </div>
+
+    <nav id="bottom-nav">
+        <button class="nav-btn active" data-view="home"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
+        <button class="nav-btn" data-view="log"><span class="nav-icon">📝</span><span class="nav-label">Log</span></button>
+        <button class="nav-btn" data-view="history"><span class="nav-icon">📊</span><span class="nav-label">Stats</span></button>
+        <button class="nav-btn" data-view="exercises"><span class="nav-icon">💪</span><span class="nav-label">Library</span></button>
+    </nav>
+
+    <script src="data.js"></script>
+    <script src="app-test.js"></script>
+</body>
+</html>
