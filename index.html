@@ -2,96 +2,220 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KneeCapacity</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; padding: 70px 0 80px 0; }
-        header { position: fixed; top: 0; left: 0; right: 0; background: #2E7D32; color: white; padding: 20px; text-align: center; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .card { background: white; margin: 16px; padding: 20px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-        h2 { margin-bottom: 20px; font-size: 22px; }
-        label { display: block; font-weight: 700; margin: 20px 0 12px 0; font-size: 16px; color: #333; }
-        .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        button { padding: 18px 10px; background: #fff; border: 3px solid #e0e0e0; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; min-height: 70px; touch-action: manipulation; font-family: inherit; }
-        button:active { transform: scale(0.92); opacity: 0.8; }
-        button.active { border-width: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-        .none.active { background: #4CAF50; color: white; border-color: #4CAF50; }
-        .mild.active { background: #FFC107; color: #333; border-color: #FFC107; }
-        .mod.active { background: #FF9800; color: white; border-color: #FF9800; }
-        .bad.active { background: #F44336; color: white; border-color: #F44336; }
-        .light.active { background: #E8F5E9; border-color: #4CAF50; color: #2E7D32; }
-        .moderate.active { background: #FFF3E0; border-color: #FF9800; color: #F57C00; }
-        .hard.active { background: #FFEBEE; border-color: #F44336; color: #C62828; }
-        .am.active, .pm.active, .eve.active { background: #2E7D32; color: white; border-color: #2E7D32; }
-        input[type="range"] { width: 100%; height: 50px; margin: 16px 0; -webkit-appearance: none; background: transparent; }
-        input[type="range"]::-webkit-slider-track { height: 8px; background: #e0e0e0; border-radius: 4px; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; background: #2E7D32; border-radius: 50%; cursor: pointer; margin-top: -12px; }
-        textarea { width: 100%; padding: 14px; border: 2px solid #e0e0e0; border-radius: 12px; font: inherit; font-size: 16px; }
-        .big-save { background: #2E7D32; color: white; width: 100%; padding: 22px; font-size: 19px; border: none; margin-top: 24px; border-radius: 14px; }
-        .big-save:active { background: #1B5E20; }
-        #result { margin: 16px; padding: 24px; background: white; border-radius: 16px; text-align: center; font-size: 20px; min-height: 80px; display: flex; align-items: center; justify-content: center; }
-        .val { font-size: 32px; color: #2E7D32; font-weight: 800; margin: 0 6px; }
-    </style>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="custom-styles.css">
+    <link rel="stylesheet" href="stopwatch-styles.css">
+    <link rel="stylesheet" href="measurement-styles.css">
+    <link rel="stylesheet" href="toggle-fix.css">
 </head>
 <body>
-    <header><h1>💪 KneeCapacity</h1></header>
-    <div id="result">Tap a swelling button below</div>
-    <div class="card">
-        <h2>Daily Check-In</h2>
-        <label>Swelling</label>
-        <div class="grid4">
-            <button class="none" ontouchstart="sel('swelling','none',this)" onclick="sel('swelling','none',this)">🟢<br>None</button>
-            <button class="mild" ontouchstart="sel('swelling','mild',this)" onclick="sel('swelling','mild',this)">🟡<br>Mild</button>
-            <button class="mod" ontouchstart="sel('swelling','moderate',this)" onclick="sel('swelling','moderate',this)">🟠<br>Mod</button>
-            <button class="bad" ontouchstart="sel('swelling','severe',this)" onclick="sel('swelling','severe',this)">🔴<br>Bad</button>
+    <header>
+        <h1>💪 KneeCapacity</h1>
+        <div id="streak-display" class="streak-badge"><span>🔥</span><span id="streak-count">0</span></div>
+    </header>
+
+    <main id="app-content">
+        <div id="home-view" class="view active">
+            <section id="knee-status-card" class="status-card text-center">
+                <div class="status-icon">❓</div>
+                <h2>Complete Check-In</h2>
+            </section>
+
+            <section class="card">
+                <h2>Daily Check-In</h2>
+                <div class="form-group">
+                    <label>Swelling</label>
+                    <div class="swelling-group">
+                        <button class="swelling-btn" data-level="none" ontouchstart="selectSwelling('none',this)" onclick="selectSwelling('none',this)">🟢 None</button>
+                        <button class="swelling-btn" data-level="mild" ontouchstart="selectSwelling('mild',this)" onclick="selectSwelling('mild',this)">🟡 Mild</button>
+                        <button class="swelling-btn" data-level="moderate" ontouchstart="selectSwelling('moderate',this)" onclick="selectSwelling('moderate',this)">🟠 Mod</button>
+                        <button class="swelling-btn" data-level="severe" ontouchstart="selectSwelling('severe',this)" onclick="selectSwelling('severe',this)">🔴 Bad</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Pain: <span id="pain-value">0</span>/10</label>
+                    <input type="range" id="pain-slider" min="0" max="10" value="0" class="slider" oninput="document.getElementById('pain-value').textContent=this.value">
+                </div>
+                <div class="form-group">
+                    <label>Activity Level</label>
+                    <div class="activity-group">
+                        <button class="activity-level-btn active" data-level="light" ontouchstart="selectActivity('light',this)" onclick="selectActivity('light',this)">🚶 Light</button>
+                        <button class="activity-level-btn" data-level="moderate" ontouchstart="selectActivity('moderate',this)" onclick="selectActivity('moderate',this)">🏃 Moderate</button>
+                        <button class="activity-level-btn" data-level="active" ontouchstart="selectActivity('active',this)" onclick="selectActivity('active',this)">💪 Active</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Time</label>
+                    <div class="time-group">
+                        <button class="time-btn active" data-time="morning" ontouchstart="selectTime('morning',this)" onclick="selectTime('morning',this)">🌅 AM</button>
+                        <button class="time-btn" data-time="afternoon" ontouchstart="selectTime('afternoon',this)" onclick="selectTime('afternoon',this)">☀️ PM</button>
+                        <button class="time-btn" data-time="evening" ontouchstart="selectTime('evening',this)" onclick="selectTime('evening',this)">🌙 Eve</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="checkin-notes" rows="2"></textarea>
+                </div>
+                <button id="save-checkin" class="primary-button" ontouchstart="saveCheckIn()" onclick="saveCheckIn()">Save Check-In</button>
+            </section>
+
+            <section class="card">
+                <h3>This Week</h3>
+                <div id="week-summary"></div>
+            </section>
         </div>
-        <label>Pain: <span class="val" id="pval">0</span>/10</label>
-        <input type="range" id="pain" min="0" max="10" value="0" oninput="document.getElementById('pval').textContent=this.value">
-        <label>Activity</label>
-        <div class="grid3">
-            <button class="light active" ontouchstart="sel('activity','light',this)" onclick="sel('activity','light',this)">🚶<br>Light</button>
-            <button class="moderate" ontouchstart="sel('activity','moderate',this)" onclick="sel('activity','moderate',this)">🏃<br>Moderate</button>
-            <button class="hard" ontouchstart="sel('activity','active',this)" onclick="sel('activity','active',this)">💪<br>Active</button>
+
+        <div id="log-view" class="view">
+            <h2>Log Workout</h2>
+            <section class="card stopwatch-card">
+                <h3>⏱️ Stopwatch</h3>
+                <div id="stopwatch-display" class="stopwatch-display">00:00</div>
+                <button id="stopwatch-action" class="primary-button" ontouchstart="toggleStopwatch()" onclick="toggleStopwatch()">Start</button>
+            </section>
+            <div id="todays-summary" class="card"><h3>Today</h3><div id="todays-list">No workouts yet</div></div>
         </div>
-        <label>Time</label>
-        <div class="grid3">
-            <button class="am active" ontouchstart="sel('time','morning',this)" onclick="sel('time','morning',this)">🌅<br>AM</button>
-            <button class="pm" ontouchstart="sel('time','afternoon',this)" onclick="sel('time','afternoon',this)">☀️<br>PM</button>
-            <button class="eve" ontouchstart="sel('time','evening',this)" onclick="sel('time','evening',this)">🌙<br>Eve</button>
+
+        <div id="history-view" class="view">
+            <h2>Analytics</h2>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value" id="total-checkIns">0</div><div class="stat-label">Check-ins</div></div>
+                <div class="stat-card"><div class="stat-value" id="avg-pain">0</div><div class="stat-label">Avg Pain</div></div>
+            </div>
+            <div id="history-list"></div>
         </div>
-        <label>Notes</label>
-        <textarea id="notes" rows="3" placeholder="How's the knee?"></textarea>
-        <button class="big-save" ontouchstart="this.style.opacity='0.8'" ontouchend="this.style.opacity='1';save()" onclick="save()">💾 Save Check-In</button>
-    </div>
+
+        <div id="exercises-view" class="view">
+            <h2>Library</h2>
+            <p style="padding: 40px; text-align: center;">Exercise library coming soon</p>
+        </div>
+    </main>
+
+    <nav id="bottom-nav">
+        <button class="nav-btn active" data-view="home" ontouchstart="switchView('home',this)" onclick="switchView('home',this)"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
+        <button class="nav-btn" data-view="log" ontouchstart="switchView('log',this)" onclick="switchView('log',this)"><span class="nav-icon">📝</span><span class="nav-label">Log</span></button>
+        <button class="nav-btn" data-view="history" ontouchstart="switchView('history',this)" onclick="switchView('history',this)"><span class="nav-icon">📊</span><span class="nav-label">Stats</span></button>
+        <button class="nav-btn" data-view="exercises" ontouchstart="switchView('exercises',this)" onclick="switchView('exercises',this)"><span class="nav-icon">💪</span><span class="nav-label">Library</span></button>
+    </nav>
+
+    <script src="data.js"></script>
     <script>
-        const state = { swelling: null, activity: 'light', time: 'morning' };
-        function sel(type, val, btn) {
-            console.log(type + ':', val);
-            btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        let state = { swelling: null, activity: 'light', time: 'morning', stopwatchSeconds: 0, stopwatchRunning: false, stopwatchInterval: null };
+        
+        function selectSwelling(level, btn) {
+            document.querySelectorAll('.swelling-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            state[type] = val;
-            if (type === 'swelling') document.getElementById('result').innerHTML = `Swelling: <span class="val">${val}</span>`;
-            return false;
+            state.swelling = level;
         }
-        function save() {
-            if (!state.swelling) { alert('⚠️ Select swelling'); return false; }
-            const data = { swelling: state.swelling, pain: parseInt(document.getElementById('pain').value) || 0, activity: state.activity, time: state.time, notes: document.getElementById('notes').value, date: new Date().toISOString().split('T')[0], timestamp: new Date().toISOString() };
-            try {
-                let checkIns = JSON.parse(localStorage.getItem('checkIns') || '[]');
-                const idx = checkIns.findIndex(c => c.date === data.date);
-                if (idx >= 0) checkIns[idx] = data; else checkIns.push(data);
-                localStorage.setItem('checkIns', JSON.stringify(checkIns));
-                alert('✅ Saved!\\n\\nSwelling: ' + data.swelling + '\\nPain: ' + data.pain);
-                document.getElementById('result').innerHTML = `✅ Saved! Swelling: <span class="val">${data.swelling}</span> Pain: <span class="val">${data.pain}</span>`;
-            } catch(e) { alert('❌ Error: ' + e.message); }
-            return false;
+        
+        function selectActivity(level, btn) {
+            document.querySelectorAll('.activity-level-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.activity = level;
         }
-        const saved = localStorage.getItem('checkIns');
-        if (saved) {
-            const checkIns = JSON.parse(saved);
-            const today = checkIns.find(c => c.date === new Date().toISOString().split('T')[0]);
-            if (today) document.getElementById('result').innerHTML = `Today: <span class="val">${today.swelling}</span> pain <span class="val">${today.pain}</span>`;
+        
+        function selectTime(time, btn) {
+            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.time = time;
+        }
+        
+        function saveCheckIn() {
+            if (!state.swelling) { alert('⚠️ Select swelling'); return; }
+            DataManager.saveCheckIn({
+                swelling: state.swelling,
+                pain: parseInt(document.getElementById('pain-slider').value),
+                activityLevel: state.activity,
+                timeOfDay: state.time,
+                notes: document.getElementById('checkin-notes').value
+            });
+            alert('✅ Saved!');
+            updateWeekSummary();
+            updateHistoryView();
+        }
+        
+        function switchView(viewName, btn) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(viewName + '-view').classList.add('active');
+            btn.classList.add('active');
+            if (viewName === 'history') updateHistoryView();
+        }
+        
+        function toggleStopwatch() {
+            if (state.stopwatchRunning) {
+                clearInterval(state.stopwatchInterval);
+                state.stopwatchRunning = false;
+                document.getElementById('stopwatch-action').textContent = 'Start';
+            } else {
+                state.stopwatchRunning = true;
+                document.getElementById('stopwatch-action').textContent = 'Stop';
+                state.stopwatchInterval = setInterval(() => {
+                    state.stopwatchSeconds++;
+                    const mins = Math.floor(state.stopwatchSeconds / 60);
+                    const secs = state.stopwatchSeconds % 60;
+                    document.getElementById('stopwatch-display').textContent = 
+                        mins.toString().padStart(2, '0') + ':' + secs.toString().padStart(2, '0');
+                }, 1000);
+            }
+        }
+        
+        function updateWeekSummary() {
+            const checkIns = DataManager.getRecentCheckIns(7);
+            const greenDays = checkIns.filter(c => DataManager.getKneeStatusForCheckIn(c) === 'GREEN').length;
+            const avgPain = checkIns.length > 0 ? (checkIns.reduce((s, c) => s + (c.pain || 0), 0) / checkIns.length).toFixed(1) : 0;
+            
+            document.getElementById('week-summary').innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                    <div style="text-align: center; padding: 12px; background: #f5f5f5; border-radius: 10px;">
+                        <div style="font-size: 24px; font-weight: 800; color: #2E7D32;">${greenDays}</div>
+                        <div style="font-size: 12px; color: #666;">Green Days</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px; background: #f5f5f5; border-radius: 10px;">
+                        <div style="font-size: 24px; font-weight: 800; color: #2E7D32;">${avgPain}</div>
+                        <div style="font-size: 12px; color: #666;">Avg Pain</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function updateHistoryView() {
+            const checkIns = DataManager.getRecentCheckIns(30);
+            document.getElementById('total-checkIns').textContent = checkIns.length;
+            const avgPain = checkIns.length > 0 ? (checkIns.reduce((s, c) => s + (c.pain || 0), 0) / checkIns.length).toFixed(1) : 0;
+            document.getElementById('avg-pain').textContent = avgPain;
+            
+            const list = document.getElementById('history-list');
+            if (checkIns.length === 0) {
+                list.innerHTML = '<p style="text-align: center; padding: 40px;">No data yet</p>';
+                return;
+            }
+            
+            list.innerHTML = checkIns.map(c => {
+                const status = DataManager.getKneeStatusForCheckIn(c);
+                const colors = { GREEN: '#4CAF50', YELLOW: '#FFC107', RED: '#F44336' };
+                return `<div style="background: white; padding: 16px; border-radius: 12px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <div style="font-weight: 700;">${new Date(c.date).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'})}</div>
+                        <div style="font-weight: 800; color: ${colors[status]};">${status}</div>
+                    </div>
+                    <div style="font-size: 14px; color: #666; margin-top: 8px;">
+                        ${c.swelling} | Pain ${c.pain}/10 | ${c.activityLevel} | ${c.timeOfDay}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        
+        DataManager.init();
+        updateWeekSummary();
+        const today = DataManager.getCheckIn(new Date().toISOString().split('T')[0]);
+        if (today) {
+            state.swelling = today.swelling;
+            state.activity = today.activityLevel || 'light';
+            state.time = today.timeOfDay || 'morning';
+            document.getElementById('pain-slider').value = today.pain || 0;
+            document.getElementById('pain-value').textContent = today.pain || 0;
         }
     </script>
 </body>
