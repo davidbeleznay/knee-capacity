@@ -47,21 +47,38 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Activities</label>
-                    <div class="activity-grid">
-                        <label class="activity-chip"><input type="checkbox" value="volleyball"><span class="chip-content">🏐 Volleyball</span></label>
-                        <label class="activity-chip"><input type="checkbox" value="peloton"><span class="chip-content">🚴 Peloton</span></label>
-                        <label class="activity-chip"><input type="checkbox" value="rowing"><span class="chip-content">🚣 Rowing</span></label>
-                        <label class="activity-chip"><input type="checkbox" value="walking"><span class="chip-content">🚶 Walk</span></label>
+                    <label>Activity Level Today</label>
+                    <div class="button-group">
+                        <button class="activity-level-btn active" data-level="light">
+                            <div style="font-size: 20px;">🚶</div>
+                            <div style="font-size: 12px;">Light</div>
+                        </button>
+                        <button class="activity-level-btn" data-level="moderate">
+                            <div style="font-size: 20px;">🏃</div>
+                            <div style="font-size: 12px;">Moderate</div>
+                        </button>
+                        <button class="activity-level-btn" data-level="active">
+                            <div style="font-size: 20px;">💪</div>
+                            <div style="font-size: 12px;">Active</div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Time of Day</label>
+                    <div class="button-group">
+                        <button class="time-btn active" data-time="morning">🌅 AM</button>
+                        <button class="time-btn" data-time="afternoon">☀️ PM</button>
+                        <button class="time-btn" data-time="evening">🌙 Eve</button>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Notes</label>
-                    <textarea id="checkin-notes" rows="2" placeholder="How's the knee?"></textarea>
+                    <textarea id="checkin-notes" rows="2" placeholder="How's the knee feeling?"></textarea>
                 </div>
 
-                <button id="save-checkin" class="primary-button">Save</button>
+                <button id="save-checkin" class="primary-button">Save Check-In</button>
             </section>
 
             <section class="card">
@@ -70,13 +87,13 @@
             </section>
 
             <!-- Measurements Link -->
-            <section class="card" style="background: linear-gradient(135deg, #E3F2FD, white); border-left: 4px solid #1976D2;">
+            <section class="card" style="background: linear-gradient(135deg, #E3F2FD, white); border-left: 4px solid #1976D2; cursor: pointer;" onclick="openMeasurementModal()">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <h3 style="margin: 0 0 6px 0; color: #1976D2;">📏 Body Measurements</h3>
-                        <p style="font-size: 13px; color: var(--gray-600); margin: 0;" id="last-measurement-date">Track weekly</p>
+                        <p style="font-size: 13px; color: var(--gray-600); margin: 0;" id="last-measurement-date">Tap to add weekly</p>
                     </div>
-                    <button onclick="openMeasurementModal()" class="secondary-button" style="width: auto; padding: 10px 20px; margin: 0;">Add</button>
+                    <div style="font-size: 32px; color: #1976D2;">→</div>
                 </div>
             </section>
 
@@ -103,9 +120,16 @@
                 <p class="timer-info">Rewards at 30s, 45s, 60s!</p>
             </section>
             
+            <!-- Workout Type Selector (FIXED) -->
             <div class="workout-type-selector">
-                <button class="workout-type-btn active" data-type="exercises"><span style="font-size: 24px;">💪</span><span>Exercises</span></button>
-                <button class="workout-type-btn" data-type="custom"><span style="font-size: 24px;">🎯</span><span>Custom</span></button>
+                <button class="workout-type-btn active" data-type="exercises">
+                    <div style="font-size: 28px; margin-bottom: 4px;">💪</div>
+                    <div style="font-weight: 700;">Exercises</div>
+                </button>
+                <button class="workout-type-btn" data-type="custom">
+                    <div style="font-size: 28px; margin-bottom: 4px;">🎯</div>
+                    <div style="font-weight: 700;">Custom</div>
+                </button>
             </div>
 
             <div id="exercise-tiles" class="exercise-tiles"></div>
@@ -184,7 +208,7 @@
                     
                     <div class="form-group">
                         <label>Details</label>
-                        <input type="text" id="custom-workout-type" class="text-input" placeholder="e.g., Power Zone">
+                        <input type="text" id="custom-workout-type" class="text-input" placeholder="e.g., Power Zone with Matt">
                     </div>
                     <div class="form-group">
                         <label>Duration</label>
@@ -200,7 +224,7 @@
                         <input type="range" id="custom-intensity" min="1" max="10" value="5" class="slider">
                     </div>
                     <div class="form-group">
-                        <label>Impact</label>
+                        <label>Knee Impact</label>
                         <div class="button-group">
                             <button class="impact-btn active" data-impact="none"><div>🟢</div></button>
                             <button class="impact-btn" data-impact="low"><div>🟡</div></button>
@@ -245,13 +269,12 @@
             </div>
 
             <!-- Measurements Summary -->
-            <div class="card" style="border-left: 4px solid #1976D2;">
+            <div class="card" style="border-left: 4px solid #1976D2; cursor: pointer;" onclick="openMeasurementModal()">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                     <h3 style="margin: 0; color: #1976D2;">📏 Body Measurements</h3>
-                    <button onclick="openMeasurementModal()" class="secondary-button" style="width: auto; padding: 8px 16px; margin: 0;">Add</button>
+                    <div style="font-size: 28px; color: #1976D2;">+</div>
                 </div>
                 <div id="measurement-summary"></div>
-                <div id="measurement-history" style="margin-top: 16px;"></div>
             </div>
 
             <div class="card"><h3>📊 Swelling</h3><div id="swelling-chart"></div></div>
@@ -270,7 +293,7 @@
             <h3 style="margin: 24px 0 12px 0;">Daily Log</h3>
             <div id="history-list"></div>
             
-            <button id="export-data" class="secondary-button">📤 Export</button>
+            <button id="export-data" class="secondary-button">📤 Export All Data</button>
         </div>
 
         <!-- Library -->
@@ -287,8 +310,8 @@
     </main>
 
     <!-- Measurement Modal -->
-    <div id="measurement-modal" class="modal" style="display: none;">
-        <div class="modal-content">
+    <div id="measurement-modal" class="modal" style="display: none;" onclick="handleModalClick(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h2>📏 Measurements</h2>
                 <button onclick="closeMeasurementModal()" class="close-btn">×</button>
@@ -296,21 +319,21 @@
             
             <div class="modal-body">
                 <h4 style="margin-top: 0; color: var(--primary);">Knee Circumference</h4>
-                <p style="font-size: 13px; color: var(--gray-600); margin-bottom: 12px;">2cm above patella (effusion zone)</p>
+                <p style="font-size: 13px; color: var(--gray-600); margin-bottom: 12px;">Measure 2cm above patella (effusion zone)</p>
                 
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px;">
                     <div class="form-group">
-                        <label>Right (cm)</label>
+                        <label>Right Knee (cm)</label>
                         <input type="number" id="knee-right" step="0.1" class="text-input" placeholder="38.5">
                     </div>
                     <div class="form-group">
-                        <label>Left (cm)</label>
+                        <label>Left Knee (cm)</label>
                         <input type="number" id="knee-left" step="0.1" class="text-input" placeholder="37.5">
                     </div>
                 </div>
 
                 <details>
-                    <summary>➕ Optional Measurements</summary>
+                    <summary style="cursor: pointer; padding: 12px; background: var(--gray-100); border-radius: 8px; font-weight: 600;">➕ Optional Measurements</summary>
                     <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
                         <div class="form-group">
                             <label>R Thigh (cm)</label>
@@ -349,10 +372,10 @@
 
                 <div class="form-group">
                     <label>Notes</label>
-                    <textarea id="measurement-notes" rows="2" placeholder="Conditions, observations..."></textarea>
+                    <textarea id="measurement-notes" rows="2" placeholder="Measurement conditions, observations..."></textarea>
                 </div>
 
-                <button id="save-measurement" class="primary-button">💾 Save</button>
+                <button id="save-measurement" class="primary-button">💾 Save Measurements</button>
             </div>
         </div>
     </div>
