@@ -1,0 +1,1023 @@
+﻿// State Management Module
+const AppState = {
+    swelling: null,
+    pain: 0,
+    activityLevel: 'light',
+    timeOfDay: 'morning',
+    currentView: 'home',
+    kneeStatus: 'unknown',
+    selectedExercise: null,
+    selectedCustomWorkout: null,
+    kneeImpact: 'none',
+    posture: 'relaxed',
+    analyticsDays: 7
+};
+
+function updateState(key, value) {
+    AppState[key] = value;
+    console.log(`State updated: ${key} = ${value}`);
+}
+
+function getState(key) {
+    return AppState[key];
+}
+// Utility Helpers
+function getExerciseIcon(id) {
+    // Return empty string - no icons/badges needed
+    return '';
+}
+
+function adjustValue(inputId, delta) {
+    const input = document.getElementById(inputId);
+    let value = parseInt(input.value) || 0;
+    value = Math.max(0, value + delta);
+    
+    const limits = {
+        'sets-completed': 10,
+        'reps-completed': 50,
+        'hold-time': 120,
+        'weight-used': 500,
+        'custom-duration': 180
+    };
+    
+    if (limits[inputId]) {
+        value = Math.min(limits[inputId], value);
+    }
+    
+    input.value = value;
+}
+
+function updateStreakDisplay() {
+    const el = document.getElementById('streak-count');
+    if (el) el.textContent = DataManager.getCurrentStreak();
+}
+// View Router Module
+function switchView(viewName) {
+    console.log('â†’', viewName);
+    
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    
+    document.getElementById(`${viewName}-view`).classList.add('active');
+    document.querySelector(`.nav-btn[data-view="${viewName}"]`).classList.add('active');
+    
+    AppState.currentView = viewName;
+    
+    // Trigger view-specific rendering
+    if (viewName === 'home') {
+        updateKneeStatusCard();
+        updateWeekSummary();
+    }
+    if (viewName === 'log') {
+        renderExerciseTiles();
+        renderTodaysSummary();
+    }
+    if (viewName === 'history') {
+        renderAnalytics(AppState.analyticsDays);
+        renderMeasurementSummary();
+    }
+    if (viewName === 'exercises') {
+        renderExerciseLibrary('all');
+    }
+}
+
+function setupNavigation() {
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        const handler = function() { switchView(this.dataset.view); };
+        btn.ontouchstart = handler;
+        btn.onclick = handler;
+    });
+}
+// Check-In UI Module
+function setupCheckInHandlers() {
+    document.querySelectorAll('.swelling-btn').forEach(btn => {
+        const handler = function() {
+            console.log('Swelling:', this.dataset.level);
+            document.querySelectorAll('.swelling-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            AppState.swelling = this.dataset.level;
+        };
+        btn.ontouchstart = handler;
+        btn.onclick = handler;
+    });
+    
+    document.querySelectorAll('.activity-level-btn').forEach(btn => {
+        const handler = function() {
+            document.querySelectorAll('.activity-level-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            AppState.activityLevel = this.dataset.level;
+        };
+        btn.ontouchstart = handler;
+        btn.onclick = handler;
+    });
+    
+    document.querySelectorAll('.time-btn').forEach(btn => {
+        const handler = function() {
+            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            AppState.timeOfDay = this.dataset.time;
+        };
+        btn.ontouchstart = handler;
+        btn.onclick = handler;
+    });
+    
+    document.getElementById('pain-slider').oninput = (e) => {
+        document.getElementById('pain-value').textContent = e.target.value;
+        AppState.pain = parseInt(e.target.value);
+    };
+    
+    document.getElementById('save-checkin').onclick = saveCheckIn;
+}
+
+function saveCheckIn() {
+    if (!AppState.swelling) {
+        alert('âš ï¸ Select swelling');
+        return;
+    }
+    
+    console.log('ðŸ’¾ Saving check-in...');
+    
+    const success = DataManager.saveCheckIn({ 
+        swelling: AppState.swelling, 
+        pain: AppState.pain,
+        activityLevel: AppState.activityLevel,
+        timeOfDay: AppState.timeOfDay,
+        notes: document.getElementById('checkin-notes').value
+    });
+    
+    if (success) {
+        updateKneeStatusCard();
+        updateWeekSummary();
+        
+        const btn = document.getElementById('save-checkin');
+        btn.textContent = 'Saved!';
+        btn.style.background = '#4CAF50';
+        setTimeout(() => {
+            btn.textContent = 'Save Check-In';
+            btn.style.background = '';
+        }, 2000);
+    }
+}
+
+function loadTodayCheckIn() {
+    const checkIn = DataManager.getCheckIn(new Date().toISOString().split('T')[0]);
+    if (!checkIn) return;
+    
+    console.log('ðŸ“¥ Loading check-in');
+    
+    if (checkIn.swelling) {
+        const btn = document.querySelector(`.swelling-btn[data-level="${checkIn.swelling}"]`);
+        if (btn) {
+            btn.classList.add('active');
+            AppState.swelling = checkIn.swelling;
+        }
+    }
+    
+    if (checkIn.pain !== undefined) {
+        document.getElementById('pain-slider').value = checkIn.pain;
+        document.getElementById('pain-value').textContent = checkIn.pain;
+        AppState.pain = checkIn.pain;
+    }
+    
+    if (checkIn.activityLevel) {
+        const btn = document.querySelector(`.activity-level-btn[data-level="${checkIn.activityLevel}"]`);
+        if (btn) {
+            document.querySelectorAll('.activity-level-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            AppState.activityLevel = checkIn.activityLevel;
+        }
+    }
+    
+    if (checkIn.timeOfDay) {
+        const btn = document.querySelector(`.time-btn[data-time="${checkIn.timeOfDay}"]`);
+        if (btn) {
+            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            AppState.timeOfDay = checkIn.timeOfDay;
+        }
+    }
+    
+    if (checkIn.notes) {
+        document.getElementById('checkin-notes').value = checkIn.notes;
+    }
+}
+
+function updateKneeStatusCard() {
+    const statusInfo = DataManager.getKneeStatusMessage();
+    const status = DataManager.getKneeStatus();
+    AppState.kneeStatus = status;
+    
+    const card = document.getElementById('knee-status-card');
+    card.className = `status-card status-${status} text-center`;
+    card.innerHTML = `
+        <div class="status-icon">${statusInfo.icon}</div>
+        <h2>${statusInfo.title}</h2>
+        <p style="font-size: 16px; margin: 12px 0;">${statusInfo.message}</p>
+        <div style="background: rgba(0,0,0,0.05); padding: 12px; border-radius: 10px; margin-top: 12px;">
+            <strong>Plan:</strong> ${statusInfo.action}
+        </div>
+    `;
+    
+    const badge = document.getElementById('current-mode-badge');
+    if (badge) {
+        badge.className = `mode-badge mode-${status}`;
+        badge.textContent = status.toUpperCase();
+    }
+}
+
+function updateWeekSummary() {
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    
+    const weekData = DataManager.getRecentCheckIns(7);
+    const weekExercises = DataManager.getExerciseLogs().filter(e => new Date(e.date) >= weekStart);
+    const weekCustom = DataManager.getCustomWorkouts().filter(w => new Date(w.date) >= weekStart);
+    
+    const greenDays = weekData.filter(c => DataManager.getKneeStatusForCheckIn(c) === 'GREEN').length;
+    const avgPain = weekData.length > 0 ? 
+        (weekData.reduce((s, c) => s + (c.pain || 0), 0) / weekData.length).toFixed(1) : 0;
+    
+    document.getElementById('week-summary').innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+            <div style="text-align: center; padding: 12px; background: var(--gray-50); border-radius: 10px;">
+                <div style="font-size: 24px; font-weight: 800; color: var(--primary);">${greenDays}</div>
+                <div style="font-size: 12px; color: var(--gray-600);">Green Days</div>
+            </div>
+            <div style="text-align: center; padding: 12px; background: var(--gray-50); border-radius: 10px;">
+                <div style="font-size: 24px; font-weight: 800; color: var(--primary);">${avgPain}</div>
+                <div style="font-size: 12px; color: var(--gray-600);">Avg Pain</div>
+            </div>
+            <div style="text-align: center; padding: 12px; background: var(--gray-50); border-radius: 10px;">
+                <div style="font-size: 24px; font-weight: 800; color: var(--primary);">${weekExercises.length}</div>
+                <div style="font-size: 12px; color: var(--gray-600);">Exercises</div>
+            </div>
+            <div style="text-align: center; padding: 12px; background: var(--gray-50); border-radius: 10px;">
+                <div style="font-size: 24px; font-weight: 800; color: var(--primary);">${weekCustom.length}</div>
+                <div style="font-size: 12px; color: var(--gray-600);">Workouts</div>
+            </div>
+        </div>
+    `;
+}
+// Stopwatch Module
+const Stopwatch = {
+    seconds: 0,
+    isRunning: false,
+    interval: null,
+    audioContext: null,
+    milestones: [30, 45, 60, 90, 120],
+    hitMilestones: [],
+    
+    init() {
+        const actionBtn = document.getElementById('stopwatch-action');
+        const resetBtn = document.getElementById('reset-stopwatch');
+        
+        if (actionBtn) {
+            const toggleHandler = () => {
+                if (this.isRunning) this.stop();
+                else this.start();
+            };
+            actionBtn.ontouchstart = toggleHandler;
+            actionBtn.onclick = toggleHandler;
+        }
+        
+        if (resetBtn) {
+            const resetHandler = () => {
+                if (confirm('Reset?')) this.reset();
+            };
+            resetBtn.ontouchstart = resetHandler;
+            resetBtn.onclick = resetHandler;
+        }
+    },
+    
+    start() {
+        if (this.isRunning) return;
+        
+        this.isRunning = true;
+        this.hitMilestones = [];
+        
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        const actionBtn = document.getElementById('stopwatch-action');
+        actionBtn.textContent = 'Stop';
+        actionBtn.style.background = '#F44336';
+        
+        document.getElementById('reset-stopwatch').style.display = 'inline-block';
+        document.getElementById('milestone-badges').style.display = 'flex';
+        
+        this.interval = setInterval(() => this.tick(), 1000);
+    },
+    
+    tick() {
+        this.seconds++;
+        this.updateDisplay();
+        this.checkMilestones();
+    },
+    
+    stop() {
+        if (!this.isRunning) return;
+        
+        clearInterval(this.interval);
+        this.isRunning = false;
+        
+        const actionBtn = document.getElementById('stopwatch-action');
+        actionBtn.textContent = 'Start';
+        actionBtn.style.background = '';
+        
+        if (this.seconds >= 30) this.playSuccessSound();
+    },
+    
+    reset() {
+        clearInterval(this.interval);
+        this.isRunning = false;
+        this.seconds = 0;
+        this.hitMilestones = [];
+        
+        this.updateDisplay();
+        
+        const actionBtn = document.getElementById('stopwatch-action');
+        actionBtn.textContent = 'Start';
+        actionBtn.style.background = '';
+        
+        document.getElementById('reset-stopwatch').style.display = 'none';
+        document.getElementById('milestone-badges').style.display = 'none';
+        document.getElementById('milestone-badges').innerHTML = '';
+    },
+    
+    updateDisplay() {
+        const mins = Math.floor(this.seconds / 60);
+        const secs = this.seconds % 60;
+        document.getElementById('stopwatch-display').textContent = 
+            `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    },
+    
+    checkMilestones() {
+        this.milestones.forEach(milestone => {
+            if (this.seconds === milestone && !this.hitMilestones.includes(milestone)) {
+                this.hitMilestones.push(milestone);
+                this.celebrateMilestone(milestone);
+            }
+        });
+    },
+    
+    celebrateMilestone(milestone) {
+        this.playMilestoneSound(milestone);
+        
+        const badgesContainer = document.getElementById('milestone-badges');
+        const badge = document.createElement('div');
+        badge.className = 'milestone-badge milestone-new';
+        badge.innerHTML = `<span class="milestone-icon">ðŸŽ¯</span><span class="milestone-text">${milestone}s!</span>`;
+        badgesContainer.appendChild(badge);
+        
+        setTimeout(() => badge.classList.remove('milestone-new'), 500);
+        
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    },
+    
+    playMilestoneSound(milestone) {
+        if (!this.audioContext) return;
+        
+        const frequencies = { 30: 523, 45: 659, 60: 784, 90: 880, 120: 1047 };
+        
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        
+        oscillator.frequency.value = frequencies[milestone] || 659;
+        gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+        
+        oscillator.start(this.audioContext.currentTime);
+        oscillator.stop(this.audioContext.currentTime + 0.2);
+    },
+    
+    playSuccessSound() {
+        if (!this.audioContext) return;
+        
+        [523, 659, 784].forEach((freq, i) => {
+            setTimeout(() => {
+                const osc = this.audioContext.createOscillator();
+                const gain = this.audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(this.audioContext.destination);
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+                osc.start(this.audioContext.currentTime);
+                osc.stop(this.audioContext.currentTime + 0.3);
+            }, i * 100);
+        });
+    }
+};
+// Workouts Module - Exercise & Custom Workout Logging
+
+function setupWorkoutHandlers() {
+    const toggleEx = document.getElementById('toggle-exercises');
+    const toggleCu = document.getElementById('toggle-custom');
+    
+    if (toggleEx) {
+        const h = () => {
+            console.log('â†’ Exercises');
+            toggleEx.classList.add('active');
+            toggleCu.classList.remove('active');
+            document.getElementById('exercise-tiles').style.display = 'grid';
+            document.getElementById('custom-workout-tiles').style.display = 'none';
+        };
+        toggleEx.ontouchstart = h;
+        toggleEx.onclick = h;
+    }
+    
+    if (toggleCu) {
+        const h = () => {
+            console.log('â†’ Custom');
+            toggleCu.classList.add('active');
+            toggleEx.classList.remove('active');
+            document.getElementById('exercise-tiles').style.display = 'none';
+            document.getElementById('custom-workout-tiles').style.display = 'grid';
+        };
+        toggleCu.ontouchstart = h;
+        toggleCu.onclick = h;
+    }
+    
+    document.querySelectorAll('.impact-btn').forEach(btn => {
+        const h = function() {
+            document.querySelectorAll('.impact-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            AppState.kneeImpact = this.dataset.impact;
+        };
+        btn.ontouchstart = h;
+        btn.onclick = h;
+    });
+    
+    const rpeSlider = document.getElementById('rpe-slider');
+    if (rpeSlider) rpeSlider.oninput = (e) => document.getElementById('rpe-value').textContent = e.target.value;
+    
+    const customIntensity = document.getElementById('custom-intensity');
+    if (customIntensity) customIntensity.oninput = (e) => document.getElementById('custom-intensity-value').textContent = e.target.value;
+    
+    const saveEx = document.getElementById('save-exercise');
+    if (saveEx) { saveEx.ontouchstart = saveExerciseLog; saveEx.onclick = saveExerciseLog; }
+    
+    const saveCust = document.getElementById('save-custom-workout');
+    if (saveCust) { saveCust.ontouchstart = saveCustomWorkout; saveCust.onclick = saveCustomWorkout; }
+    
+    const closeForm = document.getElementById('close-form');
+    if (closeForm) { closeForm.ontouchstart = closeExerciseForm; closeForm.onclick = closeExerciseForm; }
+    
+    const closeCust = document.getElementById('close-custom-form');
+    if (closeCust) { closeCust.ontouchstart = closeCustomForm; closeCust.onclick = closeCustomForm; }
+}
+
+function renderExerciseTiles() {
+    const container = document.getElementById('exercise-tiles');
+    if (!container) return;
+    
+    const status = AppState.kneeStatus;
+    const phaseMap = { 'green': ['Build', 'Prime'], 'yellow': ['Build', 'Calm'], 'red': ['Calm'], 'unknown': ['Calm', 'Build'] };
+    
+    const filtered = EXERCISES.filter(ex => ex.phase.some(p => phaseMap[status].includes(p)));
+    
+    container.innerHTML = filtered.map(ex => {
+        const icon = getExerciseIcon(ex.id);
+        const hold = ex.dosage.holdTime > 0 ? `x${ex.dosage.holdTime}s` : '';
+        const name = ex.name.replace(' (Isometric)', '').replace(' (Eccentric)', '');
+        
+        return `<div class="exercise-tile" ontouchstart="selectExerciseForLogging('${ex.id}')" onclick="selectExerciseForLogging('${ex.id}')">
+            <div><div class="tile-icon">${icon}</div><div class="tile-name">${name}</div></div>
+            <div><div class="tile-meta">${ex.dosage.sets}x${ex.dosage.reps}${hold}</div></div>
+        </div>`;
+    }).join('');
+}
+
+function selectExerciseForLogging(id) {
+    AppState.selectedExercise = window.getExerciseById(id);
+    if (!AppState.selectedExercise) return;
+    
+    document.getElementById('exercise-log-form').style.display = 'block';
+    document.getElementById('exercise-tiles').style.display = 'none';
+    document.getElementById('custom-workout-tiles').style.display = 'none';
+    
+    const ex = AppState.selectedExercise;
+    document.getElementById('selected-exercise-name').textContent = ex.name;
+    document.getElementById('sets-completed').value = ex.dosage.sets;
+    document.getElementById('reps-completed').value = ex.dosage.reps;
+    document.getElementById('hold-time').value = ex.dosage.holdTime;
+    document.getElementById('weight-used').value = 0;
+    document.getElementById('rpe-slider').value = 5;
+    document.getElementById('rpe-value').textContent = '5';
+    document.getElementById('exercise-notes').value = '';
+    
+    document.getElementById('hold-tracker').style.display = ex.dosage.holdTime > 0 ? 'block' : 'none';
+    renderExerciseTrends(id);
+}
+
+function closeExerciseForm() {
+    document.getElementById('exercise-log-form').style.display = 'none';
+    document.getElementById('exercise-tiles').style.display = 'grid';
+    AppState.selectedExercise = null;
+}
+
+function saveExerciseLog() {
+    if (!AppState.selectedExercise) return;
+    
+    DataManager.saveExerciseLog({
+        exerciseId: AppState.selectedExercise.id,
+        exerciseName: AppState.selectedExercise.name,
+        setsCompleted: parseInt(document.getElementById('sets-completed').value),
+        repsPerSet: parseInt(document.getElementById('reps-completed').value),
+        holdTimeSeconds: parseInt(document.getElementById('hold-time').value),
+        weightUsed: parseInt(document.getElementById('weight-used').value),
+        rpe: parseInt(document.getElementById('rpe-slider').value),
+        notes: document.getElementById('exercise-notes').value
+    });
+    
+    const btn = document.getElementById('save-exercise');
+    btn.textContent = 'Logged!';
+    btn.style.background = '#4CAF50';
+    setTimeout(() => { btn.textContent = 'Log'; btn.style.background = ''; closeExerciseForm(); renderTodaysSummary(); updateWeekSummary(); }, 1000);
+}
+
+function selectCustomWorkout(type) {
+    const names = { peloton: 'ðŸš´ Peloton', rowing: 'ðŸš£ Rowing', core: 'ðŸŽ¯ Core', stretch: 'ðŸ§˜ Stretch' };
+    AppState.selectedCustomWorkout = type;
+    document.getElementById('custom-workout-tiles').style.display = 'none';
+    document.getElementById('custom-workout-form').style.display = 'block';
+    document.getElementById('custom-workout-title').textContent = names[type];
+    
+    const defaults = { peloton: { duration: 30, intensity: 6, impact: 'none' }, rowing: { duration: 20, intensity: 5, impact: 'none' }, core: { duration: 15, intensity: 6, impact: 'none' }, stretch: { duration: 10, intensity: 3, impact: 'none' } };
+    const preset = defaults[type];
+    document.getElementById('custom-duration').value = preset.duration;
+    document.getElementById('custom-intensity').value = preset.intensity;
+    document.getElementById('custom-intensity-value').textContent = preset.intensity;
+    document.querySelectorAll('.impact-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.impact-btn[data-impact="${preset.impact}"]`).classList.add('active');
+    AppState.kneeImpact = preset.impact;
+}
+
+function closeCustomForm() {
+    document.getElementById('custom-workout-form').style.display = 'none';
+    document.getElementById('custom-workout-tiles').style.display = 'grid';
+    AppState.selectedCustomWorkout = null;
+}
+
+function saveCustomWorkout() {
+    if (!AppState.selectedCustomWorkout) return;
+    DataManager.saveCustomWorkout({
+        workoutCategory: AppState.selectedCustomWorkout,
+        workoutType: document.getElementById('custom-workout-type').value || AppState.selectedCustomWorkout,
+        durationMinutes: parseInt(document.getElementById('custom-duration').value),
+        intensity: parseInt(document.getElementById('custom-intensity').value),
+        kneeImpact: AppState.kneeImpact,
+        notes: document.getElementById('custom-notes').value
+    });
+    const btn = document.getElementById('save-custom-workout');
+    btn.textContent = 'Logged!';
+    btn.style.background = '#4CAF50';
+    setTimeout(() => { btn.textContent = 'Log'; btn.style.background = ''; closeCustomForm(); renderTodaysSummary(); }, 1000);
+}
+
+function renderTodaysSummary() {
+    const exercises = DataManager.getTodaysExerciseLogs();
+    const custom = DataManager.getTodaysCustomWorkouts();
+    const container = document.getElementById('todays-exercise-list');
+    
+    if (exercises.length === 0 && custom.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666; padding: 30px;">None yet</p>';
+        return;
+    }
+    
+    let html = '';
+    custom.forEach(w => {
+        const icons = { peloton: 'ðŸš´', rowing: 'ðŸš£', core: 'ðŸŽ¯', stretch: 'ðŸ§˜' };
+        html += `<div style="padding: 12px; background: #f5f5f5; border-radius: 10px; margin-bottom: 8px;">
+            <div style="font-weight: 700;">${icons[w.workoutCategory]} ${w.workoutType || w.workoutCategory}</div>
+            <div style="font-size: 13px; color: #666; margin-top: 4px;">${w.durationMinutes}min â€¢ ${w.intensity}/10</div>
+        </div>`;
+    });
+    exercises.forEach(log => {
+        const icon = getExerciseIcon(log.exerciseId);
+        const hold = log.holdTimeSeconds > 0 ? ` x ${log.holdTimeSeconds}s` : '';
+        html += `<div style="padding: 12px; background: #f5f5f5; border-radius: 10px; margin-bottom: 8px;">
+            <div style="font-weight: 700;">${icon} ${log.exerciseName.split('(')[0].trim()}</div>
+            <div style="font-size: 13px; color: #666; margin-top: 4px;">${log.setsCompleted}x${log.repsPerSet}${hold}</div>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+function renderExerciseTrends(id) {
+    const history = DataManager.getExerciseHistory(id, 30);
+    const container = document.getElementById('trend-chart');
+    if (history.length < 2) { container.innerHTML = '<p style="text-align: center; padding: 20px;">Log more</p>'; return; }
+    
+    const recent = history.slice(0, 10).reverse();
+    const metric = recent.some(h => h.holdTimeSeconds > 0) ? 'hold' : 'reps';
+    const getValue = (l) => metric === 'hold' ? l.holdTimeSeconds : l.repsPerSet;
+    const values = recent.map(getValue);
+    const max = Math.max(...values);
+    const avg = (values.reduce((a,b) => a+b, 0) / values.length).toFixed(1);
+    
+    container.innerHTML = `<div style="text-align: center; margin-bottom: 12px;"><div>Avg: <strong style="color: #2E7D32; font-size: 18px;">${avg}</strong> ${metric === 'hold' ? 's' : 'reps'}</div></div>
+        <div class="chart-row">${recent.map((l, i) => {
+            const val = getValue(l);
+            const height = max > 0 ? (val / max) * 100 : 0;
+            const improved = i > 0 && val > getValue(recent[i-1]);
+            return `<div class="chart-bar" style="height: ${height}%; background: ${improved ? '#4CAF50' : '#2E7D32'};">
+                <span class="chart-value">${val}</span><span class="chart-label">${new Date(l.date).getDate()}</span></div>`;
+        }).join('')}</div>`;
+}
+
+function renderExerciseLibrary() {
+    const container = document.getElementById('exercise-library');
+    if (!container) return;
+    container.innerHTML = EXERCISES.map(ex => `<div class="exercise-card">
+        <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+            <div style="font-size: 40px;">${getExerciseIcon(ex.id)}</div>
+            <div><h3>${ex.name}</h3><p style="font-size: 13px; color: #666;">${ex.category}</p></div>
+        </div><p>${ex.description}</p>
+        <div style="background: #E8F5E9; padding: 14px; border-radius: 10px; margin-top: 12px;">
+            <strong>Why:</strong> ${ex.why}</div></div>`).join('');
+}
+// Analytics Module
+
+function setupAnalyticsHandlers() {
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        const h = function() {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            AppState.analyticsDays = parseInt(this.dataset.days);
+            renderAnalytics(AppState.analyticsDays);
+        };
+        btn.ontouchstart = h;
+        btn.onclick = h;
+    });
+    
+    const exportBtn = document.getElementById('export-data');
+    if (exportBtn) { exportBtn.ontouchstart = () => DataManager.exportData(); exportBtn.onclick = () => DataManager.exportData(); }
+    
+    const exerciseSelect = document.getElementById('analytics-exercise-select');
+    if (exerciseSelect) {
+        exerciseSelect.onchange = (e) => {
+            if (e.target.value) renderIndividualExerciseAnalytics(e.target.value, AppState.analyticsDays);
+        };
+    }
+}
+
+function renderAnalytics(days) {
+    renderSummaryStats(days);
+    renderSwellingTrend(days);
+    renderPainTrend(days);
+    renderWorkoutFrequency(days);
+    renderExerciseBreakdown(days);
+    renderHistory(days);
+}
+
+function renderSummaryStats(days) {
+    const exercises = DataManager.getExerciseLogs().filter(e => (new Date() - new Date(e.date)) / (1000*60*60*24) <= days);
+    const custom = DataManager.getCustomWorkouts().filter(w => (new Date() - new Date(w.date)) / (1000*60*60*24) <= days);
+    const checkIns = DataManager.getRecentCheckIns(days);
+    
+    const avgPain = checkIns.length > 0 ? (checkIns.reduce((s, c) => s + (c.pain || 0), 0) / checkIns.length).toFixed(1) : 0;
+    const greenDays = checkIns.filter(c => DataManager.getKneeStatusForCheckIn(c) === 'GREEN').length;
+    
+    document.getElementById('total-workouts').textContent = exercises.length + custom.length;
+    document.getElementById('total-exercises').textContent = exercises.length;
+    document.getElementById('avg-pain').textContent = avgPain;
+    document.getElementById('green-days').textContent = greenDays;
+}
+
+function populateAnalyticsExerciseSelect() {
+    const select = document.getElementById('analytics-exercise-select');
+    if (!select) return;
+    
+    // Avoid duplicating options if called multiple times
+    select.innerHTML = '<option value="">Select an exercise</option>';
+    
+    (window.EXERCISES || []).forEach(ex => {
+        const option = document.createElement('option');
+        option.value = ex.id;
+        option.textContent = ex.name;
+        select.appendChild(option);
+    });
+}
+
+function renderWorkoutFrequency(days) {
+    const container = document.getElementById('workout-frequency-chart');
+    if (!container) return;
+    
+    const exercises = DataManager.getExerciseLogs();
+    const custom = DataManager.getCustomWorkouts();
+    
+    const dateMap = {};
+    [...exercises, ...custom].forEach(item => {
+        const date = item.date || item.timestamp.split('T')[0];
+        dateMap[date] = (dateMap[date] || 0) + 1;
+    });
+    
+    const daysArray = [];
+    for (let i = days - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        daysArray.push({ date: dateStr, count: dateMap[dateStr] || 0 });
+    }
+    
+    const max = Math.max(...daysArray.map(d => d.count), 1);
+    
+    container.innerHTML = `
+        <div class="chart-row" style="height: 100px;">
+            ${daysArray.map(d => {
+                const height = (d.count / max) * 100 || 5;
+                const color = d.count === 0 ? 'var(--gray-300)' : d.count === 1 ? 'var(--green)' : d.count === 2 ? 'var(--primary)' : 'var(--orange)';
+                
+                return `
+                    <div class="chart-bar" style="height: ${height}%; background: ${color}; min-height: 8px;">
+                        ${d.count > 0 ? `<span class="chart-value">${d.count}</span>` : ''}
+                        <span class="chart-label">${new Date(d.date).getDate()}</span>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+function renderExerciseBreakdown(days) {
+    const container = document.getElementById('exercise-breakdown');
+    if (!container) return;
+    
+    const exercises = DataManager.getExerciseLogs().filter(e => (new Date() - new Date(e.date)) / (1000*60*60*24) <= days);
+    
+    if (exercises.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--gray-600); padding: 20px;">None yet</p>';
+        return;
+    }
+    
+    const counts = {};
+    exercises.forEach(e => counts[e.exerciseId] = (counts[e.exerciseId] || 0) + 1);
+    
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const max = sorted[0][1];
+    
+    container.innerHTML = sorted.map(([id, count]) => {
+        const ex = window.getExerciseById(id);
+        const icon = getExerciseIcon(id);
+        const width = (count / max) * 100;
+        
+        return `
+            <div style="margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span style="font-weight: 600;">${icon} ${ex.name.split('(')[0].trim()}</span>
+                    <span style="color: var(--primary); font-weight: 700;">${count}x</span>
+                </div>
+                <div style="height: 8px; background: var(--gray-200); border-radius: 4px;">
+                    <div style="height: 100%; width: ${width}%; background: var(--primary); border-radius: 4px;"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderIndividualExerciseAnalytics(id, days) {
+    const container = document.getElementById('exercise-analytics');
+    if (!container) return;
+    
+    const history = DataManager.getExerciseHistory(id, days);
+    
+    if (history.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--gray-600); padding: 20px;">No data</p>';
+        return;
+    }
+    
+    const icon = getExerciseIcon(id);
+    const total = history.length;
+    const avgSets = (history.reduce((s, h) => s + h.setsCompleted, 0) / total).toFixed(1);
+    const avgReps = (history.reduce((s, h) => s + h.repsPerSet, 0) / total).toFixed(1);
+    const avgHold = (history.reduce((s, h) => s + (h.holdTimeSeconds || 0), 0) / total).toFixed(1);
+    const avgWeight = (history.reduce((s, h) => s + (h.weightUsed || 0), 0) / total).toFixed(1);
+    const avgRPE = (history.reduce((s, h) => s + h.rpe, 0) / total).toFixed(1);
+    
+    const recent = history.slice(0, 10).reverse();
+    
+    container.innerHTML = `
+        <div style="text-align: center; font-size: 40px; margin: 20px 0;">${icon}</div>
+        
+        <div style="background: var(--gray-50); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 14px;">
+                <div><div style="color: var(--gray-600);">Sessions</div><div style="font-weight: 700; font-size: 20px; color: var(--primary)">${total}</div></div>
+                <div><div style="color: var(--gray-600);">RPE</div><div style="font-weight: 700; font-size: 20px; color: var(--primary)">${avgRPE}</div></div>
+                <div><div style="color: var(--gray-600);">Sets</div><div style="font-weight: 700; font-size: 20px; color: var(--primary)">${avgSets}</div></div>
+                <div><div style="color: var(--gray-600);">Reps</div><div style="font-weight: 700; font-size: 20px; color: var(--primary)">${avgReps}</div></div>
+                ${avgHold > 0 ? `<div><div style="color: var(--gray-600);">Hold</div><div style="font-weight: 700; font-size: 20px; color: var(--primary)">${avgHold}s</div></div>` : ''}
+                ${avgWeight > 0 ? `<div><div style="color: var(--gray-600);">Weight</div><div style="font-weight: 700; font-size: 20px; color: var(--primary)">${avgWeight}lb</div></div>` : ''}
+            </div>
+        </div>
+        
+        ${avgHold > 0 ? renderMetricTrend(recent, 'hold', 'Hold (s)') : ''}
+        ${avgWeight > 0 ? renderMetricTrend(recent, 'weight', 'Weight (lbs)') : ''}
+        ${renderMetricTrend(recent, 'rpe', 'RPE')}
+    `;
+}
+
+function renderMetricTrend(sessions, metric, label) {
+    const getValue = (l) => metric === 'weight' ? l.weightUsed : metric === 'hold' ? l.holdTimeSeconds : l.rpe;
+    const values = sessions.map(getValue);
+    const max = Math.max(...values, 1);
+    const avg = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
+    
+    return `
+        <div style="margin-top: 20px;">
+            <div style="font-weight: 700; margin-bottom: 8px;">${label}</div>
+            <div style="text-align: center; font-size: 13px; margin-bottom: 8px;">Avg: <strong style="color: var(--primary)">${avg}</strong></div>
+            <div class="chart-row" style="height: 120px;">
+                ${sessions.map((l, i) => {
+                    const val = getValue(l);
+                    const height = (val / max) * 100;
+                    const improved = i > 0 && val > getValue(sessions[i-1]);
+                    const color = metric === 'rpe' ? (val >= 8 ? 'var(--red)' : val >= 6 ? 'var(--yellow)' : 'var(--green)') : improved ? 'var(--green)' : 'var(--primary)';
+                    
+                    return `
+                        <div class="chart-bar" style="height: ${height}%; background: ${color};">
+                            <span class="chart-value">${val}</span>
+                            <span class="chart-label">${new Date(l.date).getDate()}</span>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function renderSwellingTrend(days) {
+    const checkIns = DataManager.getRecentCheckIns(days);
+    const container = document.getElementById('swelling-chart');
+    if (checkIns.length < 2) { container.innerHTML = '<p style="text-align: center; padding: 20px;">Track more</p>'; return; }
+    
+    const values = { 'none': 0, 'mild': 1, 'moderate': 2, 'severe': 3 };
+    const reversed = [...checkIns].reverse();
+    
+    container.innerHTML = `<div class="chart-row">${reversed.map(c => {
+        const val = values[c.swelling] || 0;
+        const height = (val / 3) * 100 || 5;
+        const colors = ['#4CAF50', '#FFC107', '#FF9800', '#F44336'];
+        return `<div class="chart-bar" style="height: ${height}%; background: ${colors[val]}; min-height: 10px;">
+            <span class="chart-label">${new Date(c.date).getDate()}</span></div>`;
+    }).join('')}</div><div style="text-align: center; margin-top: 16px; font-size: 13px;">ðŸŸ¢ None | ðŸŸ¡ Mild | ðŸŸ  Mod | ðŸ”´ Severe</div>`;
+}
+
+function renderPainTrend(days) {
+    const checkIns = DataManager.getRecentCheckIns(days);
+    const container = document.getElementById('pain-chart');
+    if (checkIns.length < 2) { container.innerHTML = '<p style="text-align: center; padding: 20px;">Track more</p>'; return; }
+    
+    const reversed = [...checkIns].reverse();
+    const max = Math.max(...reversed.map(c => c.pain || 0), 1);
+    const avg = (reversed.reduce((s, c) => s + (c.pain || 0), 0) / reversed.length).toFixed(1);
+    
+    container.innerHTML = `<div style="text-align: center; margin-bottom: 12px;">Avg: <strong style="font-size: 18px;">${avg}</strong></div>
+        <div class="chart-row">${reversed.map(c => {
+            const val = c.pain || 0;
+            const height = (val / max) * 100 || 5;
+            const color = val <= 2 ? '#4CAF50' : val <= 5 ? '#FFC107' : '#F44336';
+            return `<div class="chart-bar" style="height: ${height}%; background: ${color}; min-height: 10px;">
+                <span class="chart-value">${val}</span><span class="chart-label">${new Date(c.date).getDate()}</span></div>`;
+        }).join('')}</div>`;
+}
+
+function renderHistory(days) {
+    const checkIns = DataManager.getRecentCheckIns(days);
+    const list = document.getElementById('history-list');
+    if (checkIns.length === 0) { list.innerHTML = '<div class="card"><p style="text-align: center; padding: 40px;">No data</p></div>'; return; }
+    
+    list.innerHTML = checkIns.map(c => {
+        const status = DataManager.getKneeStatusForCheckIn(c);
+        const colors = { GREEN: '#4CAF50', YELLOW: '#FFC107', RED: '#F44336' };
+        return `<div class="history-item" style="background: white; padding: 16px; border-radius: 12px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between;">
+                <div style="font-weight: 700;">${new Date(c.date).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'})}</div>
+                <div style="font-weight: 800; color: ${colors[status]};">${status}</div>
+            </div>
+            <div style="font-size: 14px; color: #666; margin-top: 8px;">
+                ${c.swelling} | Pain ${c.pain}/10 | ${c.activityLevel} | ${c.timeOfDay}
+            </div></div>`;
+    }).join('');
+}
+
+// "Exports" for the concatenated bundle model (optional, but useful for debugging / inline handlers)
+window.populateAnalyticsExerciseSelect = populateAnalyticsExerciseSelect;
+window.renderIndividualExerciseAnalytics = renderIndividualExerciseAnalytics;
+// Measurements Module
+
+function setupMeasurementHandlers() {
+    document.querySelectorAll('.posture-btn').forEach(btn => {
+        const h = function() {
+            document.querySelectorAll('.posture-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            AppState.posture = this.dataset.posture;
+        };
+        btn.ontouchstart = h;
+        btn.onclick = h;
+    });
+    
+    const saveBtn = document.getElementById('save-measurement');
+    if (saveBtn) { saveBtn.ontouchstart = saveMeasurement; saveBtn.onclick = saveMeasurement; }
+}
+
+function openMeasurementModal() {
+    document.getElementById('measurement-modal').style.display = 'flex';
+    const latest = DataManager.getLatestBodyMeasurement();
+    if (latest?.measurements) {
+        const m = latest.measurements;
+        if (m.knee_top_cm) {
+            document.getElementById('knee-right').value = m.knee_top_cm.right || '';
+            document.getElementById('knee-left').value = m.knee_top_cm.left || '';
+        }
+        document.getElementById('waist').value = m.waist_cm || '';
+        document.getElementById('weight').value = m.weight_lb || '';
+    }
+}
+
+function closeMeasurementModal() {
+    document.getElementById('measurement-modal').style.display = 'none';
+}
+
+function saveMeasurement() {
+    const kneeRight = parseFloat(document.getElementById('knee-right').value);
+    const kneeLeft = parseFloat(document.getElementById('knee-left').value);
+    if (!kneeRight || !kneeLeft) { alert('âš ï¸ Enter both knees'); return; }
+    
+    const data = { measurements: { knee_top_cm: { right: kneeRight, left: kneeLeft, method: '2cm above patella' }, height_cm: 189 }, posture: AppState.posture, notes: document.getElementById('measurement-notes').value, type: 'measurement' };
+    const waist = parseFloat(document.getElementById('waist').value);
+    if (waist) data.measurements.waist_cm = waist;
+    const weight = parseFloat(document.getElementById('weight').value);
+    if (weight) data.measurements.weight_lb = weight;
+    
+    if (DataManager.saveBodyMeasurement(data)) {
+        alert('Saved!');
+        closeMeasurementModal();
+        updateMeasurementDisplay();
+        renderMeasurementSummary();
+    }
+}
+
+function updateMeasurementDisplay() {
+    const latest = DataManager.getLatestBodyMeasurement();
+    const el = document.getElementById('last-measurement-date');
+    if (!el) return;
+    if (latest) el.textContent = `Last: ${new Date(latest.date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}`;
+    else el.textContent = 'Tap to add';
+}
+
+function renderMeasurementSummary() {
+    const container = document.getElementById('measurement-summary');
+    if (!container) return;
+    const latest = DataManager.getLatestBodyMeasurement();
+    if (!latest) { container.innerHTML = '<p style="text-align: center; padding: 20px;">No data</p>'; return; }
+    
+    const m = latest.measurements;
+    const derived = DataManager.getDerivedMetrics();
+    let html = '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;">';
+    
+    if (derived.bmi) {
+        const status = derived.bmi < 25 ? 'Normal' : 'Over';
+        const color = derived.bmi < 25 ? '#4CAF50' : '#FFC107';
+        html += `<div class="metric-card"><div class="metric-label">BMI</div><div class="metric-value">${derived.bmi}</div><div class="metric-status" style="color: ${color};">${status}</div></div>`;
+    }
+    if (derived.kneeDifference) {
+        const diff = parseFloat(derived.kneeDifference);
+        const color = Math.abs(diff) < 0.5 ? '#4CAF50' : '#FFC107';
+        html += `<div class="metric-card"><div class="metric-label">R-L Diff</div><div class="metric-value">${derived.kneeDifference}cm</div><div class="metric-status" style="color: ${color};">${diff > 0 ? 'R larger' : 'Equal'}</div></div>`;
+    }
+    html += '</div>';
+    if (m.knee_top_cm) html += `<div class="measurement-row"><span>Knee</span><span>R ${m.knee_top_cm.right} | L ${m.knee_top_cm.left} cm</span></div>`;
+    if (m.weight_lb) html += `<div class="measurement-row"><span>Weight</span><span>${m.weight_lb} lbs</span></div>`;
+    container.innerHTML = html;
+}
+// App Initialization
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('ðŸš€ KneeCapacity starting...');
+    
+    // Initialize data
+    DataManager.init();
+    AppState.kneeStatus = DataManager.getKneeStatus();
+    
+    // Setup all handlers
+    setupCheckInHandlers();
+    setupWorkoutHandlers();
+    setupAnalyticsHandlers();
+    setupMeasurementHandlers();
+    setupNavigation();
+    Stopwatch.init();
+    if (typeof populateAnalyticsExerciseSelect === 'function') {
+        populateAnalyticsExerciseSelect();
+    }
+    
+    // Initial rendering
+    updateStreakDisplay();
+    updateKneeStatusCard();
+    updateWeekSummary();
+    updateMeasurementDisplay();
+    loadTodayCheckIn();
+    
+    console.log('Ready!');
+});

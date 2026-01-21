@@ -543,9 +543,9 @@ window.formatExerciseDuration = (ex) => {
     let duration = "";
     
     if (holdTime > 0) {
-        duration = `${sets} sets × ${reps} reps × ${holdTime}s hold`;
+        duration = `${sets} sets x ${reps} reps x ${holdTime}s hold`;
     } else {
-        duration = `${sets} sets × ${reps} reps`;
+        duration = `${sets} sets x ${reps} reps`;
     }
     
     duration += ` (${restBetweenSets}s rest between sets)`;

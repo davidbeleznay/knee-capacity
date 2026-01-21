@@ -13,6 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setupMeasurementHandlers();
     setupNavigation();
     Stopwatch.init();
+    if (typeof populateAnalyticsExerciseSelect === 'function') {
+        populateAnalyticsExerciseSelect();
+    }
     
     // Initial rendering
     updateStreakDisplay();
@@ -21,5 +24,5 @@ document.addEventListener('DOMContentLoaded', () => {
     updateMeasurementDisplay();
     loadTodayCheckIn();
     
-    console.log('✅ Ready!');
+    console.log('Ready!');
 });

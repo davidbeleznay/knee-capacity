@@ -377,7 +377,7 @@ function renderExerciseTiles() {
     
     container.innerHTML = filtered.map(ex => {
         const icon = getExerciseIcon(ex.id);
-        const hold = ex.dosage.holdTime > 0 ? `×${ex.dosage.holdTime}s` : '';
+        const hold = ex.dosage.holdTime > 0 ? `x${ex.dosage.holdTime}s` : '';
         
         return `
             <div class="exercise-tile" onclick="selectExerciseForLogging('${ex.id}')">
@@ -386,7 +386,7 @@ function renderExerciseTiles() {
                     <div class="tile-name">${ex.name.replace(' (Isometric)', '').replace(' (Eccentric)', '')}</div>
                 </div>
                 <div>
-                    <div class="tile-meta">${ex.dosage.sets}×${ex.dosage.reps}${hold}</div>
+                    <div class="tile-meta">${ex.dosage.sets}x${ex.dosage.reps}${hold}</div>
                     <span class="tile-phase-badge badge-${ex.phase[0].toLowerCase()}">${ex.phase[0]}</span>
                 </div>
             </div>
@@ -614,7 +614,7 @@ function renderTodaysSummary() {
     if (exercises.length > 0) {
         html += exercises.map(log => {
             const icon = getExerciseIcon(log.exerciseId);
-            const hold = log.holdTimeSeconds > 0 ? ` × ${log.holdTimeSeconds}s` : '';
+            const hold = log.holdTimeSeconds > 0 ? ` x ${log.holdTimeSeconds}s` : '';
             const weight = log.weightUsed > 0 ? ` @ ${log.weightUsed}lb` : '';
             const rpeColor = log.rpe >= 8 ? 'var(--red)' : log.rpe >= 6 ? 'var(--yellow)' : 'var(--green)';
             
@@ -625,7 +625,7 @@ function renderTodaysSummary() {
                             <div style="font-size: 24px;">${icon}</div>
                             <div>
                                 <div style="font-weight: 700;">${log.exerciseName.split('(')[0].trim()}</div>
-                                <div style="font-size: 13px; color: var(--gray-600);">${log.setsCompleted}×${log.repsPerSet}${hold}${weight}</div>
+                                <div style="font-size: 13px; color: var(--gray-600);">${log.setsCompleted}x${log.repsPerSet}${hold}${weight}</div>
                             </div>
                         </div>
                         <div style="padding: 4px 10px; border-radius: 8px; background: ${rpeColor}; color: white; font-size: 12px; font-weight: 700; height: fit-content;">
@@ -860,7 +860,7 @@ function renderExerciseBreakdown(days) {
             <div style="margin-bottom: 12px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                     <span style="font-weight: 600;">${icon} ${ex.name.split('(')[0].trim()}</span>
-                    <span style="color: var(--primary); font-weight: 700;">${count}×</span>
+                    <span style="color: var(--primary); font-weight: 700;">${count}x</span>
                 </div>
                 <div style="height: 8px; background: var(--gray-200); border-radius: 4px;">
                     <div style="height: 100%; width: ${width}%; background: var(--primary); border-radius: 4px;"></div>

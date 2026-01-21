@@ -68,12 +68,12 @@ function renderExerciseTiles() {
     
     container.innerHTML = filtered.map(ex => {
         const icon = getExerciseIcon(ex.id);
-        const hold = ex.dosage.holdTime > 0 ? `×${ex.dosage.holdTime}s` : '';
+        const hold = ex.dosage.holdTime > 0 ? `x${ex.dosage.holdTime}s` : '';
         const name = ex.name.replace(' (Isometric)', '').replace(' (Eccentric)', '');
         
         return `<div class="exercise-tile" ontouchstart="selectExerciseForLogging('${ex.id}')" onclick="selectExerciseForLogging('${ex.id}')">
             <div><div class="tile-icon">${icon}</div><div class="tile-name">${name}</div></div>
-            <div><div class="tile-meta">${ex.dosage.sets}×${ex.dosage.reps}${hold}</div></div>
+            <div><div class="tile-meta">${ex.dosage.sets}x${ex.dosage.reps}${hold}</div></div>
         </div>`;
     }).join('');
 }
@@ -121,9 +121,9 @@ function saveExerciseLog() {
     });
     
     const btn = document.getElementById('save-exercise');
-    btn.textContent = '✅ Logged!';
+    btn.textContent = 'Logged!';
     btn.style.background = '#4CAF50';
-    setTimeout(() => { btn.textContent = '✅ Log'; btn.style.background = ''; closeExerciseForm(); renderTodaysSummary(); updateWeekSummary(); }, 1000);
+    setTimeout(() => { btn.textContent = 'Log'; btn.style.background = ''; closeExerciseForm(); renderTodaysSummary(); updateWeekSummary(); }, 1000);
 }
 
 function selectCustomWorkout(type) {
@@ -160,9 +160,9 @@ function saveCustomWorkout() {
         notes: document.getElementById('custom-notes').value
     });
     const btn = document.getElementById('save-custom-workout');
-    btn.textContent = '✅ Logged!';
+    btn.textContent = 'Logged!';
     btn.style.background = '#4CAF50';
-    setTimeout(() => { btn.textContent = '✅ Log'; btn.style.background = ''; closeCustomForm(); renderTodaysSummary(); }, 1000);
+    setTimeout(() => { btn.textContent = 'Log'; btn.style.background = ''; closeCustomForm(); renderTodaysSummary(); }, 1000);
 }
 
 function renderTodaysSummary() {
@@ -185,10 +185,10 @@ function renderTodaysSummary() {
     });
     exercises.forEach(log => {
         const icon = getExerciseIcon(log.exerciseId);
-        const hold = log.holdTimeSeconds > 0 ? ` × ${log.holdTimeSeconds}s` : '';
+        const hold = log.holdTimeSeconds > 0 ? ` x ${log.holdTimeSeconds}s` : '';
         html += `<div style="padding: 12px; background: #f5f5f5; border-radius: 10px; margin-bottom: 8px;">
             <div style="font-weight: 700;">${icon} ${log.exerciseName.split('(')[0].trim()}</div>
-            <div style="font-size: 13px; color: #666; margin-top: 4px;">${log.setsCompleted}×${log.repsPerSet}${hold}</div>
+            <div style="font-size: 13px; color: #666; margin-top: 4px;">${log.setsCompleted}x${log.repsPerSet}${hold}</div>
         </div>`;
     });
     container.innerHTML = html;

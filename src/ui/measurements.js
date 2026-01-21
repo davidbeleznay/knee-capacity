@@ -45,7 +45,7 @@ function saveMeasurement() {
     if (weight) data.measurements.weight_lb = weight;
     
     if (DataManager.saveBodyMeasurement(data)) {
-        alert('✅ Saved!');
+        alert('Saved!');
         closeMeasurementModal();
         updateMeasurementDisplay();
         renderMeasurementSummary();

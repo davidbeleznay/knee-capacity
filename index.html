@@ -14,6 +14,7 @@
     <header>
         <h1>💪 KneeCapacity</h1>
         <div id="streak-display" class="streak-badge"><span>🔥</span><span id="streak-count">0</span></div>
+        <span id="current-mode-badge" class="mode-badge" style="margin-left: 12px;"></span>
     </header>
 
     <main id="app-content">
@@ -55,7 +56,7 @@
                     </div>
                 </div>
                 <div class="form-group"><label>Notes</label><textarea id="checkin-notes" rows="2"></textarea></div>
-                <button class="primary-button" onclick="saveCheckIn()">Save Check-In</button>
+                <button class="primary-button" id="save-checkin" onclick="saveCheckIn()">Save Check-In</button>
             </section>
 
             <section class="card"><h3>This Week</h3><div id="week-summary"></div></section>
@@ -68,22 +69,157 @@
 
         <div id="log-view" class="view">
             <h2>Log Workout</h2>
+
+            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+                <button id="toggle-exercises" class="secondary-button active">Exercises</button>
+                <button id="toggle-custom" class="secondary-button">Custom</button>
+            </div>
+
             <section class="card stopwatch-card">
                 <h3>⏱️ Stopwatch</h3>
                 <div id="stopwatch-display" class="stopwatch-display">00:00</div>
-                <button id="stopwatch-action" class="primary-button">Start</button>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
+                    <button id="stopwatch-action" class="primary-button">Start</button>
+                    <button id="reset-stopwatch" class="secondary-button" style="display:none;">Reset</button>
+                    <div id="milestone-badges" style="display:none; gap:6px; flex-wrap:wrap;"></div>
+                </div>
             </section>
-            <section class="card"><h3>Quick Log</h3><div class="exercise-tiles" id="exercise-tiles"></div></section>
+
+            <section class="card">
+                <h3>Quick Log</h3>
+                <div class="exercise-tiles" id="exercise-tiles"></div>
+                <div id="custom-workout-tiles" class="exercise-tiles" style="display:none; margin-top:12px;">
+                    <div class="exercise-tile" onclick="selectCustomWorkout('peloton')">🚴 Peloton</div>
+                    <div class="exercise-tile" onclick="selectCustomWorkout('rowing')">🚣 Rowing</div>
+                    <div class="exercise-tile" onclick="selectCustomWorkout('core')">🎯 Core</div>
+                    <div class="exercise-tile" onclick="selectCustomWorkout('stretch')">🧘 Stretch</div>
+                    <div class="exercise-tile" onclick="selectCustomWorkout('upper')">💪 Upper</div>
+                    <div class="exercise-tile" onclick="selectCustomWorkout('bike')">🚴 Bike</div>
+                </div>
+            </section>
+
+            <section class="card" id="exercise-log-form" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 id="selected-exercise-name">Exercise</h3>
+                    <button id="close-form" class="secondary-button">Close</button>
+                </div>
+                <div class="form-row">
+                    <label>Sets</label>
+                    <div class="input-stepper">
+                        <button type="button" onclick="adjustValue('sets-completed',-1)">−</button>
+                        <input id="sets-completed" type="number" value="3">
+                        <button type="button" onclick="adjustValue('sets-completed',1)">+</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>Reps</label>
+                    <div class="input-stepper">
+                        <button type="button" onclick="adjustValue('reps-completed',-1)">−</button>
+                        <input id="reps-completed" type="number" value="10">
+                        <button type="button" onclick="adjustValue('reps-completed',1)">+</button>
+                    </div>
+                </div>
+                <div class="form-row" id="hold-tracker">
+                    <label>Hold (sec)</label>
+                    <div class="input-stepper">
+                        <button type="button" onclick="adjustValue('hold-time',-5)">−</button>
+                        <input id="hold-time" type="number" value="0">
+                        <button type="button" onclick="adjustValue('hold-time',5)">+</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>Weight (lb)</label>
+                    <div class="input-stepper">
+                        <button type="button" onclick="adjustValue('weight-used',-5)">−</button>
+                        <input id="weight-used" type="number" value="0">
+                        <button type="button" onclick="adjustValue('weight-used',5)">+</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>Difficulty (1-10): <span id="rpe-value">5</span></label>
+                    <input type="range" id="rpe-slider" min="1" max="10" value="5">
+                </div>
+                <div class="form-row">
+                    <label>Notes</label>
+                    <textarea id="exercise-notes" rows="2"></textarea>
+                </div>
+                <div id="trend-chart" style="margin-top:12px;"></div>
+                <button id="save-exercise" class="primary-button" type="button">✅ Log</button>
+            </section>
+
+            <section class="card" id="custom-workout-form" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 id="custom-workout-title">Custom</h3>
+                    <button id="close-custom-form" class="secondary-button" type="button">Close</button>
+                </div>
+                <div class="form-row">
+                    <label>Duration (min)</label>
+                    <div class="input-stepper">
+                        <button type="button" onclick="adjustValue('custom-duration',-5)">−</button>
+                        <input id="custom-duration" type="number" value="20">
+                        <button type="button" onclick="adjustValue('custom-duration',5)">+</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>Intensity: <span id="custom-intensity-value">5</span>/10</label>
+                    <input type="range" id="custom-intensity" min="1" max="10" value="5">
+                </div>
+                <div class="form-row">
+                    <label>Type</label>
+                    <input id="custom-workout-type" type="text" placeholder="e.g. Intervals">
+                </div>
+                <div class="form-row">
+                    <label>Impact</label>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="impact-btn secondary-button" data-impact="none" type="button">None</button>
+                        <button class="impact-btn secondary-button" data-impact="low" type="button">Low</button>
+                        <button class="impact-btn secondary-button" data-impact="moderate" type="button">Moderate</button>
+                        <button class="impact-btn secondary-button" data-impact="high" type="button">High</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>Notes</label>
+                    <textarea id="custom-notes" rows="2"></textarea>
+                </div>
+                <div id="custom-history-list" style="margin:8px 0;"></div>
+                <button id="save-custom-workout" class="primary-button" type="button">✅ Log</button>
+            </section>
+
+            <section class="card">
+                <h3>Today</h3>
+                <div id="todays-exercise-list"></div>
+            </section>
         </div>
 
         <div id="history-view" class="view">
             <h2>Analytics</h2>
             <div class="stats-grid">
-                <div class="stat-card"><div class="stat-value" id="total-checkIns">0</div><div class="stat-label">Check-ins</div></div>
-                <div class="stat-card"><div class="stat-value" id="avg-pain">0</div><div class="stat-label">Avg Pain</div></div>
+                <div class="stat-card"><div class="stat-value" id="total-workouts">0</div><div class="stat-label">Workouts</div></div>
                 <div class="stat-card"><div class="stat-value" id="total-exercises">0</div><div class="stat-label">Exercises</div></div>
+                <div class="stat-card"><div class="stat-value" id="avg-pain">0</div><div class="stat-label">Avg Pain</div></div>
+                <div class="stat-card"><div class="stat-value" id="green-days">0</div><div class="stat-label">Green Days</div></div>
+            </div>
+            <div class="card" style="margin-top:12px;">
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center; justify-content:space-between;">
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="filter-btn secondary-button active" data-days="7">7d</button>
+                    <button class="filter-btn secondary-button" data-days="30">30d</button>
+                    <button class="filter-btn secondary-button" data-days="90">90d</button>
+                    </div>
+                    <button id="export-data" class="secondary-button" type="button">Export</button>
+                </div>
+                <div id="swelling-chart" class="chart-container"></div>
+                <div id="pain-chart" class="chart-container" style="margin-top:16px;"></div>
+                <div id="workout-frequency-chart" class="chart-container" style="margin-top:16px;"></div>
+                <div id="exercise-breakdown" style="margin-top:16px;"></div>
+                <div style="margin-top:16px;">
+                    <label for="analytics-exercise-select">Exercise detail</label>
+                    <select id="analytics-exercise-select" style="width:100%; padding:8px; margin-top:6px;"></select>
+                    <div id="exercise-analytics" style="margin-top:12px;"></div>
+                </div>
             </div>
             <div id="history-list"></div>
+            <div id="measurement-summary" class="card" style="margin-top:16px;"></div>
         </div>
 
         <div id="exercises-view" class="view">
@@ -96,7 +232,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2>📏 Measurements</h2>
-                <button onclick="closeMeasurementModal()" class="close-btn">×</button>
+                <button onclick="closeMeasurementModal()" class="close-btn">x</button>
             </div>
             <div class="modal-body">
                 <h4>Knee (2cm above patella)</h4>
@@ -111,212 +247,28 @@
                         <div><label>Weight (lbs)</label><input type="number" id="weight" step="0.1" class="text-input"></div>
                     </div>
                 </details>
+                <div style="margin:12px 0;">
+                    <label>Posture</label>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="posture-btn secondary-button active" data-posture="relaxed" type="button">Relaxed</button>
+                        <button class="posture-btn secondary-button" data-posture="flexed" type="button">Flexed</button>
+                    </div>
+                </div>
                 <div class="form-group"><label>Notes</label><textarea id="measurement-notes" rows="2"></textarea></div>
-                <button class="primary-button" onclick="saveMeasurement()">💾 Save</button>
+                <button class="primary-button" id="save-measurement" onclick="saveMeasurement()">💾 Save</button>
             </div>
         </div>
     </div>
 
     <nav id="bottom-nav">
-        <button class="nav-btn active" onclick="switchView('home',this)"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
-        <button class="nav-btn" onclick="switchView('log',this)"><span class="nav-icon">📝</span><span class="nav-label">Log</span></button>
-        <button class="nav-btn" onclick="switchView('history',this)"><span class="nav-icon">📊</span><span class="nav-label">Stats</span></button>
-        <button class="nav-btn" onclick="switchView('exercises',this)"><span class="nav-icon">💪</span><span class="nav-label">Library</span></button>
+        <button class="nav-btn active" data-view="home"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
+        <button class="nav-btn" data-view="log"><span class="nav-icon">📝</span><span class="nav-label">Log</span></button>
+        <button class="nav-btn" data-view="history"><span class="nav-icon">📊</span><span class="nav-label">Stats</span></button>
+        <button class="nav-btn" data-view="exercises"><span class="nav-icon">💪</span><span class="nav-label">Library</span></button>
     </nav>
 
     <script src="exercises.js"></script>
     <script src="data.js"></script>
-    <script>
-        let state = { swelling: null, activity: 'light', time: 'morning', stopwatchSeconds: 0, stopwatchRunning: false };
-        
-        // Setup handlers AFTER DOM loads
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('Setting up handlers...');
-            
-            // Swelling buttons
-            document.querySelectorAll('.swelling-btn').forEach(btn => {
-                btn.ontouchstart = function() { selectSwelling(this.dataset.level, this); };
-                btn.onclick = function() { selectSwelling(this.dataset.level, this); };
-            });
-            
-            // Activity buttons
-            document.querySelectorAll('.activity-level-btn').forEach(btn => {
-                btn.ontouchstart = function() { selectActivity(this.dataset.level, this); };
-                btn.onclick = function() { selectActivity(this.dataset.level, this); };
-            });
-            
-            // Time buttons
-            document.querySelectorAll('.time-btn').forEach(btn => {
-                btn.ontouchstart = function() { selectTime(this.dataset.time, this); };
-                btn.onclick = function() { selectTime(this.dataset.time, this); };
-            });
-            
-            // Stopwatch
-            document.getElementById('stopwatch-action').onclick = toggleStopwatch;
-            
-            DataManager.init();
-            updateWeekSummary();
-            updateKneeStatus();
-            updateMeasurementDisplay();
-            document.getElementById('streak-count').textContent = DataManager.getCurrentStreak();
-            
-            const today = DataManager.getCheckIn(new Date().toISOString().split('T')[0]);
-            if (today && today.swelling) {
-                state.swelling = today.swelling;
-                document.querySelector('.swelling-btn[data-level="' + today.swelling + '"]').classList.add('active');
-            }
-            
-            console.log('✅ Ready');
-        });
-        
-        function selectSwelling(level, btn) {
-            console.log('Swelling:', level);
-            document.querySelectorAll('.swelling-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            state.swelling = level;
-        }
-        
-        function selectActivity(level, btn) {
-            console.log('Activity:', level);
-            document.querySelectorAll('.activity-level-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            state.activity = level;
-        }
-        
-        function selectTime(time, btn) {
-            console.log('Time:', time);
-            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            state.time = time;
-        }
-        
-        function saveCheckIn() {
-            if (!state.swelling) { alert('⚠️ Select swelling'); return; }
-            DataManager.saveCheckIn({
-                swelling: state.swelling,
-                pain: parseInt(document.getElementById('pain-slider').value),
-                activityLevel: state.activity,
-                timeOfDay: state.time,
-                notes: document.getElementById('checkin-notes').value
-            });
-            alert('✅ Saved!');
-            updateWeekSummary();
-            updateKneeStatus();
-        }
-        
-        function switchView(viewName, btn) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(viewName + '-view').classList.add('active');
-            btn.classList.add('active');
-            if (viewName === 'history') updateHistoryView();
-            if (viewName === 'exercises') renderExerciseLibrary();
-            if (viewName === 'log') renderExerciseTiles();
-        }
-        
-        function toggleStopwatch() {
-            if (state.stopwatchRunning) {
-                clearInterval(state.stopwatchInterval);
-                state.stopwatchRunning = false;
-                document.getElementById('stopwatch-action').textContent = 'Start';
-                if (state.stopwatchSeconds >= 30) alert('Great! ' + state.stopwatchSeconds + 's');
-            } else {
-                state.stopwatchRunning = true;
-                document.getElementById('stopwatch-action').textContent = 'Stop';
-                state.stopwatchInterval = setInterval(() => {
-                    state.stopwatchSeconds++;
-                    const mins = Math.floor(state.stopwatchSeconds / 60);
-                    const secs = state.stopwatchSeconds % 60;
-                    document.getElementById('stopwatch-display').textContent = 
-                        mins.toString().padStart(2, '0') + ':' + secs.toString().padStart(2, '0');
-                    if ([30, 45, 60].includes(state.stopwatchSeconds) && navigator.vibrate) navigator.vibrate(200);
-                }, 1000);
-            }
-        }
-        
-        function openMeasurementModal() { document.getElementById('measurement-modal').style.display = 'flex'; }
-        function closeMeasurementModal() { document.getElementById('measurement-modal').style.display = 'none'; }
-        
-        function saveMeasurement() {
-            const kneeR = parseFloat(document.getElementById('knee-right').value);
-            const kneeL = parseFloat(document.getElementById('knee-left').value);
-            if (!kneeR || !kneeL) { alert('⚠️ Enter both knees'); return; }
-            
-            const data = { measurements: { knee_top_cm: { right: kneeR, left: kneeL, method: '2cm above patella' }, height_cm: 189 }, type: 'measurement', notes: document.getElementById('measurement-notes').value };
-            const waist = parseFloat(document.getElementById('waist').value);
-            if (waist) data.measurements.waist_cm = waist;
-            const weight = parseFloat(document.getElementById('weight').value);
-            if (weight) data.measurements.weight_lb = weight;
-            
-            DataManager.saveBodyMeasurement(data);
-            alert('✅ Saved!');
-            closeMeasurementModal();
-            updateMeasurementDisplay();
-        }
-        
-        function updateMeasurementDisplay() {
-            const latest = DataManager.getLatestBodyMeasurement();
-            const el = document.getElementById('last-measurement-date');
-            if (latest) el.textContent = 'Last: ' + new Date(latest.date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
-            else el.textContent = 'Tap to add';
-        }
-        
-        function renderExerciseTiles() {
-            const container = document.getElementById('exercise-tiles');
-            if (!container) return;
-            const status = DataManager.getKneeStatus();
-            const phaseMap = { 'green': ['Build', 'Prime'], 'yellow': ['Build', 'Calm'], 'red': ['Calm'], 'unknown': ['Calm', 'Build'] };
-            const filtered = EXERCISES.filter(ex => ex.phase.some(p => phaseMap[status].includes(p)));
-            const icons = { 'spanish-squat': '🔷', 'wall-sit': '🧱', 'step-downs': '📉', 'single-leg-rdl': '🦵', 'hamstring-bridge': '🌉', 'tke': '⚡' };
-            container.innerHTML = filtered.slice(0, 6).map(ex => {
-                const icon = icons[ex.id] || '💪';
-                const name = ex.name.replace(' (Isometric)', '').replace(' (Eccentric)', '');
-                return '<div class="exercise-tile" onclick="quickLogExercise(\'' + ex.id + '\',\'' + name + '\')"><div class="tile-icon">' + icon + '</div><div class="tile-name">' + name + '</div></div>';
-            }).join('');
-        }
-        
-        function quickLogExercise(id, name) {
-            DataManager.saveExerciseLog({ exerciseId: id, exerciseName: name, setsCompleted: 3, repsPerSet: 10, holdTimeSeconds: 45, weightUsed: 0, rpe: 5, notes: 'Quick log' });
-            alert('✅ Logged ' + name + '!');
-            updateHistoryView();
-        }
-        
-        function renderExerciseLibrary() {
-            const container = document.getElementById('exercise-library');
-            if (!container) return;
-            const icons = { 'spanish-squat': '🔷', 'wall-sit': '🧱', 'step-downs': '📉', 'single-leg-rdl': '🦵', 'hamstring-bridge': '🌉', 'tke': '⚡', 'lateral-band-walk': '↔️', 'mini-squat': '⬇️', 'calf-raise': '👟', 'balance-single-leg': '⚖️', 'quad-sets': '💪', 'heel-slides': '↕️' };
-            container.innerHTML = EXERCISES.map(ex => '<div class="exercise-card"><div style="display: flex; gap: 12px; margin-bottom: 12px;"><div style="font-size: 40px;">' + (icons[ex.id] || '💪') + '</div><div><h3>' + ex.name + '</h3><p style="font-size: 13px; color: #666;">' + ex.category + '</p></div></div><p>' + ex.description + '</p><div style="background: #E8F5E9; padding: 14px; border-radius: 10px; margin-top: 12px;"><strong>Why:</strong> ' + ex.why + '</div></div>').join('');
-        }
-        
-        function updateKneeStatus() {
-            const statusInfo = DataManager.getKneeStatusMessage();
-            const card = document.getElementById('knee-status-card');
-            card.className = 'status-card status-' + DataManager.getKneeStatus() + ' text-center';
-            card.innerHTML = '<div class="status-icon">' + statusInfo.icon + '</div><h2>' + statusInfo.title + '</h2><p>' + statusInfo.message + '</p>';
-        }
-        
-        function updateWeekSummary() {
-            const checkIns = DataManager.getRecentCheckIns(7);
-            const greenDays = checkIns.filter(c => DataManager.getKneeStatusForCheckIn(c) === 'GREEN').length;
-            const avgPain = checkIns.length > 0 ? (checkIns.reduce((s, c) => s + (c.pain || 0), 0) / checkIns.length).toFixed(1) : 0;
-            document.getElementById('week-summary').innerHTML = '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;"><div style="text-align: center; padding: 12px; background: #f5f5f5; border-radius: 10px;"><div style="font-size: 24px; font-weight: 800; color: #2E7D32;">' + greenDays + '</div><div style="font-size: 12px;">Green Days</div></div><div style="text-align: center; padding: 12px; background: #f5f5f5; border-radius: 10px;"><div style="font-size: 24px; font-weight: 800; color: #2E7D32;">' + avgPain + '</div><div style="font-size: 12px;">Avg Pain</div></div></div>';
-        }
-        
-        function updateHistoryView() {
-            const checkIns = DataManager.getRecentCheckIns(30);
-            const exercises = DataManager.getExerciseLogs();
-            document.getElementById('total-checkIns').textContent = checkIns.length;
-            document.getElementById('total-exercises').textContent = exercises.length;
-            const avgPain = checkIns.length > 0 ? (checkIns.reduce((s, c) => s + (c.pain || 0), 0) / checkIns.length).toFixed(1) : 0;
-            document.getElementById('avg-pain').textContent = avgPain;
-            const list = document.getElementById('history-list');
-            if (checkIns.length === 0) { list.innerHTML = '<p style="text-align: center; padding: 40px;">No data</p>'; return; }
-            list.innerHTML = checkIns.map(c => {
-                const status = DataManager.getKneeStatusForCheckIn(c);
-                const colors = { GREEN: '#4CAF50', YELLOW: '#FFC107', RED: '#F44336' };
-                return '<div style="background: white; padding: 16px; border-radius: 12px; margin-bottom: 12px;"><div style="display: flex; justify-content: space-between;"><div style="font-weight: 700;">' + new Date(c.date).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'}) + '</div><div style="font-weight: 800; color: ' + colors[status] + ';">' + status + '</div></div><div style="font-size: 14px; color: #666; margin-top: 8px;">' + c.swelling + ' | Pain ' + c.pain + '/10 | ' + c.activityLevel + ' | ' + c.timeOfDay + '</div></div>';
-            }).join('');
-        }
-    </script>
+    <script src="app.bundle.js"></script>
 </body>
 </html>

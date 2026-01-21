@@ -60,7 +60,7 @@ function saveCheckIn() {
         updateWeekSummary();
         
         const btn = document.getElementById('save-checkin');
-        btn.textContent = '✅ Saved!';
+        btn.textContent = 'Saved!';
         btn.style.background = '#4CAF50';
         setTimeout(() => {
             btn.textContent = 'Save Check-In';
