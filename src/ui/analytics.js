@@ -155,6 +155,7 @@ function renderIndividualExerciseAnalytics(id, days) {
     const avgHold = (history.reduce((s, h) => s + (h.holdTimeSeconds || 0), 0) / total).toFixed(1);
     const avgWeight = (history.reduce((s, h) => s + (h.weightUsed || 0), 0) / total).toFixed(1);
     const avgRPE = (history.reduce((s, h) => s + h.rpe, 0) / total).toFixed(1);
+    const avgPain = (history.reduce((s, h) => s + (h.pain || 0), 0) / total).toFixed(1);
     
     const recent = history.slice(0, 10).reverse();
     
@@ -164,6 +165,7 @@ function renderIndividualExerciseAnalytics(id, days) {
         <div style="background: var(--gray-50); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 14px;">
                 <div><div style="color: var(--gray-600);">Sessions</div><div style="font-weight: 700; font-size: 20px; color: var(--primary)">${total}</div></div>
+                <div><div style="color: var(--gray-600);">Avg Pain</div><div style="font-weight: 700; font-size: 20px; color: ${avgPain > 3 ? 'var(--red)' : 'var(--primary)'}">${avgPain}</div></div>
                 <div><div style="color: var(--gray-600);">RPE</div><div style="font-weight: 700; font-size: 20px; color: var(--primary)">${avgRPE}</div></div>
                 <div><div style="color: var(--gray-600);">Sets</div><div style="font-weight: 700; font-size: 20px; color: var(--primary)">${avgSets}</div></div>
                 <div><div style="color: var(--gray-600);">Reps</div><div style="font-weight: 700; font-size: 20px; color: var(--primary)">${avgReps}</div></div>
@@ -175,11 +177,12 @@ function renderIndividualExerciseAnalytics(id, days) {
         ${avgHold > 0 ? renderMetricTrend(recent, 'hold', 'Hold (s)') : ''}
         ${avgWeight > 0 ? renderMetricTrend(recent, 'weight', 'Weight (lbs)') : ''}
         ${renderMetricTrend(recent, 'rpe', 'RPE')}
+        ${renderMetricTrend(recent, 'pain', 'Knee Pain')}
     `;
 }
 
 function renderMetricTrend(sessions, metric, label) {
-    const getValue = (l) => metric === 'weight' ? l.weightUsed : metric === 'hold' ? l.holdTimeSeconds : l.rpe;
+    const getValue = (l) => metric === 'weight' ? l.weightUsed : metric === 'hold' ? l.holdTimeSeconds : metric === 'pain' ? (l.pain || 0) : l.rpe;
     const values = sessions.map(getValue);
     const max = Math.max(...values, 1);
     const avg = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
@@ -193,7 +196,7 @@ function renderMetricTrend(sessions, metric, label) {
                     const val = getValue(l);
                     const height = (val / max) * 100;
                     const improved = i > 0 && val > getValue(sessions[i-1]);
-                    const color = metric === 'rpe' ? (val >= 8 ? 'var(--red)' : val >= 6 ? 'var(--yellow)' : 'var(--green)') : improved ? 'var(--green)' : 'var(--primary)';
+                    const color = (metric === 'rpe' || metric === 'pain') ? (val >= 8 ? 'var(--red)' : val >= 6 ? 'var(--yellow)' : 'var(--green)') : improved ? 'var(--green)' : 'var(--primary)';
                     
                     return `
                         <div class="chart-bar" style="height: ${height}%; background: ${color};">

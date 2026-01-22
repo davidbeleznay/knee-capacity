@@ -321,19 +321,34 @@ const DataManager = {
     
     // Streak calculation
     updateStreak() {
-        const sessions = this.getSessions();
-        if (sessions.length === 0) {
+        const exerciseLogs = this.getExerciseLogs();
+        const customWorkouts = this.getCustomWorkouts();
+        
+        const allWorkouts = [...exerciseLogs, ...customWorkouts];
+        if (allWorkouts.length === 0) {
+            localStorage.setItem('streak', '0');
+            return 0;
+        }
+        
+        const dates = allWorkouts.map(w => w.date || w.timestamp.split('T')[0]);
+        const uniqueDates = [...new Set(dates)].sort().reverse();
+        
+        const today = new Date().toISOString().split('T')[0];
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        
+        // If no workout today or yesterday, streak is broken
+        if (uniqueDates[0] !== today && uniqueDates[0] !== yesterday) {
             localStorage.setItem('streak', '0');
             return 0;
         }
         
         let streak = 1;
-        const dates = sessions.map(s => s.timestamp.split('T')[0]);
-        const uniqueDates = [...new Set(dates)].sort().reverse();
-        
-        for (let i = 1; i < uniqueDates.length; i++) {
-            const daysDiff = (new Date(uniqueDates[i-1]) - new Date(uniqueDates[i])) / (1000 * 60 * 60 * 24);
-            if (daysDiff <= 1.5) {
+        for (let i = 0; i < uniqueDates.length - 1; i++) {
+            const d1 = new Date(uniqueDates[i]);
+            const d2 = new Date(uniqueDates[i+1]);
+            const diff = (d1 - d2) / (1000 * 60 * 60 * 24);
+            
+            if (diff <= 1.1) { // Allowing some buffer for timezones
                 streak++;
             } else {
                 break;
@@ -348,7 +363,20 @@ const DataManager = {
     },
     
     getCurrentStreak() {
-        return parseInt(localStorage.getItem('streak') || '0');
+        return this.updateStreak(); // Always recalculate to ensure accuracy
+    },
+
+    getBadges() {
+        const totalWorkouts = this.getExerciseLogs().length + this.getCustomWorkouts().length;
+        const milestones = [
+            { count: 100, emoji: '👑', label: 'King' },
+            { count: 50, emoji: '⭐', label: 'Star' },
+            { count: 20, emoji: '🔥', label: 'Elite' },
+            { count: 10, emoji: '🏆', label: 'Champ' },
+            { count: 1, emoji: '💪', label: 'Starter' }
+        ];
+        
+        return milestones.filter(m => totalWorkouts >= m.count);
     },
     
     // Traffic light status

@@ -24,6 +24,11 @@ function openMeasurementModal() {
             document.getElementById('knee-right').value = m.knee_top_cm.right || '';
             document.getElementById('knee-left').value = m.knee_top_cm.left || '';
         }
+        if (m.thigh_cm) {
+            document.getElementById('thigh-right').value = m.thigh_cm.right || '';
+            document.getElementById('thigh-left').value = m.thigh_cm.left || '';
+        }
+        document.getElementById('height').value = m.height_cm || '';
         document.getElementById('waist').value = m.waist_cm || '';
         document.getElementById('weight').value = m.weight_lb || '';
     }
@@ -36,9 +41,23 @@ function closeMeasurementModal() {
 function saveMeasurement() {
     const kneeRight = parseFloat(document.getElementById('knee-right').value);
     const kneeLeft = parseFloat(document.getElementById('knee-left').value);
+    const thighRight = parseFloat(document.getElementById('thigh-right').value);
+    const thighLeft = parseFloat(document.getElementById('thigh-left').value);
+    const height = parseFloat(document.getElementById('height').value);
+    
     if (!kneeRight || !kneeLeft) { alert('! Enter both knees'); return; }
     
-    const data = { measurements: { knee_top_cm: { right: kneeRight, left: kneeLeft, method: '2cm above patella' }, height_cm: 189 }, posture: AppState.posture, notes: document.getElementById('measurement-notes').value, type: 'measurement' };
+    const data = { 
+        measurements: { 
+            knee_top_cm: { right: kneeRight, left: kneeLeft, method: '2cm above patella' },
+            thigh_cm: { right: thighRight || 0, left: thighLeft || 0, method: 'mid-thigh' },
+            height_cm: height || 0
+        }, 
+        posture: AppState.posture, 
+        notes: document.getElementById('measurement-notes').value, 
+        type: 'measurement' 
+    };
+    
     const waist = parseFloat(document.getElementById('waist').value);
     if (waist) data.measurements.waist_cm = waist;
     const weight = parseFloat(document.getElementById('weight').value);
@@ -82,6 +101,8 @@ function renderMeasurementSummary() {
     }
     html += '</div>';
     if (m.knee_top_cm) html += `<div class="measurement-row"><span>Knee</span><span>R ${m.knee_top_cm.right} | L ${m.knee_top_cm.left} cm</span></div>`;
+    if (m.thigh_cm) html += `<div class="measurement-row"><span>Thigh</span><span>R ${m.thigh_cm.right} | L ${m.thigh_cm.left} cm</span></div>`;
+    if (m.height_cm) html += `<div class="measurement-row"><span>Height</span><span>${m.height_cm} cm</span></div>`;
     if (m.weight_lb) html += `<div class="measurement-row"><span>Weight</span><span>${m.weight_lb} lbs</span></div>`;
     container.innerHTML = html;
 }

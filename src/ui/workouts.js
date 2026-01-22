@@ -104,6 +104,8 @@ function selectExerciseForLogging(id) {
     document.getElementById('weight-used').value = 0;
     document.getElementById('rpe-slider').value = 5;
     document.getElementById('rpe-value').textContent = '5';
+    document.getElementById('exercise-pain-slider').value = 0;
+    document.getElementById('exercise-pain-value').textContent = '0';
     document.getElementById('exercise-notes').value = '';
     
     document.getElementById('hold-tracker').style.display = ex.dosage.holdTime > 0 ? 'block' : 'none';
@@ -134,13 +136,14 @@ function saveExerciseLog() {
         holdTimeSeconds: parseInt(document.getElementById('hold-time').value),
         weightUsed: parseInt(document.getElementById('weight-used').value),
         rpe: parseInt(document.getElementById('rpe-slider').value),
+        pain: parseInt(document.getElementById('exercise-pain-slider').value),
         notes: document.getElementById('exercise-notes').value
     });
     
     const btn = document.getElementById('save-exercise');
     btn.textContent = 'Logged!';
     btn.style.background = '#4CAF50';
-    setTimeout(() => { btn.textContent = 'Log'; btn.style.background = ''; closeExerciseForm(); renderTodaysSummary(); updateWeekSummary(); }, 1000);
+    setTimeout(() => { btn.textContent = 'Log'; btn.style.background = ''; closeExerciseForm(); renderTodaysSummary(); updateWeekSummary(); updateStreakDisplay(); }, 1000);
 }
 
 function selectCustomWorkout(type) {
@@ -179,7 +182,7 @@ function saveCustomWorkout() {
     const btn = document.getElementById('save-custom-workout');
     btn.textContent = 'Logged!';
     btn.style.background = '#4CAF50';
-    setTimeout(() => { btn.textContent = 'Log'; btn.style.background = ''; closeCustomForm(); renderTodaysSummary(); }, 1000);
+    setTimeout(() => { btn.textContent = 'Log'; btn.style.background = ''; closeCustomForm(); renderTodaysSummary(); updateStreakDisplay(); }, 1000);
 }
 
 function renderTodaysSummary() {

@@ -6,15 +6,31 @@ function getExerciseIcon(id) {
 
 function adjustValue(inputId, delta) {
     const input = document.getElementById(inputId);
-    let value = parseInt(input.value) || 0;
-    value = Math.max(0, value + delta);
+    let value = parseFloat(input.value) || 0;
+    value = value + delta;
+    
+    // Handle floating point precision issues
+    if (delta % 1 !== 0) {
+        value = Math.round(value * 10) / 10;
+    } else {
+        value = Math.round(value);
+    }
+    
+    value = Math.max(0, value);
     
     const limits = {
         'sets-completed': 10,
         'reps-completed': 50,
         'hold-time': 120,
         'weight-used': 500,
-        'custom-duration': 180
+        'custom-duration': 180,
+        'knee-right': 60,
+        'knee-left': 60,
+        'thigh-right': 80,
+        'thigh-left': 80,
+        'height': 250,
+        'waist': 200,
+        'weight': 500
     };
     
     if (limits[inputId]) {
@@ -25,6 +41,25 @@ function adjustValue(inputId, delta) {
 }
 
 function updateStreakDisplay() {
-    const el = document.getElementById('streak-count');
-    if (el) el.textContent = DataManager.getCurrentStreak();
+    const streak = DataManager.getCurrentStreak();
+    const badges = DataManager.getBadges();
+    
+    // Update Home Streak Card
+    const homeStreakCount = document.getElementById('home-streak-count');
+    if (homeStreakCount) homeStreakCount.textContent = streak;
+    
+    const homeBadges = document.getElementById('home-milestone-badges');
+    if (homeBadges) {
+        homeBadges.innerHTML = badges.map(b => 
+            `<span class="milestone-badge-home" data-label="${b.label}">${b.emoji}</span>`
+        ).join('') || '<span style="font-size: 12px; opacity: 0.8;">WORKOUT TO EARN BADGES</span>';
+    }
+    
+    // Update Header Badges
+    const headerBadges = document.getElementById('header-badges');
+    if (headerBadges) {
+        headerBadges.innerHTML = badges.map(b => 
+            `<span class="header-badge" title="${b.label}">${b.emoji}</span>`
+        ).join('');
+    }
 }

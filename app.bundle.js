@@ -29,15 +29,31 @@ function getExerciseIcon(id) {
 
 function adjustValue(inputId, delta) {
     const input = document.getElementById(inputId);
-    let value = parseInt(input.value) || 0;
-    value = Math.max(0, value + delta);
+    let value = parseFloat(input.value) || 0;
+    value = value + delta;
+    
+    // Handle floating point precision issues
+    if (delta % 1 !== 0) {
+        value = Math.round(value * 10) / 10;
+    } else {
+        value = Math.round(value);
+    }
+    
+    value = Math.max(0, value);
     
     const limits = {
         'sets-completed': 10,
         'reps-completed': 50,
         'hold-time': 120,
         'weight-used': 500,
-        'custom-duration': 180
+        'custom-duration': 180,
+        'knee-right': 60,
+        'knee-left': 60,
+        'thigh-right': 80,
+        'thigh-left': 80,
+        'height': 250,
+        'waist': 200,
+        'weight': 500
     };
     
     if (limits[inputId]) {
@@ -48,8 +64,27 @@ function adjustValue(inputId, delta) {
 }
 
 function updateStreakDisplay() {
-    const el = document.getElementById('streak-count');
-    if (el) el.textContent = DataManager.getCurrentStreak();
+    const streak = DataManager.getCurrentStreak();
+    const badges = DataManager.getBadges();
+    
+    // Update Home Streak Card
+    const homeStreakCount = document.getElementById('home-streak-count');
+    if (homeStreakCount) homeStreakCount.textContent = streak;
+    
+    const homeBadges = document.getElementById('home-milestone-badges');
+    if (homeBadges) {
+        homeBadges.innerHTML = badges.map(b => 
+            `<span class="milestone-badge-home" data-label="${b.label}">${b.emoji}</span>`
+        ).join('') || '<span style="font-size: 12px; opacity: 0.8;">WORKOUT TO EARN BADGES</span>';
+    }
+    
+    // Update Header Badges
+    const headerBadges = document.getElementById('header-badges');
+    if (headerBadges) {
+        headerBadges.innerHTML = badges.map(b => 
+            `<span class="header-badge" title="${b.label}">${b.emoji}</span>`
+        ).join('');
+    }
 }
 // View Router Module
 function switchView(viewName) {
@@ -268,25 +303,16 @@ const Stopwatch = {
     hitMilestones: [],
     
     init() {
-        const actionBtn = document.getElementById('stopwatch-action');
-        const resetBtn = document.getElementById('reset-stopwatch');
+        const startBtn = document.getElementById('stopwatch-start');
+        const stopBtn = document.getElementById('stopwatch-stop');
+        const resetBtn = document.getElementById('stopwatch-reset');
         
-        if (actionBtn) {
-            const toggleHandler = () => {
-                if (this.isRunning) this.stop();
-                else this.start();
-            };
-            actionBtn.ontouchstart = toggleHandler;
-            actionBtn.onclick = toggleHandler;
-        }
-        
-        if (resetBtn) {
-            const resetHandler = () => {
-                if (confirm('Reset?')) this.reset();
-            };
-            resetBtn.ontouchstart = resetHandler;
-            resetBtn.onclick = resetHandler;
-        }
+        if (startBtn) startBtn.onclick = () => this.start();
+        if (stopBtn) stopBtn.onclick = () => this.stop();
+        if (resetBtn) resetBtn.onclick = () => {
+            if (this.seconds > 0 && confirm('Reset timer?')) this.reset();
+            else if (this.seconds > 0) this.reset();
+        };
     },
     
     start() {
@@ -299,11 +325,8 @@ const Stopwatch = {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
         
-        const actionBtn = document.getElementById('stopwatch-action');
-        actionBtn.textContent = 'Stop';
-        actionBtn.style.background = '#F44336';
-        
-        document.getElementById('reset-stopwatch').style.display = 'inline-block';
+        document.getElementById('stopwatch-start').disabled = true;
+        document.getElementById('stopwatch-stop').disabled = false;
         document.getElementById('milestone-badges').style.display = 'flex';
         
         this.interval = setInterval(() => this.tick(), 1000);
@@ -321,9 +344,8 @@ const Stopwatch = {
         clearInterval(this.interval);
         this.isRunning = false;
         
-        const actionBtn = document.getElementById('stopwatch-action');
-        actionBtn.textContent = 'Start';
-        actionBtn.style.background = '';
+        document.getElementById('stopwatch-start').disabled = false;
+        document.getElementById('stopwatch-stop').disabled = true;
         
         if (this.seconds >= 30) this.playSuccessSound();
 
@@ -348,11 +370,8 @@ const Stopwatch = {
         
         this.updateDisplay();
         
-        const actionBtn = document.getElementById('stopwatch-action');
-        actionBtn.textContent = 'Start';
-        actionBtn.style.background = '';
-        
-        document.getElementById('reset-stopwatch').style.display = 'none';
+        document.getElementById('stopwatch-start').disabled = false;
+        document.getElementById('stopwatch-stop').disabled = true;
         document.getElementById('milestone-badges').style.display = 'none';
         document.getElementById('milestone-badges').innerHTML = '';
     },
@@ -528,6 +547,8 @@ function selectExerciseForLogging(id) {
     document.getElementById('weight-used').value = 0;
     document.getElementById('rpe-slider').value = 5;
     document.getElementById('rpe-value').textContent = '5';
+    document.getElementById('exercise-pain-slider').value = 0;
+    document.getElementById('exercise-pain-value').textContent = '0';
     document.getElementById('exercise-notes').value = '';
     
     document.getElementById('hold-tracker').style.display = ex.dosage.holdTime > 0 ? 'block' : 'none';
@@ -558,13 +579,14 @@ function saveExerciseLog() {
         holdTimeSeconds: parseInt(document.getElementById('hold-time').value),
         weightUsed: parseInt(document.getElementById('weight-used').value),
         rpe: parseInt(document.getElementById('rpe-slider').value),
+        pain: parseInt(document.getElementById('exercise-pain-slider').value),
         notes: document.getElementById('exercise-notes').value
     });
     
     const btn = document.getElementById('save-exercise');
     btn.textContent = 'Logged!';
     btn.style.background = '#4CAF50';
-    setTimeout(() => { btn.textContent = 'Log'; btn.style.background = ''; closeExerciseForm(); renderTodaysSummary(); updateWeekSummary(); }, 1000);
+    setTimeout(() => { btn.textContent = 'Log'; btn.style.background = ''; closeExerciseForm(); renderTodaysSummary(); updateWeekSummary(); updateStreakDisplay(); }, 1000);
 }
 
 function selectCustomWorkout(type) {
@@ -603,7 +625,7 @@ function saveCustomWorkout() {
     const btn = document.getElementById('save-custom-workout');
     btn.textContent = 'Logged!';
     btn.style.background = '#4CAF50';
-    setTimeout(() => { btn.textContent = 'Log'; btn.style.background = ''; closeCustomForm(); renderTodaysSummary(); }, 1000);
+    setTimeout(() => { btn.textContent = 'Log'; btn.style.background = ''; closeCustomForm(); renderTodaysSummary(); updateStreakDisplay(); }, 1000);
 }
 
 function renderTodaysSummary() {
@@ -825,6 +847,7 @@ function renderIndividualExerciseAnalytics(id, days) {
     const avgHold = (history.reduce((s, h) => s + (h.holdTimeSeconds || 0), 0) / total).toFixed(1);
     const avgWeight = (history.reduce((s, h) => s + (h.weightUsed || 0), 0) / total).toFixed(1);
     const avgRPE = (history.reduce((s, h) => s + h.rpe, 0) / total).toFixed(1);
+    const avgPain = (history.reduce((s, h) => s + (h.pain || 0), 0) / total).toFixed(1);
     
     const recent = history.slice(0, 10).reverse();
     
@@ -834,6 +857,7 @@ function renderIndividualExerciseAnalytics(id, days) {
         <div style="background: var(--gray-50); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 14px;">
                 <div><div style="color: var(--gray-600);">Sessions</div><div style="font-weight: 700; font-size: 20px; color: var(--primary)">${total}</div></div>
+                <div><div style="color: var(--gray-600);">Avg Pain</div><div style="font-weight: 700; font-size: 20px; color: ${avgPain > 3 ? 'var(--red)' : 'var(--primary)'}">${avgPain}</div></div>
                 <div><div style="color: var(--gray-600);">RPE</div><div style="font-weight: 700; font-size: 20px; color: var(--primary)">${avgRPE}</div></div>
                 <div><div style="color: var(--gray-600);">Sets</div><div style="font-weight: 700; font-size: 20px; color: var(--primary)">${avgSets}</div></div>
                 <div><div style="color: var(--gray-600);">Reps</div><div style="font-weight: 700; font-size: 20px; color: var(--primary)">${avgReps}</div></div>
@@ -845,11 +869,12 @@ function renderIndividualExerciseAnalytics(id, days) {
         ${avgHold > 0 ? renderMetricTrend(recent, 'hold', 'Hold (s)') : ''}
         ${avgWeight > 0 ? renderMetricTrend(recent, 'weight', 'Weight (lbs)') : ''}
         ${renderMetricTrend(recent, 'rpe', 'RPE')}
+        ${renderMetricTrend(recent, 'pain', 'Knee Pain')}
     `;
 }
 
 function renderMetricTrend(sessions, metric, label) {
-    const getValue = (l) => metric === 'weight' ? l.weightUsed : metric === 'hold' ? l.holdTimeSeconds : l.rpe;
+    const getValue = (l) => metric === 'weight' ? l.weightUsed : metric === 'hold' ? l.holdTimeSeconds : metric === 'pain' ? (l.pain || 0) : l.rpe;
     const values = sessions.map(getValue);
     const max = Math.max(...values, 1);
     const avg = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
@@ -863,7 +888,7 @@ function renderMetricTrend(sessions, metric, label) {
                     const val = getValue(l);
                     const height = (val / max) * 100;
                     const improved = i > 0 && val > getValue(sessions[i-1]);
-                    const color = metric === 'rpe' ? (val >= 8 ? 'var(--red)' : val >= 6 ? 'var(--yellow)' : 'var(--green)') : improved ? 'var(--green)' : 'var(--primary)';
+                    const color = (metric === 'rpe' || metric === 'pain') ? (val >= 8 ? 'var(--red)' : val >= 6 ? 'var(--yellow)' : 'var(--green)') : improved ? 'var(--green)' : 'var(--primary)';
                     
                     return `
                         <div class="chart-bar" style="height: ${height}%; background: ${color};">
@@ -961,6 +986,11 @@ function openMeasurementModal() {
             document.getElementById('knee-right').value = m.knee_top_cm.right || '';
             document.getElementById('knee-left').value = m.knee_top_cm.left || '';
         }
+        if (m.thigh_cm) {
+            document.getElementById('thigh-right').value = m.thigh_cm.right || '';
+            document.getElementById('thigh-left').value = m.thigh_cm.left || '';
+        }
+        document.getElementById('height').value = m.height_cm || '';
         document.getElementById('waist').value = m.waist_cm || '';
         document.getElementById('weight').value = m.weight_lb || '';
     }
@@ -973,9 +1003,23 @@ function closeMeasurementModal() {
 function saveMeasurement() {
     const kneeRight = parseFloat(document.getElementById('knee-right').value);
     const kneeLeft = parseFloat(document.getElementById('knee-left').value);
+    const thighRight = parseFloat(document.getElementById('thigh-right').value);
+    const thighLeft = parseFloat(document.getElementById('thigh-left').value);
+    const height = parseFloat(document.getElementById('height').value);
+    
     if (!kneeRight || !kneeLeft) { alert('! Enter both knees'); return; }
     
-    const data = { measurements: { knee_top_cm: { right: kneeRight, left: kneeLeft, method: '2cm above patella' }, height_cm: 189 }, posture: AppState.posture, notes: document.getElementById('measurement-notes').value, type: 'measurement' };
+    const data = { 
+        measurements: { 
+            knee_top_cm: { right: kneeRight, left: kneeLeft, method: '2cm above patella' },
+            thigh_cm: { right: thighRight || 0, left: thighLeft || 0, method: 'mid-thigh' },
+            height_cm: height || 0
+        }, 
+        posture: AppState.posture, 
+        notes: document.getElementById('measurement-notes').value, 
+        type: 'measurement' 
+    };
+    
     const waist = parseFloat(document.getElementById('waist').value);
     if (waist) data.measurements.waist_cm = waist;
     const weight = parseFloat(document.getElementById('weight').value);
@@ -1019,6 +1063,8 @@ function renderMeasurementSummary() {
     }
     html += '</div>';
     if (m.knee_top_cm) html += `<div class="measurement-row"><span>Knee</span><span>R ${m.knee_top_cm.right} | L ${m.knee_top_cm.left} cm</span></div>`;
+    if (m.thigh_cm) html += `<div class="measurement-row"><span>Thigh</span><span>R ${m.thigh_cm.right} | L ${m.thigh_cm.left} cm</span></div>`;
+    if (m.height_cm) html += `<div class="measurement-row"><span>Height</span><span>${m.height_cm} cm</span></div>`;
     if (m.weight_lb) html += `<div class="measurement-row"><span>Weight</span><span>${m.weight_lb} lbs</span></div>`;
     container.innerHTML = html;
 }

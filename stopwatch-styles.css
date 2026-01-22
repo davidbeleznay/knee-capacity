@@ -11,29 +11,73 @@
 }
 
 .stopwatch-display {
-    font-size: 80px;
+    font-size: 64px;
     font-weight: 800;
     text-align: center;
-    margin: 24px 0;
+    margin: 10px 0;
     font-variant-numeric: tabular-nums;
-    letter-spacing: -3px;
+    letter-spacing: -2px;
     text-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-.reset-btn {
-    padding: 6px 14px;
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 20px;
+/* Embedded Stopwatch Fixes */
+.embedded-stopwatch {
+    margin-top: 16px;
+    padding: 20px;
+    background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
+    border-radius: 16px;
     color: white;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
+    text-align: center;
 }
 
-.reset-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
+.stopwatch-controls {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.stopwatch-btn {
+    min-height: 48px;
+    padding: 12px 8px;
+    border-radius: 12px;
+    border: none;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stopwatch-btn:active {
+    transform: scale(0.92);
+}
+
+.stopwatch-btn.start {
+    background: white;
+    color: #1B5E20;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.stopwatch-btn.stop {
+    background: #F44336;
+    color: white;
+    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+}
+
+.stopwatch-btn.reset {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.stopwatch-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
 }
 
 /* Milestone Container */

@@ -8,25 +8,16 @@ const Stopwatch = {
     hitMilestones: [],
     
     init() {
-        const actionBtn = document.getElementById('stopwatch-action');
-        const resetBtn = document.getElementById('reset-stopwatch');
+        const startBtn = document.getElementById('stopwatch-start');
+        const stopBtn = document.getElementById('stopwatch-stop');
+        const resetBtn = document.getElementById('stopwatch-reset');
         
-        if (actionBtn) {
-            const toggleHandler = () => {
-                if (this.isRunning) this.stop();
-                else this.start();
-            };
-            actionBtn.ontouchstart = toggleHandler;
-            actionBtn.onclick = toggleHandler;
-        }
-        
-        if (resetBtn) {
-            const resetHandler = () => {
-                if (confirm('Reset?')) this.reset();
-            };
-            resetBtn.ontouchstart = resetHandler;
-            resetBtn.onclick = resetHandler;
-        }
+        if (startBtn) startBtn.onclick = () => this.start();
+        if (stopBtn) stopBtn.onclick = () => this.stop();
+        if (resetBtn) resetBtn.onclick = () => {
+            if (this.seconds > 0 && confirm('Reset timer?')) this.reset();
+            else if (this.seconds > 0) this.reset();
+        };
     },
     
     start() {
@@ -39,11 +30,8 @@ const Stopwatch = {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
         
-        const actionBtn = document.getElementById('stopwatch-action');
-        actionBtn.textContent = 'Stop';
-        actionBtn.style.background = '#F44336';
-        
-        document.getElementById('reset-stopwatch').style.display = 'inline-block';
+        document.getElementById('stopwatch-start').disabled = true;
+        document.getElementById('stopwatch-stop').disabled = false;
         document.getElementById('milestone-badges').style.display = 'flex';
         
         this.interval = setInterval(() => this.tick(), 1000);
@@ -61,9 +49,8 @@ const Stopwatch = {
         clearInterval(this.interval);
         this.isRunning = false;
         
-        const actionBtn = document.getElementById('stopwatch-action');
-        actionBtn.textContent = 'Start';
-        actionBtn.style.background = '';
+        document.getElementById('stopwatch-start').disabled = false;
+        document.getElementById('stopwatch-stop').disabled = true;
         
         if (this.seconds >= 30) this.playSuccessSound();
 
@@ -88,11 +75,8 @@ const Stopwatch = {
         
         this.updateDisplay();
         
-        const actionBtn = document.getElementById('stopwatch-action');
-        actionBtn.textContent = 'Start';
-        actionBtn.style.background = '';
-        
-        document.getElementById('reset-stopwatch').style.display = 'none';
+        document.getElementById('stopwatch-start').disabled = false;
+        document.getElementById('stopwatch-stop').disabled = true;
         document.getElementById('milestone-badges').style.display = 'none';
         document.getElementById('milestone-badges').innerHTML = '';
     },
