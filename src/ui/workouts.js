@@ -55,6 +55,16 @@ function setupWorkoutHandlers() {
     
     const closeCust = document.getElementById('close-custom-form');
     if (closeCust) { closeCust.ontouchstart = closeCustomForm; closeCust.onclick = closeCustomForm; }
+
+    const toggleTimerBtn = document.getElementById('toggle-form-timer');
+    if (toggleTimerBtn) {
+        toggleTimerBtn.onclick = () => {
+            const timerDiv = document.getElementById('embedded-stopwatch');
+            const isVisible = timerDiv.style.display !== 'none';
+            timerDiv.style.display = isVisible ? 'none' : 'block';
+            toggleTimerBtn.textContent = isVisible ? '⏱️ Show Timer' : '⏱️ Hide Timer';
+        };
+    }
 }
 
 function renderExerciseTiles() {
@@ -104,6 +114,13 @@ function closeExerciseForm() {
     document.getElementById('exercise-log-form').style.display = 'none';
     document.getElementById('exercise-tiles').style.display = 'grid';
     AppState.selectedExercise = null;
+    
+    // Reset timer UI if open
+    const timerDiv = document.getElementById('embedded-stopwatch');
+    if (timerDiv) timerDiv.style.display = 'none';
+    const toggleBtn = document.getElementById('toggle-form-timer');
+    if (toggleBtn) toggleBtn.textContent = '⏱️ Show Timer';
+    if (typeof Stopwatch !== 'undefined') Stopwatch.reset();
 }
 
 function saveExerciseLog() {

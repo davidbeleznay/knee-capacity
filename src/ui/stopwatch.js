@@ -66,6 +66,18 @@ const Stopwatch = {
         actionBtn.style.background = '';
         
         if (this.seconds >= 30) this.playSuccessSound();
+
+        // Auto-sync with exercise log if open
+        const holdTimeInput = document.getElementById('hold-time');
+        const exerciseForm = document.getElementById('exercise-log-form');
+        
+        if (holdTimeInput && exerciseForm && exerciseForm.style.display !== 'none' && this.seconds > 0) {
+            holdTimeInput.value = this.seconds;
+            holdTimeInput.style.backgroundColor = 'rgba(76, 175, 80, 0.2)';
+            holdTimeInput.style.transition = 'background-color 0.5s';
+            setTimeout(() => { holdTimeInput.style.backgroundColor = ''; }, 1000);
+            console.log(`⏱️ Auto-synced ${this.seconds}s to hold time`);
+        }
     },
     
     reset() {

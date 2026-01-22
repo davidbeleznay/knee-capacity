@@ -41,7 +41,7 @@ function setupCheckInHandlers() {
 
 function saveCheckIn() {
     if (!AppState.swelling) {
-        alert('⚠️ Select swelling');
+        alert('! Select swelling');
         return;
     }
     

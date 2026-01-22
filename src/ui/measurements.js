@@ -36,7 +36,7 @@ function closeMeasurementModal() {
 function saveMeasurement() {
     const kneeRight = parseFloat(document.getElementById('knee-right').value);
     const kneeLeft = parseFloat(document.getElementById('knee-left').value);
-    if (!kneeRight || !kneeLeft) { alert('⚠️ Enter both knees'); return; }
+    if (!kneeRight || !kneeLeft) { alert('! Enter both knees'); return; }
     
     const data = { measurements: { knee_top_cm: { right: kneeRight, left: kneeLeft, method: '2cm above patella' }, height_cm: 189 }, posture: AppState.posture, notes: document.getElementById('measurement-notes').value, type: 'measurement' };
     const waist = parseFloat(document.getElementById('waist').value);

@@ -7,7 +7,7 @@ const DataManager = {
             // Verify localStorage is available
             if (!this.isLocalStorageAvailable()) {
                 console.error('LocalStorage not available!');
-                alert('⚠️ Storage not available. Data may not persist.');
+                alert('! Storage not available. Data may not persist.');
                 return;
             }
             
@@ -168,7 +168,7 @@ const DataManager = {
             return true;
         } catch (e) {
             console.error('Save session error:', e);
-            alert('⚠️ Failed to save session: ' + e.message);
+            alert('! Failed to save session: ' + e.message);
             return false;
         }
     },
@@ -199,7 +199,7 @@ const DataManager = {
             return true;
         } catch (e) {
             console.error('Save exercise error:', e);
-            alert('⚠️ Failed to save: ' + e.message);
+            alert('! Failed to save: ' + e.message);
             return false;
         }
     },
@@ -293,7 +293,7 @@ const DataManager = {
             return true;
         } catch (e) {
             console.error('Save check-in error:', e);
-            alert('⚠️ Failed to save check-in: ' + e.message);
+            alert('! Failed to save check-in: ' + e.message);
             return false;
         }
     },
@@ -360,9 +360,14 @@ const DataManager = {
         
         const { swelling, pain } = checkIn;
         
+        // RED: Severe swelling OR moderate swelling with high pain
         if (swelling === 'severe' || (swelling === 'moderate' && pain >= 6)) return 'red';
-        if (swelling === 'moderate' || pain >= 4 || (swelling === 'mild' && pain >= 3)) return 'yellow';
-        if (swelling === 'none' || (swelling === 'mild' && pain <= 2)) return 'green';
+        
+        // YELLOW: Moderate swelling OR high pain OR mild swelling with high pain
+        if (swelling === 'moderate' || pain >= 5 || (swelling === 'mild' && pain >= 5)) return 'yellow';
+        
+        // GREEN: No swelling OR mild swelling with low-moderate pain
+        if (swelling === 'none' || (swelling === 'mild' && pain <= 4)) return 'green';
         
         return 'yellow';
     },
@@ -400,9 +405,15 @@ const DataManager = {
     
     getKneeStatusForCheckIn(checkIn) {
         const { swelling, pain } = checkIn;
+        // RED: Severe swelling OR moderate swelling with high pain
         if (swelling === 'severe' || (swelling === 'moderate' && pain >= 6)) return 'RED';
-        if (swelling === 'moderate' || pain >= 4) return 'YELLOW';
-        if (swelling === 'none' || (swelling === 'mild' && pain <= 2)) return 'GREEN';
+        
+        // YELLOW: Moderate swelling OR high pain OR mild swelling with high pain
+        if (swelling === 'moderate' || pain >= 5 || (swelling === 'mild' && pain >= 5)) return 'YELLOW';
+        
+        // GREEN: No swelling OR mild swelling with low-moderate pain
+        if (swelling === 'none' || (swelling === 'mild' && pain <= 4)) return 'GREEN';
+        
         return 'YELLOW';
     },
     

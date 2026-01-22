@@ -91,6 +91,12 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
 }
 
 /* Traffic Light Status */
+.status-card {
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.status-card:active {
+    transform: scale(0.98);
+}
 .status-green { 
     border-left: 6px solid var(--green);
     background: linear-gradient(to right, rgba(76, 175, 80, 0.08), white);
@@ -186,6 +192,12 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
 /* Buttons */
 .button-group { display: flex; gap: 8px; margin: 16px 0; }
 
+@keyframes bubblePop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.08); }
+    100% { transform: scale(1.05); }
+}
+
 .preset-btn {
     flex: 1;
     padding: 14px;
@@ -196,21 +208,26 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
     font-weight: 700;
     color: var(--gray-600);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     min-height: 52px;
 }
 
 .preset-btn:hover {
     border-color: var(--primary);
     background: #F1F8E9;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+}
+
+.preset-btn:active {
+    transform: scale(0.92);
 }
 
 .preset-btn.active {
     background: var(--primary);
     color: white;
     border-color: var(--primary);
-    box-shadow: 0 4px 8px rgba(46, 125, 50, 0.3);
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+    animation: bubblePop 0.3s forwards;
 }
 
 .primary-button {
@@ -225,14 +242,18 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
     margin-top: 16px;
     cursor: pointer;
     min-height: 56px;
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
 }
 
 .primary-button:hover {
     background: var(--primary-dark);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(46, 125, 50, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(46, 125, 50, 0.4);
+}
+
+.primary-button:active {
+    transform: scale(0.96);
 }
 
 .secondary-button {
@@ -246,6 +267,11 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
     width: 100%;
     margin-top: 16px;
     cursor: pointer;
+    transition: all 0.2s;
+}
+
+.secondary-button:active {
+    transform: scale(0.96);
 }
 
 /* Swelling Buttons */
@@ -260,12 +286,16 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
     font-weight: 700;
     cursor: pointer;
     min-height: 68px;
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 4px;
+}
+
+.swelling-btn:active {
+    transform: scale(0.9);
 }
 
 .btn-icon { font-size: 26px; line-height: 1; }
@@ -275,32 +305,32 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
     background: var(--green);
     color: white;
     border-color: var(--green);
-    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
-    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+    animation: bubblePop 0.3s forwards;
 }
 
 .swelling-btn[data-level="mild"].active {
     background: var(--yellow);
     color: var(--gray-900);
     border-color: var(--yellow);
-    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
-    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
+    animation: bubblePop 0.3s forwards;
 }
 
 .swelling-btn[data-level="moderate"].active {
     background: var(--orange);
     color: white;
     border-color: var(--orange);
-    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4);
-    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
+    animation: bubblePop 0.3s forwards;
 }
 
 .swelling-btn[data-level="severe"].active {
     background: var(--red);
     color: white;
     border-color: var(--red);
-    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
-    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(244, 67, 54, 0.4);
+    animation: bubblePop 0.3s forwards;
 }
 
 /* Forms */
@@ -487,69 +517,103 @@ textarea:focus {
 .mode-red { background: var(--red); color: white; }
 
 /* Stepper Controls */
-.dosage-tracker {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin: 20px 0;
-}
-
-.tracker-item {
-    background: var(--gray-50);
-    padding: 14px;
+.input-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--gray-100);
+    border: 2px solid var(--gray-300);
     border-radius: 12px;
-    text-align: center;
+    padding: 4px;
+    min-height: 52px;
 }
 
-.tracker-item label {
-    display: block;
-    font-size: 11px;
+.input-stepper button {
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: white;
+    border-radius: 8px;
+    font-size: 20px;
     font-weight: 700;
-    color: var(--gray-600);
-    margin-bottom: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.stepper {
+    color: var(--primary);
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.stepper-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    border: 2px solid var(--gray-300);
-    background: white;
-    font-size: 20px;
-    font-weight: 700;
-    cursor: pointer;
-    color: var(--primary);
-    transition: all 0.15s;
+.input-stepper button:active {
+    transform: scale(0.9);
+    background: var(--gray-200);
 }
 
-.stepper-btn:hover {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-}
-
-.stepper-btn:active {
-    transform: scale(0.95);
-}
-
-.stepper-input {
-    width: 60px;
-    height: 42px;
-    text-align: center;
-    font-size: 26px;
-    font-weight: 800;
+.input-stepper input {
+    width: 100%;
     border: none;
     background: transparent;
-    color: var(--primary);
+    text-align: center;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--gray-900);
+    -moz-appearance: textfield;
+}
+
+.input-stepper input::-webkit-outer-spin-button,
+.input-stepper input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Enhanced Bubble Pop */
+@keyframes bubblePop {
+    0% { transform: scale(1); }
+    30% { transform: scale(0.92); }
+    60% { transform: scale(1.1); }
+    100% { transform: scale(1.05); }
+}
+
+.preset-btn, .swelling-btn, .nav-btn, .primary-button, .secondary-button, .chip-content, .exercise-tile {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.primary-button:active, .secondary-button:active, .swelling-btn:active, .exercise-tile:active {
+    animation: bubblePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Thumb-friendly Navigation */
+#bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom, 12px);
+    height: auto;
+    min-height: 70px;
+}
+
+.nav-btn {
+    min-height: 56px;
+    padding: 10px 4px;
+}
+
+/* Mobile Viewport Optimizations */
+@media (max-width: 375px) {
+    .exercise-tiles {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .exercise-tile {
+        padding: 12px;
+        min-height: 110px;
+    }
+    
+    .tile-icon {
+        font-size: 28px;
+    }
+    
+    .tile-name {
+        font-size: 13px;
+    }
 }
 
 /* Log Form */
@@ -863,7 +927,7 @@ details[open] {
 }
 
 @media (max-width: 380px) {
-    .exercise-tiles { grid-template-columns: 1fr; }
+    .exercise-tiles { grid-template-columns: repeat(2, 1fr); gap: 8px; }
     .activity-grid { grid-template-columns: 1fr; }
-    .stats-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
 }

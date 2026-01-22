@@ -221,7 +221,7 @@ function renderSwellingTrend(days) {
         const colors = ['#4CAF50', '#FFC107', '#FF9800', '#F44336'];
         return `<div class="chart-bar" style="height: ${height}%; background: ${colors[val]}; min-height: 10px;">
             <span class="chart-label">${new Date(c.date).getDate()}</span></div>`;
-    }).join('')}</div><div style="text-align: center; margin-top: 16px; font-size: 13px;">🟢 None | 🟡 Mild | 🟠 Mod | 🔴 Severe</div>`;
+    }).join('')}</div><div style="text-align: center; margin-top: 16px; font-size: 13px;">&#128994; None | &#128993; Mild | &#128992; Mod | &#128308; Severe</div>`;
 }
 
 function renderPainTrend(days) {

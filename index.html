@@ -29,10 +29,10 @@
                 <div class="form-group">
                     <label>Swelling</label>
                     <div class="swelling-group">
-                        <button class="swelling-btn" data-level="none">🟢 None</button>
-                        <button class="swelling-btn" data-level="mild">🟡 Mild</button>
-                        <button class="swelling-btn" data-level="moderate">🟠 Mod</button>
-                        <button class="swelling-btn" data-level="severe">🔴 Bad</button>
+                        <button class="swelling-btn" data-level="none">&#128994; None</button>
+                        <button class="swelling-btn" data-level="mild">&#128993; Mild</button>
+                        <button class="swelling-btn" data-level="moderate">&#128992; Mod</button>
+                        <button class="swelling-btn" data-level="severe">&#128308; Bad</button>
                     </div>
                 </div>
                 <div class="form-group">
@@ -75,15 +75,6 @@
                 <button id="toggle-custom" class="secondary-button">Custom</button>
             </div>
 
-            <section class="card stopwatch-card">
-                <h3>⏱️ Stopwatch</h3>
-                <div id="stopwatch-display" class="stopwatch-display">00:00</div>
-                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
-                    <button id="stopwatch-action" class="primary-button">Start</button>
-                    <button id="reset-stopwatch" class="secondary-button" style="display:none;">Reset</button>
-                    <div id="milestone-badges" style="display:none; gap:6px; flex-wrap:wrap;"></div>
-                </div>
-            </section>
 
             <section class="card">
                 <h3>Quick Log</h3>
@@ -99,52 +90,78 @@
             </section>
 
             <section class="card" id="exercise-log-form" style="display:none;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3 id="selected-exercise-name">Exercise</h3>
-                    <button id="close-form" class="secondary-button">Close</button>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                    <h3 id="selected-exercise-name" style="margin: 0;">Exercise</h3>
+                    <button id="close-form" class="secondary-button" style="width: auto; margin: 0; padding: 8px 16px;">Close</button>
                 </div>
-                <div class="form-row">
-                    <label>Sets</label>
-                    <div class="input-stepper">
-                        <button type="button" onclick="adjustValue('sets-completed',-1)">−</button>
-                        <input id="sets-completed" type="number" value="3">
-                        <button type="button" onclick="adjustValue('sets-completed',1)">+</button>
+
+                <!-- Primary Metrics -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                    <div class="form-row" style="margin: 0;">
+                        <label>Sets</label>
+                        <div class="input-stepper">
+                            <button type="button" onclick="adjustValue('sets-completed',-1)">−</button>
+                            <input id="sets-completed" type="number" value="3" inputmode="numeric">
+                            <button type="button" onclick="adjustValue('sets-completed',1)">+</button>
+                        </div>
+                    </div>
+                    <div class="form-row" style="margin: 0;">
+                        <label>Reps</label>
+                        <div class="input-stepper">
+                            <button type="button" onclick="adjustValue('reps-completed',-1)">−</button>
+                            <input id="reps-completed" type="number" value="10" inputmode="numeric">
+                            <button type="button" onclick="adjustValue('reps-completed',1)">+</button>
+                        </div>
                     </div>
                 </div>
-                <div class="form-row">
-                    <label>Reps</label>
-                    <div class="input-stepper">
-                        <button type="button" onclick="adjustValue('reps-completed',-1)">−</button>
-                        <input id="reps-completed" type="number" value="10">
-                        <button type="button" onclick="adjustValue('reps-completed',1)">+</button>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                    <div class="form-row" id="hold-tracker" style="margin: 0;">
+                        <label>Hold (sec)</label>
+                        <div class="input-stepper">
+                            <button type="button" onclick="adjustValue('hold-time',-5)">−</button>
+                            <input id="hold-time" type="number" value="0" inputmode="numeric">
+                            <button type="button" onclick="adjustValue('hold-time',5)">+</button>
+                        </div>
+                    </div>
+                    <div class="form-row" style="margin: 0;">
+                        <label>Weight (lb)</label>
+                        <div class="input-stepper">
+                            <button type="button" onclick="adjustValue('weight-used',-5)">−</button>
+                            <input id="weight-used" type="number" value="0" inputmode="numeric">
+                            <button type="button" onclick="adjustValue('weight-used',5)">+</button>
+                        </div>
                     </div>
                 </div>
-                <div class="form-row" id="hold-tracker">
-                    <label>Hold (sec)</label>
-                    <div class="input-stepper">
-                        <button type="button" onclick="adjustValue('hold-time',-5)">−</button>
-                        <input id="hold-time" type="number" value="0">
-                        <button type="button" onclick="adjustValue('hold-time',5)">+</button>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <label>Weight (lb)</label>
-                    <div class="input-stepper">
-                        <button type="button" onclick="adjustValue('weight-used',-5)">−</button>
-                        <input id="weight-used" type="number" value="0">
-                        <button type="button" onclick="adjustValue('weight-used',5)">+</button>
-                    </div>
-                </div>
-                <div class="form-row">
+
+                <div class="form-row" style="margin-bottom: 24px;">
                     <label>Difficulty (1-10): <span id="rpe-value">5</span></label>
-                    <input type="range" id="rpe-slider" min="1" max="10" value="5">
+                    <input type="range" id="rpe-slider" min="1" max="10" value="5" class="slider">
                 </div>
+
+                <!-- Timer Section -->
+                <div id="form-timer-section" style="margin-bottom: 24px;">
+                    <button id="toggle-form-timer" class="secondary-button" style="margin: 0; background: #f5f5f5; border-color: #e0e0e0; color: #444;">
+                        ⏱️ Show Timer
+                    </button>
+                    
+                    <div id="embedded-stopwatch" style="display: none; margin-top: 16px; padding: 20px; background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%); border-radius: 16px; color: white; text-align: center;">
+                        <div id="stopwatch-display" class="stopwatch-display" style="font-size: 60px; margin: 10px 0; color: white;">00:00</div>
+                        <div style="display: flex; gap: 12px; justify-content: center;">
+                            <button id="stopwatch-action" class="primary-button" style="margin: 0; background: white; color: var(--primary); padding: 12px 24px; width: auto; min-height: auto;">Start</button>
+                            <button id="reset-stopwatch" class="secondary-button" style="margin: 0; background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); color: white; padding: 12px 24px; width: auto; min-height: auto; display: none;">Reset</button>
+                        </div>
+                        <div id="milestone-badges" style="display: none; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 16px;"></div>
+                    </div>
+                </div>
+
                 <div class="form-row">
                     <label>Notes</label>
-                    <textarea id="exercise-notes" rows="2"></textarea>
+                    <textarea id="exercise-notes" rows="2" style="width: 100%; border-radius: 12px; border: 2px solid var(--gray-300); padding: 12px;"></textarea>
                 </div>
-                <div id="trend-chart" style="margin-top:12px;"></div>
-                <button id="save-exercise" class="primary-button" type="button">✅ Log</button>
+                
+                <div id="trend-chart" style="margin-top:20px;"></div>
+                <button id="save-exercise" class="primary-button" type="button" style="margin-top: 24px;">✅ Log Workout</button>
             </section>
 
             <section class="card" id="custom-workout-form" style="display:none;">
@@ -152,11 +169,11 @@
                     <h3 id="custom-workout-title">Custom</h3>
                     <button id="close-custom-form" class="secondary-button" type="button">Close</button>
                 </div>
-                <div class="form-row">
+                <div class="form-row" style="margin-bottom: 24px;">
                     <label>Duration (min)</label>
                     <div class="input-stepper">
                         <button type="button" onclick="adjustValue('custom-duration',-5)">−</button>
-                        <input id="custom-duration" type="number" value="20">
+                        <input id="custom-duration" type="number" value="20" inputmode="numeric">
                         <button type="button" onclick="adjustValue('custom-duration',5)">+</button>
                     </div>
                 </div>
@@ -234,19 +251,47 @@
                 <h2>📏 Measurements</h2>
                 <button onclick="closeMeasurementModal()" class="close-btn">x</button>
             </div>
-            <div class="modal-body">
-                <h4>Knee (2cm above patella)</h4>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px;">
-                    <div><label>Right</label><input type="number" id="knee-right" step="0.1" class="text-input"></div>
-                    <div><label>Left</label><input type="number" id="knee-left" step="0.1" class="text-input"></div>
-                </div>
-                <details>
-                    <summary style="cursor: pointer; padding: 12px; background: #f5f5f5; border-radius: 8px;">➕ Optional</summary>
-                    <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
-                        <div><label>Waist (cm)</label><input type="number" id="waist" step="0.1" class="text-input"></div>
-                        <div><label>Weight (lbs)</label><input type="number" id="weight" step="0.1" class="text-input"></div>
+                <div class="modal-body">
+                    <h4>Knee (2cm above patella)</h4>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px;">
+                        <div>
+                            <label>Right</label>
+                            <div class="input-stepper">
+                                <button type="button" onclick="adjustValue('knee-right',-0.1)">−</button>
+                                <input type="number" id="knee-right" step="0.1" inputmode="decimal">
+                                <button type="button" onclick="adjustValue('knee-right',0.1)">+</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label>Left</label>
+                            <div class="input-stepper">
+                                <button type="button" onclick="adjustValue('knee-left',-0.1)">−</button>
+                                <input type="number" id="knee-left" step="0.1" inputmode="decimal">
+                                <button type="button" onclick="adjustValue('knee-left',0.1)">+</button>
+                            </div>
+                        </div>
                     </div>
-                </details>
+                    <details>
+                        <summary style="cursor: pointer; padding: 12px; background: #f5f5f5; border-radius: 8px;">➕ Optional</summary>
+                        <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                            <div>
+                                <label>Waist (cm)</label>
+                                <div class="input-stepper">
+                                    <button type="button" onclick="adjustValue('waist',-0.5)">−</button>
+                                    <input type="number" id="waist" step="0.1" inputmode="decimal">
+                                    <button type="button" onclick="adjustValue('waist',0.5)">+</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label>Weight (lbs)</label>
+                                <div class="input-stepper">
+                                    <button type="button" onclick="adjustValue('weight',-1)">−</button>
+                                    <input type="number" id="weight" step="0.1" inputmode="decimal">
+                                    <button type="button" onclick="adjustValue('weight',1)">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
                 <div style="margin:12px 0;">
                     <label>Posture</label>
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">

@@ -1,4 +1,4 @@
-﻿// State Management Module
+// State Management Module
 const AppState = {
     swelling: null,
     pain: 0,
@@ -53,7 +53,7 @@ function updateStreakDisplay() {
 }
 // View Router Module
 function switchView(viewName) {
-    console.log('â†’', viewName);
+    console.log('→', viewName);
     
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -131,11 +131,11 @@ function setupCheckInHandlers() {
 
 function saveCheckIn() {
     if (!AppState.swelling) {
-        alert('âš ï¸ Select swelling');
+        alert('! Select swelling');
         return;
     }
     
-    console.log('ðŸ’¾ Saving check-in...');
+    console.log('💾 Saving check-in...');
     
     const success = DataManager.saveCheckIn({ 
         swelling: AppState.swelling, 
@@ -163,7 +163,7 @@ function loadTodayCheckIn() {
     const checkIn = DataManager.getCheckIn(new Date().toISOString().split('T')[0]);
     if (!checkIn) return;
     
-    console.log('ðŸ“¥ Loading check-in');
+    console.log('📥 Loading check-in');
     
     if (checkIn.swelling) {
         const btn = document.querySelector(`.swelling-btn[data-level="${checkIn.swelling}"]`);
@@ -326,6 +326,18 @@ const Stopwatch = {
         actionBtn.style.background = '';
         
         if (this.seconds >= 30) this.playSuccessSound();
+
+        // Auto-sync with exercise log if open
+        const holdTimeInput = document.getElementById('hold-time');
+        const exerciseForm = document.getElementById('exercise-log-form');
+        
+        if (holdTimeInput && exerciseForm && exerciseForm.style.display !== 'none' && this.seconds > 0) {
+            holdTimeInput.value = this.seconds;
+            holdTimeInput.style.backgroundColor = 'rgba(76, 175, 80, 0.2)';
+            holdTimeInput.style.transition = 'background-color 0.5s';
+            setTimeout(() => { holdTimeInput.style.backgroundColor = ''; }, 1000);
+            console.log(`⏱️ Auto-synced ${this.seconds}s to hold time`);
+        }
     },
     
     reset() {
@@ -367,7 +379,7 @@ const Stopwatch = {
         const badgesContainer = document.getElementById('milestone-badges');
         const badge = document.createElement('div');
         badge.className = 'milestone-badge milestone-new';
-        badge.innerHTML = `<span class="milestone-icon">ðŸŽ¯</span><span class="milestone-text">${milestone}s!</span>`;
+        badge.innerHTML = `<span class="milestone-icon">🎯</span><span class="milestone-text">${milestone}s!</span>`;
         badgesContainer.appendChild(badge);
         
         setTimeout(() => badge.classList.remove('milestone-new'), 500);
@@ -418,7 +430,7 @@ function setupWorkoutHandlers() {
     
     if (toggleEx) {
         const h = () => {
-            console.log('â†’ Exercises');
+            console.log('→ Exercises');
             toggleEx.classList.add('active');
             toggleCu.classList.remove('active');
             document.getElementById('exercise-tiles').style.display = 'grid';
@@ -430,7 +442,7 @@ function setupWorkoutHandlers() {
     
     if (toggleCu) {
         const h = () => {
-            console.log('â†’ Custom');
+            console.log('→ Custom');
             toggleCu.classList.add('active');
             toggleEx.classList.remove('active');
             document.getElementById('exercise-tiles').style.display = 'none';
@@ -467,6 +479,16 @@ function setupWorkoutHandlers() {
     
     const closeCust = document.getElementById('close-custom-form');
     if (closeCust) { closeCust.ontouchstart = closeCustomForm; closeCust.onclick = closeCustomForm; }
+
+    const toggleTimerBtn = document.getElementById('toggle-form-timer');
+    if (toggleTimerBtn) {
+        toggleTimerBtn.onclick = () => {
+            const timerDiv = document.getElementById('embedded-stopwatch');
+            const isVisible = timerDiv.style.display !== 'none';
+            timerDiv.style.display = isVisible ? 'none' : 'block';
+            toggleTimerBtn.textContent = isVisible ? '⏱️ Show Timer' : '⏱️ Hide Timer';
+        };
+    }
 }
 
 function renderExerciseTiles() {
@@ -516,6 +538,13 @@ function closeExerciseForm() {
     document.getElementById('exercise-log-form').style.display = 'none';
     document.getElementById('exercise-tiles').style.display = 'grid';
     AppState.selectedExercise = null;
+    
+    // Reset timer UI if open
+    const timerDiv = document.getElementById('embedded-stopwatch');
+    if (timerDiv) timerDiv.style.display = 'none';
+    const toggleBtn = document.getElementById('toggle-form-timer');
+    if (toggleBtn) toggleBtn.textContent = '⏱️ Show Timer';
+    if (typeof Stopwatch !== 'undefined') Stopwatch.reset();
 }
 
 function saveExerciseLog() {
@@ -539,7 +568,7 @@ function saveExerciseLog() {
 }
 
 function selectCustomWorkout(type) {
-    const names = { peloton: 'ðŸš´ Peloton', rowing: 'ðŸš£ Rowing', core: 'ðŸŽ¯ Core', stretch: 'ðŸ§˜ Stretch' };
+    const names = { peloton: '🚴 Peloton', rowing: '🚣 Rowing', core: '🎯 Core', stretch: '🧘 Stretch' };
     AppState.selectedCustomWorkout = type;
     document.getElementById('custom-workout-tiles').style.display = 'none';
     document.getElementById('custom-workout-form').style.display = 'block';
@@ -589,10 +618,10 @@ function renderTodaysSummary() {
     
     let html = '';
     custom.forEach(w => {
-        const icons = { peloton: 'ðŸš´', rowing: 'ðŸš£', core: 'ðŸŽ¯', stretch: 'ðŸ§˜' };
+        const icons = { peloton: '🚴', rowing: '🚣', core: '🎯', stretch: '🧘' };
         html += `<div style="padding: 12px; background: #f5f5f5; border-radius: 10px; margin-bottom: 8px;">
             <div style="font-weight: 700;">${icons[w.workoutCategory]} ${w.workoutType || w.workoutCategory}</div>
-            <div style="font-size: 13px; color: #666; margin-top: 4px;">${w.durationMinutes}min â€¢ ${w.intensity}/10</div>
+            <div style="font-size: 13px; color: #666; margin-top: 4px;">${w.durationMinutes}min • ${w.intensity}/10</div>
         </div>`;
     });
     exercises.forEach(log => {
@@ -862,7 +891,7 @@ function renderSwellingTrend(days) {
         const colors = ['#4CAF50', '#FFC107', '#FF9800', '#F44336'];
         return `<div class="chart-bar" style="height: ${height}%; background: ${colors[val]}; min-height: 10px;">
             <span class="chart-label">${new Date(c.date).getDate()}</span></div>`;
-    }).join('')}</div><div style="text-align: center; margin-top: 16px; font-size: 13px;">ðŸŸ¢ None | ðŸŸ¡ Mild | ðŸŸ  Mod | ðŸ”´ Severe</div>`;
+    }).join('')}</div><div style="text-align: center; margin-top: 16px; font-size: 13px;">&#128994; None | &#128993; Mild | &#128992; Mod | &#128308; Severe</div>`;
 }
 
 function renderPainTrend(days) {
@@ -944,7 +973,7 @@ function closeMeasurementModal() {
 function saveMeasurement() {
     const kneeRight = parseFloat(document.getElementById('knee-right').value);
     const kneeLeft = parseFloat(document.getElementById('knee-left').value);
-    if (!kneeRight || !kneeLeft) { alert('âš ï¸ Enter both knees'); return; }
+    if (!kneeRight || !kneeLeft) { alert('! Enter both knees'); return; }
     
     const data = { measurements: { knee_top_cm: { right: kneeRight, left: kneeLeft, method: '2cm above patella' }, height_cm: 189 }, posture: AppState.posture, notes: document.getElementById('measurement-notes').value, type: 'measurement' };
     const waist = parseFloat(document.getElementById('waist').value);
@@ -995,7 +1024,7 @@ function renderMeasurementSummary() {
 }
 // App Initialization
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('ðŸš€ KneeCapacity starting...');
+    console.log('🚀 KneeCapacity starting...');
     
     // Initialize data
     DataManager.init();
