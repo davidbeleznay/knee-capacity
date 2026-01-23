@@ -63,6 +63,17 @@ function setupWorkoutHandlers() {
             toggleTimerBtn.textContent = isVisible ? '⏱️ Show Timer' : '⏱️ Hide Timer';
         };
     }
+    
+    const toggleInstructionsBtn = document.getElementById('toggle-instructions');
+    if (toggleInstructionsBtn) {
+        toggleInstructionsBtn.onclick = () => {
+            const content = document.getElementById('instructions-content');
+            const icon = document.getElementById('toggle-instructions-icon');
+            const isVisible = content.style.display !== 'none';
+            content.style.display = isVisible ? 'none' : 'block';
+            icon.textContent = isVisible ? '▶' : '▼';
+        };
+    }
 }
 
 function renderExerciseTiles() {
@@ -201,6 +212,36 @@ function selectExerciseForLogging(id) {
     
     const ex = AppState.selectedExercise;
     document.getElementById('selected-exercise-name').textContent = ex.name;
+    
+    // Populate exercise instructions
+    if (ex.setup && ex.setup.length > 0) {
+        document.getElementById('setup-list').innerHTML = ex.setup.map(s => `<li>${s}</li>`).join('');
+    }
+    if (ex.execution && ex.execution.length > 0) {
+        document.getElementById('execution-list').innerHTML = ex.execution.map(e => `<li>${e}</li>`).join('');
+    }
+    if (ex.targetMuscles) {
+        document.getElementById('target-muscles').textContent = ex.targetMuscles;
+    }
+    
+    // Show tempo only for isometric/hold exercises
+    const isHoldExercise = ex.dosage && (ex.dosage.toLowerCase().includes('hold') || ex.dosage.toLowerCase().includes('iso'));
+    if (ex.tempo && isHoldExercise) {
+        document.getElementById('tempo-display').textContent = ex.tempo;
+        document.getElementById('instructions-tempo').style.display = 'block';
+    } else {
+        document.getElementById('instructions-tempo').style.display = 'none';
+    }
+    
+    // Reset instructions to collapsed on mobile
+    const instructionsContent = document.getElementById('instructions-content');
+    if (window.innerWidth <= 600) {
+        instructionsContent.style.display = 'none';
+        document.getElementById('toggle-instructions-icon').textContent = '▶';
+    } else {
+        instructionsContent.style.display = 'block';
+        document.getElementById('toggle-instructions-icon').textContent = '▼';
+    }
     
     // Parse dosage string to extract sets/reps/hold
     const dosageParts = ex.dosage.match(/(\d+)\s*sets?\s*x\s*(\d+)(?:-(\d+))?\s*(?:reps?|s)?/i);

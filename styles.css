@@ -14,6 +14,7 @@
     --gray-200: #EEEEEE;
     --gray-300: #E0E0E0;
     --gray-600: #757575;
+    --gray-700: #616161;
     --gray-900: #212121;
 }
 
@@ -1085,4 +1086,110 @@ details[open] {
     .exercise-tiles { grid-template-columns: repeat(2, 1fr); gap: 8px; }
     .activity-grid { grid-template-columns: 1fr; }
     .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+}
+
+/* Exercise Instructions Section */
+.exercise-instructions {
+    background: #f9f9f9;
+    border: 1px solid var(--gray-300);
+    border-radius: 12px;
+    margin-bottom: 24px;
+    overflow: hidden;
+}
+
+.toggle-instructions-btn {
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 14px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary);
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s;
+}
+
+.toggle-instructions-btn:hover {
+    background: rgba(46, 125, 50, 0.05);
+}
+
+.toggle-instructions-btn:active {
+    background: rgba(46, 125, 50, 0.1);
+}
+
+#toggle-instructions-icon {
+    font-size: 12px;
+    transition: transform 0.2s;
+}
+
+.instructions-content {
+    padding: 0 16px 16px 16px;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.instructions-section {
+    margin-bottom: 16px;
+}
+
+.instructions-section:last-child {
+    margin-bottom: 0;
+}
+
+.instructions-section strong {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--primary);
+    font-weight: 800;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+.instructions-section ul {
+    margin: 0 0 0 20px;
+    padding: 0;
+    list-style-type: disc;
+}
+
+.instructions-section li {
+    margin-bottom: 6px;
+    color: var(--gray-700);
+}
+
+.instructions-section li:last-child {
+    margin-bottom: 0;
+}
+
+/* Mobile: Start collapsed */
+@media (max-width: 600px) {
+    .toggle-instructions-btn {
+        font-size: 14px;
+        padding: 12px 14px;
+    }
+    
+    .instructions-content {
+        font-size: 13px;
+        padding: 0 14px 14px 14px;
+    }
+}
+
+/* Desktop: Always expanded */
+@media (min-width: 601px) {
+    .instructions-content {
+        display: block !important;
+    }
+    
+    #toggle-instructions-icon {
+        display: none;
+    }
+    
+    .toggle-instructions-btn {
+        cursor: default;
+        pointer-events: none;
+    }
 }

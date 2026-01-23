@@ -120,6 +120,29 @@
                     <button id="close-form" class="secondary-button" style="width: auto; margin: 0; padding: 8px 16px;">Close</button>
                 </div>
 
+                <!-- Exercise Instructions -->
+                <div id="exercise-instructions" class="exercise-instructions">
+                    <button id="toggle-instructions" class="toggle-instructions-btn">
+                        <span id="toggle-instructions-icon">▼</span> How to Perform
+                    </button>
+                    <div id="instructions-content" class="instructions-content">
+                        <div class="instructions-section">
+                            <strong>SETUP:</strong>
+                            <ul id="setup-list"></ul>
+                        </div>
+                        <div class="instructions-section">
+                            <strong>EXECUTION:</strong>
+                            <ul id="execution-list"></ul>
+                        </div>
+                        <div class="instructions-section">
+                            <strong>Target:</strong> <span id="target-muscles"></span>
+                        </div>
+                        <div id="instructions-tempo" class="instructions-section" style="display:none;">
+                            <strong>Tempo:</strong> <span id="tempo-display"></span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Primary Metrics -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
                     <div class="form-row" style="margin: 0;">
