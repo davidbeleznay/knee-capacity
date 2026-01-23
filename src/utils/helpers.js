@@ -43,10 +43,14 @@ function adjustValue(inputId, delta) {
 function updateStreakDisplay() {
     const streak = DataManager.getCurrentStreak();
     const badges = DataManager.getBadges();
+    const totalWorkouts = DataManager.getTotalWorkouts();
     
     // Update Home Streak Card
     const homeStreakCount = document.getElementById('home-streak-count');
     if (homeStreakCount) homeStreakCount.textContent = streak;
+    
+    const homeTotalWorkouts = document.getElementById('home-total-workouts');
+    if (homeTotalWorkouts) homeTotalWorkouts.textContent = totalWorkouts;
     
     const homeBadges = document.getElementById('home-milestone-badges');
     if (homeBadges) {

@@ -2,7 +2,6 @@
 function setupCheckInHandlers() {
     document.querySelectorAll('.swelling-btn').forEach(btn => {
         const handler = function() {
-            console.log('Swelling:', this.dataset.level);
             document.querySelectorAll('.swelling-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             AppState.swelling = this.dataset.level;
@@ -73,8 +72,6 @@ function loadTodayCheckIn() {
     const checkIn = DataManager.getCheckIn(new Date().toISOString().split('T')[0]);
     if (!checkIn) return;
     
-    console.log('📥 Loading check-in');
-    
     if (checkIn.swelling) {
         const btn = document.querySelector(`.swelling-btn[data-level="${checkIn.swelling}"]`);
         if (btn) {
@@ -122,18 +119,58 @@ function updateKneeStatusCard() {
     card.innerHTML = `
         <div class="status-icon">${statusInfo.icon}</div>
         <h2>${statusInfo.title}</h2>
-        <p style="font-size: 16px; margin: 12px 0;">${statusInfo.message}</p>
-        <div style="background: rgba(0,0,0,0.05); padding: 12px; border-radius: 10px; margin-top: 12px;">
-            <strong>Plan:</strong> ${statusInfo.action}
+        <div style="text-align: left; margin-top: 16px;">
+            <div style="margin-bottom: 12px;">
+                <strong style="color: var(--primary); display: block; margin-bottom: 4px;">🛤️ Today's Lane:</strong>
+                <span style="font-weight: 700; font-size: 16px;">${statusInfo.lane}</span>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong style="display: block; margin-bottom: 4px;">📝 Plan:</strong>
+                <span style="font-size: 14px; line-height: 1.4;">${statusInfo.plan}</span>
+            </div>
+            <div style="font-size: 13px; color: var(--gray-600); font-style: italic; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.05);">
+                ${statusInfo.reason}
+            </div>
         </div>
     `;
     
-    const badge = document.getElementById('current-mode-badge');
-    if (badge) {
-        badge.className = `mode-badge mode-${status}`;
-        badge.textContent = status.toUpperCase();
-    }
+    updateLaneGuidance();
 }
+
+function updateLaneGuidance() {
+    const status = DataManager.getKneeStatus();
+    const laneCard = document.getElementById('lane-guidance-card');
+    const laneOptions = document.getElementById('lane-options');
+    
+    if (status === 'unknown') {
+        laneCard.style.display = 'none';
+        return;
+    }
+    
+    laneCard.style.display = 'block';
+    const recommendedLanes = DataManager.getRecommendedLanes();
+    
+    // Auto-select first recommended lane if none selected
+    if (!AppState.selectedLane || !recommendedLanes.includes(AppState.selectedLane)) {
+        AppState.selectedLane = recommendedLanes[0];
+    }
+    
+    laneOptions.innerHTML = recommendedLanes.map(lane => `
+        <button class="lane-btn lane-${lane.toLowerCase()} ${AppState.selectedLane === lane ? 'active' : ''}" 
+                onclick="selectLane('${lane}')">
+            ${lane}
+        </button>
+    `).join('');
+    
+    document.getElementById('lane-explanation').textContent = DataManager.getLaneDescription(AppState.selectedLane);
+}
+
+window.selectLane = (lane) => {
+    AppState.selectedLane = lane;
+    updateLaneGuidance();
+    // Render exercise tiles if we switch to log view
+    if (AppState.currentView === 'log') renderExerciseTiles();
+};
 
 function updateWeekSummary() {
     const weekStart = new Date();

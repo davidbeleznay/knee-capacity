@@ -6,7 +6,6 @@ function setupWorkoutHandlers() {
     
     if (toggleEx) {
         const h = () => {
-            console.log('→ Exercises');
             toggleEx.classList.add('active');
             toggleCu.classList.remove('active');
             document.getElementById('exercise-tiles').style.display = 'grid';
@@ -18,7 +17,6 @@ function setupWorkoutHandlers() {
     
     if (toggleCu) {
         const h = () => {
-            console.log('→ Custom');
             toggleCu.classList.add('active');
             toggleEx.classList.remove('active');
             document.getElementById('exercise-tiles').style.display = 'none';
@@ -71,21 +69,126 @@ function renderExerciseTiles() {
     const container = document.getElementById('exercise-tiles');
     if (!container) return;
     
-    const status = AppState.kneeStatus;
-    const phaseMap = { 'green': ['Build', 'Prime'], 'yellow': ['Build', 'Calm'], 'red': ['Calm'], 'unknown': ['Calm', 'Build'] };
+    const kneeStatus = DataManager.getKneeStatus();
     
-    const filtered = EXERCISES.filter(ex => ex.phase.some(p => phaseMap[status].includes(p)));
-    
-    container.innerHTML = filtered.map(ex => {
-        const icon = getExerciseIcon(ex.id);
-        const hold = ex.dosage.holdTime > 0 ? `x${ex.dosage.holdTime}s` : '';
-        const name = ex.name.replace(' (Isometric)', '').replace(' (Eccentric)', '');
-        
-        return `<div class="exercise-tile" ontouchstart="selectExerciseForLogging('${ex.id}')" onclick="selectExerciseForLogging('${ex.id}')">
-            <div><div class="tile-icon">${icon}</div><div class="tile-name">${name}</div></div>
-            <div><div class="tile-meta">${ex.dosage.sets}x${ex.dosage.reps}${hold}</div></div>
+    // Define Relevance Groups based on Status
+    let groups = [];
+    if (kneeStatus === 'green') {
+        groups = [
+            { label: 'Recommended for Today (BUILD)', phases: ['BUILD'], type: 'recommended' },
+            { label: 'Also Available (PRIME)', phases: ['PRIME'], type: 'available' },
+            { label: 'Recovery & Maintenance (CALM)', phases: ['CALM'], type: 'other' }
+        ];
+    } else if (kneeStatus === 'yellow') {
+        groups = [
+            { label: 'Recommended for Today (CALM)', phases: ['CALM'], type: 'recommended' },
+            { label: 'Available (Light BUILD)', phases: ['BUILD'], type: 'available' },
+            { label: 'Other Exercises (PRIME)', phases: ['PRIME'], type: 'other' }
+        ];
+    } else { // RED or unknown
+        groups = [
+            { label: 'Recommended for Today (CALM)', phases: ['CALM'], type: 'recommended' },
+            { label: 'Not Recommended Today (BUILD/PRIME)', phases: ['BUILD', 'PRIME'], type: 'not-recommended' }
+        ];
+    }
+
+    // Filter exercises into groups
+    const sections = groups.map(group => {
+        const exercises = EXERCISES.filter(ex => {
+            const phaseMatch = ex.phase.some(p => group.phases.includes(p.toUpperCase()));
+            if (!phaseMatch) return false;
+            if (ex.availability === 'GREEN-only' && kneeStatus !== 'green') return false;
+            return true;
+        });
+
+        const categorized = {};
+        exercises.forEach(ex => {
+            if (!categorized[ex.category]) categorized[ex.category] = [];
+            categorized[ex.category].push(ex);
+        });
+
+        return { ...group, categorized };
+    }).filter(s => Object.keys(s.categorized).length > 0);
+
+    let html = '';
+    sections.forEach(section => {
+        html += `<div class="relevance-section relevance-${section.type}" style="grid-column: 1/-1; margin-top: 20px; margin-bottom: 8px;">
+            <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--gray-600); border-bottom: 2px solid var(--gray-200); padding-bottom: 4px; margin-bottom: 12px;">
+                ${section.label}
+            </h3>
         </div>`;
-    }).join('');
+
+        Object.keys(section.categorized).sort().forEach(cat => {
+            section.categorized[cat].forEach(ex => {
+                const icon = getExerciseIcon(ex.id);
+                const name = ex.name.replace(' (Isometric)', '').replace(' (Eccentric)', '');
+                const isNotRecommended = section.type === 'not-recommended';
+                
+                html += `
+                    <div id="tile-${ex.id}" class="exercise-tile ${isNotRecommended ? 'not-recommended' : ''}" 
+                         onclick="toggleExerciseDetails('${ex.id}')">
+                        <div class="tile-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+                            <div style="flex: 1;">
+                                <div class="tile-category" style="font-size: 9px; text-transform: uppercase; color: var(--primary); font-weight: 800; margin-bottom: 4px;">${ex.category}</div>
+                                <div class="tile-name" style="font-size: 14px; font-weight: 700;">${name}</div>
+                                <div class="tile-meta" style="font-size: 12px; color: var(--gray-600);">${ex.dosage}</div>
+                            </div>
+                            <button class="plus-log-btn" onclick="event.stopPropagation(); selectExerciseForLogging('${ex.id}')" 
+                                    style="width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--primary); color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                                +
+                            </button>
+                        </div>
+                        
+                        <div class="tile-details" style="display: none; width: 100%; margin-top: 16px; border-top: 1px solid var(--gray-200); padding-top: 16px;">
+                            <div style="margin-bottom: 12px;">
+                                <strong style="font-size: 12px; text-transform: uppercase; color: var(--gray-600);">Setup:</strong>
+                                <ul style="margin: 4px 0 0 16px; padding: 0; font-size: 13px; line-height: 1.4;">
+                                    ${ex.setup.map(s => `<li>${s}</li>`).join('')}
+                                </ul>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <strong style="font-size: 12px; text-transform: uppercase; color: var(--gray-600);">Execution:</strong>
+                                <ul style="margin: 4px 0 0 16px; padding: 0; font-size: 13px; line-height: 1.4;">
+                                    ${ex.execution.map(e => `<li>${e}</li>`).join('')}
+                                </ul>
+                            </div>
+                            <div style="font-size: 13px; margin-bottom: 8px;">
+                                <strong>Target:</strong> ${ex.targetMuscles}
+                            </div>
+                            <div style="font-size: 13px; margin-bottom: 16px;">
+                                <strong>Tempo:</strong> ${ex.tempo}
+                            </div>
+                            <button class="primary-button" onclick="event.stopPropagation(); selectExerciseForLogging('${ex.id}')" style="margin-top: 0;">
+                                Log This Exercise
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+    });
+
+    container.innerHTML = html;
+}
+
+function toggleExerciseDetails(id) {
+    const allTiles = document.querySelectorAll('.exercise-tile');
+    const targetTile = document.getElementById(`tile-${id}`);
+    const targetDetails = targetTile.querySelector('.tile-details');
+    const isExpanding = targetDetails.style.display === 'none';
+
+    // Accordion: Collapse all others
+    allTiles.forEach(tile => {
+        tile.classList.remove('expanded');
+        tile.querySelector('.tile-details').style.display = 'none';
+    });
+
+    if (isExpanding) {
+        targetTile.classList.add('expanded');
+        targetDetails.style.display = 'block';
+        // Scroll into view if needed
+        targetTile.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 }
 
 function selectExerciseForLogging(id) {
@@ -98,9 +201,21 @@ function selectExerciseForLogging(id) {
     
     const ex = AppState.selectedExercise;
     document.getElementById('selected-exercise-name').textContent = ex.name;
-    document.getElementById('sets-completed').value = ex.dosage.sets;
-    document.getElementById('reps-completed').value = ex.dosage.reps;
-    document.getElementById('hold-time').value = ex.dosage.holdTime;
+    
+    // Parse dosage string to extract sets/reps/hold
+    const dosageParts = ex.dosage.match(/(\d+)\s*sets?\s*x\s*(\d+)(?:-(\d+))?\s*(?:reps?|s)?/i);
+    if (dosageParts) {
+        document.getElementById('sets-completed').value = parseInt(dosageParts[1]) || 3;
+        document.getElementById('reps-completed').value = parseInt(dosageParts[2]) || 10;
+    } else {
+        document.getElementById('sets-completed').value = 3;
+        document.getElementById('reps-completed').value = 10;
+    }
+    
+    // Check if it's a hold-based exercise
+    const isHold = ex.dosage.toLowerCase().includes('hold') || ex.dosage.includes('s');
+    document.getElementById('hold-time').value = isHold ? 30 : 0;
+    
     document.getElementById('weight-used').value = 0;
     document.getElementById('rpe-slider').value = 5;
     document.getElementById('rpe-value').textContent = '5';
@@ -108,7 +223,7 @@ function selectExerciseForLogging(id) {
     document.getElementById('exercise-pain-value').textContent = '0';
     document.getElementById('exercise-notes').value = '';
     
-    document.getElementById('hold-tracker').style.display = ex.dosage.holdTime > 0 ? 'block' : 'none';
+    document.getElementById('hold-tracker').style.display = isHold ? 'block' : 'none';
     renderExerciseTrends(id);
 }
 
@@ -137,6 +252,7 @@ function saveExerciseLog() {
         weightUsed: parseInt(document.getElementById('weight-used').value),
         rpe: parseInt(document.getElementById('rpe-slider').value),
         pain: parseInt(document.getElementById('exercise-pain-slider').value),
+        lane: AppState.selectedLane,
         notes: document.getElementById('exercise-notes').value
     });
     
@@ -147,19 +263,29 @@ function saveExerciseLog() {
 }
 
 function selectCustomWorkout(type) {
-    const names = { peloton: '🚴 Peloton', rowing: '🚣 Rowing', core: '🎯 Core', stretch: '🧘 Stretch' };
+    const names = { peloton: '🚴 Peloton', rowing: '🚣 Rowing', core: '🎯 Core', stretch: '🧘 Stretch', upper: '💪 Upper', bike: '🚴 Bike' };
     AppState.selectedCustomWorkout = type;
     document.getElementById('custom-workout-tiles').style.display = 'none';
     document.getElementById('custom-workout-form').style.display = 'block';
-    document.getElementById('custom-workout-title').textContent = names[type];
+    document.getElementById('custom-workout-title').textContent = names[type] || 'Custom';
     
-    const defaults = { peloton: { duration: 30, intensity: 6, impact: 'none' }, rowing: { duration: 20, intensity: 5, impact: 'none' }, core: { duration: 15, intensity: 6, impact: 'none' }, stretch: { duration: 10, intensity: 3, impact: 'none' } };
-    const preset = defaults[type];
+    const defaults = { 
+        peloton: { duration: 30, intensity: 6, impact: 'none' }, 
+        rowing: { duration: 20, intensity: 5, impact: 'none' }, 
+        core: { duration: 15, intensity: 6, impact: 'none' }, 
+        stretch: { duration: 10, intensity: 3, impact: 'none' },
+        upper: { duration: 30, intensity: 6, impact: 'none' },
+        bike: { duration: 45, intensity: 5, impact: 'none' }
+    };
+    const preset = defaults[type] || { duration: 20, intensity: 5, impact: 'none' };
     document.getElementById('custom-duration').value = preset.duration;
     document.getElementById('custom-intensity').value = preset.intensity;
     document.getElementById('custom-intensity-value').textContent = preset.intensity;
     document.querySelectorAll('.impact-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector(`.impact-btn[data-impact="${preset.impact}"]`).classList.add('active');
+    
+    const impactBtn = document.querySelector(`.impact-btn[data-impact="${preset.impact}"]`);
+    if (impactBtn) impactBtn.classList.add('active');
+    
     AppState.kneeImpact = preset.impact;
 }
 
@@ -177,6 +303,7 @@ function saveCustomWorkout() {
         durationMinutes: parseInt(document.getElementById('custom-duration').value),
         intensity: parseInt(document.getElementById('custom-intensity').value),
         kneeImpact: AppState.kneeImpact,
+        lane: AppState.selectedLane,
         notes: document.getElementById('custom-notes').value
     });
     const btn = document.getElementById('save-custom-workout');
@@ -197,9 +324,9 @@ function renderTodaysSummary() {
     
     let html = '';
     custom.forEach(w => {
-        const icons = { peloton: '🚴', rowing: '🚣', core: '🎯', stretch: '🧘' };
+        const icons = { peloton: '🚴', rowing: '🚣', core: '🎯', stretch: '🧘', upper: '💪', bike: '🚴' };
         html += `<div style="padding: 12px; background: #f5f5f5; border-radius: 10px; margin-bottom: 8px;">
-            <div style="font-weight: 700;">${icons[w.workoutCategory]} ${w.workoutType || w.workoutCategory}</div>
+            <div style="font-weight: 700;">${icons[w.workoutCategory] || '🏋️'} ${w.workoutType || w.workoutCategory}</div>
             <div style="font-size: 13px; color: #666; margin-top: 4px;">${w.durationMinutes}min • ${w.intensity}/10</div>
         </div>`;
     });
@@ -239,11 +366,36 @@ function renderExerciseTrends(id) {
 function renderExerciseLibrary() {
     const container = document.getElementById('exercise-library');
     if (!container) return;
-    container.innerHTML = EXERCISES.map(ex => `<div class="exercise-card">
-        <div style="display: flex; gap: 12px; margin-bottom: 12px;">
-            <div style="font-size: 40px;">${getExerciseIcon(ex.id)}</div>
-            <div><h3>${ex.name}</h3><p style="font-size: 13px; color: #666;">${ex.category}</p></div>
-        </div><p>${ex.description}</p>
-        <div style="background: #E8F5E9; padding: 14px; border-radius: 10px; margin-top: 12px;">
-            <strong>Why:</strong> ${ex.why}</div></div>`).join('');
+
+    // Group exercises by category
+    const categories = [...new Set(EXERCISES.map(ex => ex.category))].sort();
+    
+    container.innerHTML = categories.map(cat => {
+        const catExercises = EXERCISES.filter(ex => ex.category === cat);
+        return `
+            <div class="category-section" style="margin-bottom: 24px;">
+                <h3 style="background: var(--primary); color: white; padding: 8px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 16px;">${cat}</h3>
+                <div class="exercise-cards-grid">
+                    ${catExercises.map(ex => `
+                        <div class="exercise-card" style="margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                <h4 style="margin: 0; color: var(--primary);">${ex.name}</h4>
+                                <div style="display: flex; gap: 4px;">
+                                    ${ex.phase.map(p => `<span class="tile-phase-badge badge-${p.toLowerCase()}">${p}</span>`).join('')}
+                                    ${ex.availability === 'GREEN-only' ? '<span class="tile-phase-badge" style="background: #E8F5E9; color: #2E7D32; border: 1px solid #2E7D32;">GREEN ONLY</span>' : ''}
+                                </div>
+                            </div>
+                            <p style="font-size: 14px; margin-bottom: 8px; line-height: 1.4;">${ex.description}</p>
+                            <div style="font-size: 13px; color: var(--gray-600); margin-bottom: 8px;">
+                                <strong>Target:</strong> ${ex.target}
+                            </div>
+                            <div style="background: #f5f5f5; padding: 8px; border-radius: 6px; font-size: 13px;">
+                                <strong>Why:</strong> ${ex.why}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
 }

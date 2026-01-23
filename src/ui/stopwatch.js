@@ -63,7 +63,6 @@ const Stopwatch = {
             holdTimeInput.style.backgroundColor = 'rgba(76, 175, 80, 0.2)';
             holdTimeInput.style.transition = 'background-color 0.5s';
             setTimeout(() => { holdTimeInput.style.backgroundColor = ''; }, 1000);
-            console.log(`⏱️ Auto-synced ${this.seconds}s to hold time`);
         }
     },
     

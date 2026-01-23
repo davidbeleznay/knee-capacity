@@ -10,12 +10,12 @@ const AppState = {
     selectedCustomWorkout: null,
     kneeImpact: 'none',
     posture: 'relaxed',
-    analyticsDays: 7
+    analyticsDays: 7,
+    selectedLane: null
 };
 
 function updateState(key, value) {
     AppState[key] = value;
-    console.log(`State updated: ${key} = ${value}`);
 }
 
 function getState(key) {

@@ -6,7 +6,6 @@ const DataManager = {
         try {
             // Verify localStorage is available
             if (!this.isLocalStorageAvailable()) {
-                console.error('LocalStorage not available!');
                 alert('! Storage not available. Data may not persist.');
                 return;
             }
@@ -23,10 +22,7 @@ const DataManager = {
             // Add baseline measurement if none exist
             this.initializeBaselineMeasurement();
             
-            console.log('✅ DataManager initialized successfully');
-            this.logStorageStatus();
         } catch (e) {
-            console.error('Init error:', e);
             alert('Storage error: ' + e.message);
         }
     },
@@ -40,14 +36,6 @@ const DataManager = {
         } catch (e) {
             return false;
         }
-    },
-    
-    logStorageStatus() {
-        console.log('📊 Storage Status:');
-        console.log('Check-ins:', this.getCheckIns().length);
-        console.log('Exercise logs:', this.getExerciseLogs().length);
-        console.log('Custom workouts:', this.getCustomWorkouts().length);
-        console.log('Body measurements:', this.getBodyMeasurements().length);
     },
     
     // Body Measurements
@@ -73,7 +61,6 @@ const DataManager = {
             
             const measurements_array = [baseline];
             localStorage.setItem('bodyMeasurements', JSON.stringify(measurements_array));
-            console.log('✅ Baseline measurement created');
         }
     },
     
@@ -87,10 +74,8 @@ const DataManager = {
                 date: new Date().toISOString().split('T')[0]
             });
             localStorage.setItem('bodyMeasurements', JSON.stringify(measurements));
-            console.log('✅ Body measurement saved');
             return true;
         } catch (e) {
-            console.error('Save measurement error:', e);
             return false;
         }
     },
@@ -164,10 +149,8 @@ const DataManager = {
             });
             localStorage.setItem('sessions', JSON.stringify(sessions));
             this.updateStreak();
-            console.log('✅ Session saved');
             return true;
         } catch (e) {
-            console.error('Save session error:', e);
             alert('! Failed to save session: ' + e.message);
             return false;
         }
@@ -194,8 +177,7 @@ const DataManager = {
             };
             logs.push(newLog);
             localStorage.setItem('exerciseLogs', JSON.stringify(logs));
-            console.log('✅ Exercise logged:', exerciseData.exerciseName);
-            this.logStorageStatus();
+            this.updateStreak();
             return true;
         } catch (e) {
             console.error('Save exercise error:', e);
@@ -243,10 +225,9 @@ const DataManager = {
                 date: new Date().toISOString().split('T')[0]
             });
             localStorage.setItem('customWorkouts', JSON.stringify(workouts));
-            console.log('✅ Custom workout saved:', workoutData.workoutCategory);
+            this.updateStreak();
             return true;
         } catch (e) {
-            console.error('Save custom workout error:', e);
             return false;
         }
     },
@@ -367,7 +348,7 @@ const DataManager = {
     },
 
     getBadges() {
-        const totalWorkouts = this.getExerciseLogs().length + this.getCustomWorkouts().length;
+        const totalWorkouts = this.getTotalWorkouts();
         const milestones = [
             { count: 100, emoji: '👑', label: 'King' },
             { count: 50, emoji: '⭐', label: 'Star' },
@@ -377,6 +358,10 @@ const DataManager = {
         ];
         
         return milestones.filter(m => totalWorkouts >= m.count);
+    },
+
+    getTotalWorkouts() {
+        return this.getExerciseLogs().length + this.getCustomWorkouts().length;
     },
     
     // Traffic light status
@@ -406,26 +391,30 @@ const DataManager = {
             green: {
                 icon: '✅',
                 title: 'GREEN - Go for It',
-                message: 'Full training approved',
-                action: 'Build or Prime exercises'
+                lane: 'BUILD or PRIME',
+                plan: 'You can do a strength session (BUILD) or prep for sport (PRIME).',
+                reason: 'Your knee is baseline or better - build capacity or get ready to play.'
             },
             yellow: {
                 icon: '⚠️',
                 title: 'YELLOW - Caution',
-                message: 'Modify intensity',
-                action: 'Build (light) or Calm only'
+                lane: 'CALM or Light BUILD',
+                plan: 'Modify intensity. Do CALM exercises (isometrics, light movement) or a light BUILD session with reduced load.',
+                reason: 'Your knee is reactive - don\'t provoke it further.'
             },
             red: {
                 icon: '🛑',
                 title: 'RED - Recover',
-                message: 'Knee needs rest',
-                action: 'Calm mode: gentle ROM, ice'
+                lane: 'CALM ONLY',
+                plan: 'Strategic rest. Do CALM exercises only (isometrics, pain-free movement).',
+                reason: 'Your knee needs to settle before you can build again.'
             },
             unknown: {
                 icon: '❓',
                 title: 'Check In First',
-                message: 'Log swelling and pain',
-                action: 'Complete Daily Check-In'
+                lane: 'Select after check-in',
+                plan: 'Log swelling and pain to get guidance.',
+                reason: 'Complete your daily check-in to see your recommended training lane.'
             }
         };
         return messages[status];
@@ -443,6 +432,23 @@ const DataManager = {
         if (swelling === 'none' || (swelling === 'mild' && pain <= 4)) return 'GREEN';
         
         return 'YELLOW';
+    },
+
+    getRecommendedLanes() {
+        const status = this.getKneeStatus();
+        if (status === 'green') return ['BUILD', 'PRIME'];
+        if (status === 'yellow') return ['CALM', 'BUILD'];
+        if (status === 'red') return ['CALM'];
+        return [];
+    },
+
+    getLaneDescription(lane) {
+        const descriptions = {
+            'CALM': 'Focus on ROM, quad sets, and gentle swelling control. No impact.',
+            'BUILD': 'Focus on strength, isometrics, and eccentric control. Minimal impact.',
+            'PRIME': 'Focus on power, impact introduction, and athletic mechanics.'
+        };
+        return descriptions[lane] || '';
     },
     
     // Export
@@ -477,9 +483,7 @@ const DataManager = {
             a.download = `kneecapacity-${new Date().toISOString().split('T')[0]}.json`;
             a.click();
             URL.revokeObjectURL(url);
-            console.log('✅ Data exported');
         } catch (e) {
-            console.error('Export error:', e);
             alert('Export failed: ' + e.message);
         }
     },

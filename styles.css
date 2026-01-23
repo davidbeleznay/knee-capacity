@@ -455,17 +455,59 @@ textarea:focus {
     border-radius: 16px;
     padding: 16px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     min-height: 130px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
 }
 
 .exercise-tile:hover {
     border-color: var(--primary);
-    transform: translateY(-4px);
+    transform: translateY(-2px);
     box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+}
+
+.exercise-tile.expanded {
+    grid-column: 1 / -1;
+    border-color: var(--primary);
+    box-shadow: 0 8px 20px rgba(46, 125, 50, 0.2);
+}
+
+.exercise-tile.not-recommended {
+    opacity: 0.6;
+    filter: grayscale(0.5);
+}
+
+.tile-header {
+    width: 100%;
+}
+
+.tile-details {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                opacity 0.25s ease;
+}
+
+.exercise-tile.expanded .tile-details {
+    max-height: 1000px;
+    opacity: 1;
+}
+
+.plus-log-btn {
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.plus-log-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.4);
+}
+
+.plus-log-btn:active {
+    transform: scale(0.95);
 }
 
 .tile-icon {
@@ -933,6 +975,37 @@ details[open] {
     animation: slideUp 0.4s ease-out;
 }
 
+/* Lane Options */
+.lane-options {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.lane-btn {
+    flex: 1;
+    padding: 12px;
+    background: white;
+    border: 2px solid var(--gray-300);
+    border-radius: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.lane-btn.active {
+    color: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: scale(1.05);
+}
+
+.lane-btn.lane-calm.active { background: #4CAF50; border-color: #4CAF50; }
+.lane-btn.lane-build.active { background: #FF9800; border-color: #FF9800; }
+.lane-btn.lane-prime.active { background: #F44336; border-color: #F44336; }
+
+.lane-btn:not(.active) { color: var(--gray-600); }
+
 .streak-number {
     font-size: 64px;
     font-weight: 900;
@@ -973,6 +1046,23 @@ details[open] {
     font-size: 10px;
     font-weight: 700;
     white-space: nowrap;
+}
+
+.exercise-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+@media (min-width: 768px) {
+    .exercise-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.category-section h3 {
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 /* Utilities */

@@ -248,20 +248,56 @@ function renderPainTrend(days) {
 
 function renderHistory(days) {
     const checkIns = DataManager.getRecentCheckIns(days);
-    const list = document.getElementById('history-list');
-    if (checkIns.length === 0) { list.innerHTML = '<div class="card"><p style="text-align: center; padding: 40px;">No data</p></div>'; return; }
+    const exerciseLogs = DataManager.getExerciseLogs().filter(e => (new Date() - new Date(e.date)) / (1000*60*60*24) <= days);
+    const customWorkouts = DataManager.getCustomWorkouts().filter(w => (new Date() - new Date(w.date)) / (1000*60*60*24) <= days);
     
-    list.innerHTML = checkIns.map(c => {
-        const status = DataManager.getKneeStatusForCheckIn(c);
-        const colors = { GREEN: '#4CAF50', YELLOW: '#FFC107', RED: '#F44336' };
-        return `<div class="history-item" style="background: white; padding: 16px; border-radius: 12px; margin-bottom: 12px;">
-            <div style="display: flex; justify-content: space-between;">
-                <div style="font-weight: 700;">${new Date(c.date).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'})}</div>
-                <div style="font-weight: 800; color: ${colors[status]};">${status}</div>
-            </div>
-            <div style="font-size: 14px; color: #666; margin-top: 8px;">
-                ${c.swelling} | Pain ${c.pain}/10 | ${c.activityLevel} | ${c.timeOfDay}
-            </div></div>`;
+    const list = document.getElementById('history-list');
+    if (checkIns.length === 0 && exerciseLogs.length === 0 && customWorkouts.length === 0) { 
+        list.innerHTML = '<div class="card"><p style="text-align: center; padding: 40px;">No data</p></div>'; 
+        return; 
+    }
+    
+    // Create a combined map of date -> checkin/workouts
+    const dates = [...new Set([
+        ...checkIns.map(c => c.date),
+        ...exerciseLogs.map(e => e.date),
+        ...customWorkouts.map(w => w.date)
+    ])].sort().reverse();
+
+    list.innerHTML = dates.map(date => {
+        const checkIn = checkIns.find(c => c.date === date);
+        const dayEx = exerciseLogs.filter(e => e.date === date);
+        const dayCu = customWorkouts.filter(w => w.date === date);
+        
+        let html = `<div class="history-item" style="background: white; padding: 18px; border-radius: 12px; margin-bottom: 12px;">
+            <div style="font-weight: 800; font-size: 16px; margin-bottom: 10px;">${new Date(date).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'})}</div>`;
+        
+        if (checkIn) {
+            const status = DataManager.getKneeStatusForCheckIn(checkIn);
+            const statusColors = { GREEN: '#4CAF50', YELLOW: '#FFC107', RED: '#F44336' };
+            html += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--gray-100);">
+                <span style="font-size: 14px; font-weight: 600;">Status: <span style="color: ${statusColors[status]}">${status}</span></span>
+                <span style="font-size: 12px; color: var(--gray-600);">${checkIn.swelling} | Pain ${checkIn.pain}/10</span>
+            </div>`;
+        }
+
+        if (dayEx.length > 0 || dayCu.length > 0) {
+            const lane = (dayEx[0] || dayCu[0])?.lane;
+            const laneColors = { CALM: '#4CAF50', BUILD: '#FF9800', PRIME: '#F44336' };
+            if (lane) {
+                html += `<div style="margin-top: 8px; font-size: 13px; font-weight: 700; color: ${laneColors[lane] || 'var(--primary)'}">
+                    Lane: ${lane}
+                </div>`;
+            }
+            
+            html += `<div style="margin-top: 8px; font-size: 13px; color: var(--gray-600);">
+                ${dayEx.map(e => `<div>• ${e.exerciseName.split('(')[0].trim()} (${e.setsCompleted}x${e.repsPerSet})</div>`).join('')}
+                ${dayCu.map(w => `<div>• ${w.workoutType} (${w.durationMinutes}m)</div>`).join('')}
+            </div>`;
+        }
+        
+        html += '</div>';
+        return html;
     }).join('');
 }
 

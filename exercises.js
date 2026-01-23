@@ -1,13 +1,14 @@
-// KneeCapacity - Enhanced Exercise Library with Tracking
+// KneeCapacity - Enhanced Exercise Library with Expandable Details
 // Based on Keith Barr protocols + specialist recommendations
 
 const EXERCISES = [
     {
         id: "spanish-squat",
         name: "Spanish Squat (Isometric)",
-        category: "Quad Strength + Swelling Control",
-        target: "Quadriceps, Patellar Tendon",
-        description: "Place resistance band or strap behind both knees. Step forward to create tension. Sit back into squat position maintaining upright torso. Shins should stay vertical - the band prevents forward knee travel.",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["CALM"],
+        dosage: "4 sets x 45s hold",
         setup: [
             "Anchor band at knee height",
             "Loop band behind both knees",
@@ -15,522 +16,642 @@ const EXERCISES = [
             "Feet shoulder-width apart"
         ],
         execution: [
-            "Sit back slowly (3-4 sec) to ~90° knee angle",
-            "Keep torso upright, core engaged",
+            "Sit back slowly to ~90° knee angle",
             "Shins stay vertical - resist band pull",
             "Hold the position steadily",
-            "Breathe normally throughout",
-            "Release slowly (3-4 sec)"
+            "Breathe normally throughout"
         ],
-        dosage: {
-            sets: 4,
-            reps: 5,
-            holdTime: 45,
-            restBetweenSets: 60,
-            tempo: "Slow in (3s) - Hold (45s) - Slow out (3s)"
-        },
-        why: "Unloads patellofemoral joint while maximally activating quads. The posterior band force reduces anterior knee shear. BEST exercise for effusion control - can calm swelling while building strength.",
-        watchFor: [
-            "Sharp pain (stop immediately)",
-            "Knees traveling past toes (adjust band)",
-            "Holding breath (breathe!)",
-            "Valgus collapse (knees caving in)"
-        ],
-        rpe: "6-7/10 (moderate effort, sustainable)",
-        phase: ["Calm", "Build"],
-        modifications: {
-            easier: "Reduce depth to 60° knee angle, or shorten hold to 30s",
-            harder: "Increase hold time to 60s, or add light weight vest"
-        }
+        targetMuscles: "Quadriceps, Patellar Tendon",
+        tempo: "3s down, 45s hold, 3s up"
     },
     {
         id: "wall-sit",
         name: "Wall Sit (Isometric)",
-        category: "Quad Endurance + Pain Relief",
-        target: "Quadriceps, Mental Toughness",
-        description: "Back against wall, slide down to 90° knee angle (or shallower if painful). Feet flat on ground, hip-width apart. Hold the position.",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["CALM"],
+        dosage: "3 sets x 45s hold",
         setup: [
             "Stand with back against wall",
             "Feet 12-18 inches from wall",
             "Shoulder-width stance"
         ],
         execution: [
-            "Slide down wall slowly",
-            "Stop at 90° (thighs parallel to ground)",
-            "Or stop at 60-70° if full depth painful",
+            "Slide down wall slowly to 90°",
             "Keep back flat against wall",
-            "Arms at sides or on thighs",
             "Hold position, breathe steadily"
         ],
-        dosage: {
-            sets: 3,
-            reps: 4,
-            holdTime: 45,
-            restBetweenSets: 60,
-            tempo: "Slide down (3s) - Hold (45s) - Slide up (3s)"
-        },
-        why: "Classic isometric for quad strength. Keith Barr research shows this provides immediate pain relief (analgesia) lasting 45+ minutes. Perfect during flare-ups when dynamics hurt.",
-        watchFor: [
-            "Knees past toes (move feet out)",
-            "Lower back arching (engage core)",
-            "Sharp knee pain (go shallower)",
-            "Breath holding"
-        ],
-        rpe: "7-8/10 (challenging by last 10 seconds)",
-        phase: ["Calm", "Build", "Prime"],
-        modifications: {
-            easier: "Only go to 60° knee bend, or hold 30s instead of 45s",
-            harder: "Hold 60s, or add weight on thighs, or single-leg version"
-        }
+        targetMuscles: "Quadriceps, Glutes",
+        tempo: "3s down, 45s hold, 3s up"
     },
     {
         id: "step-downs",
         name: "Slow Step-Downs (Eccentric)",
-        category: "Landing Control + Lateral Protection",
-        target: "Quadriceps (Eccentric), VMO, Lateral Stability",
-        description: "Stand on step with one leg. Slowly lower opposite heel to tap ground in front. Control the descent - this is the key. Push back up using working leg.",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 8-10 reps",
         setup: [
             "6-8 inch step or stair",
             "Stand on affected leg",
-            "Use rail/wall for balance as needed",
-            "Other leg hanging free"
+            "Use rail/wall for balance"
         ],
         execution: [
-            "Slowly bend standing knee (3-4 second lower)",
-            "Lower opposite heel to tap floor in front",
-            "Keep knee tracking over 2nd toe (no valgus)",
-            "Light tap only - don't shift weight",
-            "Push back up through working heel (2 sec)",
-            "Maintain upright torso throughout"
+            "Slowly bend standing knee (3-4s lower)",
+            "Lower opposite heel to tap floor",
+            "Keep knee tracking over 2nd toe",
+            "Push back up through working leg"
         ],
-        dosage: {
-            sets: 3,
-            reps: 8,
-            holdTime: 0,
-            restBetweenSets: 90,
-            tempo: "Down 3-4s - Tap - Up 2s"
-        },
-        why: "CRITICAL for lateral OA. Trains eccentric quad control for landing/deceleration. Mimics volleyball landing phase. Protects lateral compartment by teaching controlled load distribution.",
-        watchFor: [
-            "Knee wobbling side-to-side",
-            "Knee diving inward (valgus)",
-            "Losing balance (use more hand support)",
-            "Sharp pain in lateral knee"
-        ],
-        rpe: "7/10 (tough but controlled)",
-        phase: ["Build", "Prime"],
-        modifications: {
-            easier: "Lower step height to 4 inches, or partial range (don't go all the way down)",
-            harder: "Increase step height to 10 inches, or hold light weight (10 lb dumbbell)"
-        }
+        targetMuscles: "Quadriceps (Eccentric), VMO, Hip Stabilizers",
+        tempo: "4s down, 1s tap, 1s up"
     },
     {
         id: "single-leg-rdl",
         name: "Single-Leg RDL",
-        category: "Hip Control + Posterior Chain",
-        target: "Hamstrings, Glutes, Hip Stabilizers",
-        description: "Stand on one leg, hinge forward at hip keeping back flat. Lower weight/hand toward ground while extending free leg behind you. Return to standing.",
+        category: "Hip + Pelvis Control",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 8-12 reps",
         setup: [
             "Stand on affected leg",
-            "Slight bend in standing knee (5-10°)",
-            "Hold light weight (10-20 lbs) or bodyweight",
-            "Use wall/chair for balance if needed"
+            "Slight bend in standing knee",
+            "Hold weight or use wall for balance"
         ],
         execution: [
-            "Hinge forward from hips (not spine)",
-            "Keep back flat, core tight",
-            "Lower weight toward ground (3 sec)",
-            "Free leg extends back for counterbalance",
-            "Feel stretch in hamstring of standing leg",
-            "Drive through heel to return to start (2 sec)"
+            "Hinge forward from hips, back flat",
+            "Free leg extends back for balance",
+            "Lower with control until stretch felt",
+            "Drive through heel to return"
         ],
-        dosage: {
-            sets: 3,
-            reps: 8,
-            holdTime: 0,
-            restBetweenSets: 60,
-            tempo: "Down 3s - Bottom 1s - Up 2s"
-        },
-        why: "Reduces valgus collapse and lateral knee stress during single-leg activities. Critical for volleyball where you're often loading one leg. Builds hip stability that protects knee alignment.",
-        watchFor: [
-            "Rounding lower back (maintain neutral spine)",
-            "Knee collapsing inward",
-            "Loss of balance (use support)",
-            "Hip hiking up on working side"
-        ],
-        rpe: "6-7/10",
-        phase: ["Build", "Prime"],
-        modifications: {
-            easier: "Hold onto support throughout, or reduce range of motion",
-            harder: "Increase weight to 25-30 lbs, or add 1-second pause at bottom"
-        }
+        targetMuscles: "Hamstrings, Glutes, Hip Stabilizers",
+        tempo: "3s down, 1s bottom, 1s up"
     },
     {
         id: "hamstring-bridge",
         name: "Single-Leg Hamstring Bridge",
-        category: "Joint Unloading + Posterior Strength",
-        target: "Hamstrings, Glutes, Lower Back",
-        description: "Lie on back with one foot on ground, opposite leg extended. Drive through heel to lift hips off ground. Pause at top, lower with control.",
+        category: "Hamstrings + Posterior Chain",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 12 reps",
         setup: [
-            "Lie on back on mat",
-            "One foot flat, close to butt",
-            "Opposite leg straight, raised 6 inches",
+            "Lie on back, one foot on floor",
+            "Opposite leg extended 6 inches up",
             "Arms at sides for stability"
         ],
         execution: [
-            "Drive through heel of grounded foot",
-            "Lift hips until body is straight line (2 sec)",
+            "Drive through heel to lift hips",
             "Squeeze glute at top",
-            "Pause 1 second",
-            "Lower slowly (3 sec) without touching down",
-            "Keep extended leg raised throughout"
+            "Lower slowly without touching floor"
         ],
-        dosage: {
-            sets: 3,
-            reps: 12,
-            holdTime: 1,
-            restBetweenSets: 60,
-            tempo: "Up 2s - Hold 1s - Down 3s"
-        },
-        why: "Reduces anterior knee load by strengthening hamstrings. Strong posterior chain = less compressive force on knee joint during activities. Also improves hip extension for jumping.",
-        watchFor: [
-            "Lower back arching excessively",
-            "Hips sagging or rotating",
-            "Cramping in hamstring (ease off)",
-            "Using arms to push up (should be leg-driven)"
-        ],
-        rpe: "7-8/10 (should burn by last 3 reps)",
-        phase: ["Build", "Prime"],
-        modifications: {
-            easier: "Double-leg bridges instead, or reduce range",
-            harder: "Add weight on hips (plate or dumbbell), or elevate foot on step"
-        }
+        targetMuscles: "Hamstrings, Glute Max",
+        tempo: "2s up, 1s hold, 3s down"
     },
     {
         id: "tke",
         name: "Terminal Knee Extensions (TKEs)",
-        category: "Quad Activation After Swelling",
-        target: "Vastus Medialis Oblique (VMO), Quadriceps",
-        description: "Standing with band behind knee, squeeze knee completely straight against resistance. This reactivates quads after effusion.",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["CALM"],
+        dosage: "3 sets x 15 reps",
         setup: [
-            "Anchor band at knee height behind you",
+            "Anchor band at knee height",
             "Loop band behind affected knee",
-            "Step forward creating tension",
-            "Slight forward lean, hands on hips or support"
+            "Step forward until tension is felt"
         ],
         execution: [
-            "Starting position: knee slightly bent (~10°)",
-            "Squeeze/straighten knee fully (1-2 sec)",
-            "Push back against band resistance",
+            "Start with knee slightly bent",
+            "Squeeze quad to straighten knee fully",
             "Hold lockout for 2 seconds",
-            "Slowly release to start (2 sec)",
-            "Feel quad contract hard at lockout"
+            "Slowly release back to start"
         ],
-        dosage: {
-            sets: 3,
-            reps: 15,
-            holdTime: 2,
-            restBetweenSets: 45,
-            tempo: "Extend 1s - Hold 2s - Release 2s"
-        },
-        why: "Swelling (effusion) inhibits quad activation - this is called arthrogenic muscle inhibition. TKEs specifically target VMO to restore quad firing. Very joint-friendly, essential after flare-ups.",
-        watchFor: [
-            "Hyperextending knee (stop at straight)",
-            "Using hip thrust instead of quad",
-            "Pain with lockout (reduce band tension)",
-            "Knee wobbling"
-        ],
-        rpe: "5-6/10 (moderate, focus on activation not exhaustion)",
-        phase: ["Calm", "Build"],
-        modifications: {
-            easier: "Lighter band, or seated version with foot on towel sliding forward",
-            harder: "Heavier band, or add ankle weight"
-        }
+        targetMuscles: "Vastus Medialis Oblique (VMO)",
+        tempo: "1s extend, 2s hold, 2s release"
     },
     {
         id: "lateral-band-walk",
         name: "Lateral Band Walks",
-        category: "Hip Stability + Valgus Control",
-        target: "Gluteus Medius, Hip Abductors",
-        description: "Loop band around knees or ankles. Slight squat position. Side-step maintaining band tension. This prevents knee valgus collapse.",
+        category: "Hip + Pelvis Control",
+        availability: "always",
+        phase: ["PRIME"],
+        dosage: "3 sets x 12-15 steps/side",
         setup: [
-            "Loop resistance band above knees (easier) or ankles (harder)",
-            "Stand with feet hip-width",
-            "Slight athletic squat (~30° knee bend)",
-            "Hands on hips or out for balance"
+            "Band above knees or ankles",
+            "Athletic squat (~30° knee bend)",
+            "Feet hip-width apart"
         ],
         execution: [
-            "Step sideways with lead foot (12-18 inches)",
-            "Follow with trailing foot to return to hip-width",
-            "Maintain tension in band throughout",
-            "Keep hips level (don't lean)",
-            "Knees stay aligned over toes (no collapse inward)",
-            "Take 10-15 steps one direction, then reverse"
+            "Step sideways with lead foot",
+            "Follow with trailing foot slowly",
+            "Maintain band tension throughout",
+            "Keep knees aligned over toes"
         ],
-        dosage: {
-            sets: 3,
-            reps: 12,
-            holdTime: 0,
-            restBetweenSets: 45,
-            tempo: "Controlled steps, ~1 step per second"
-        },
-        why: "Weak hip abductors cause knee valgus (inward collapse) which CRUSHES lateral compartment. This directly protects your lateral OA by keeping knee tracking straight during activities.",
-        watchFor: [
-            "Band riding up (adjust placement)",
-            "Knees collapsing inward",
-            "Hips swaying side to side",
-            "Steps too wide (keep controlled)"
-        ],
-        rpe: "6/10 (should feel glute burn)",
-        phase: ["Build", "Prime"],
-        modifications: {
-            easier: "Lighter band, or fewer steps (8 each way)",
-            harder: "Heavier band, or band at ankles, or add mini-squat between steps"
-        }
+        targetMuscles: "Gluteus Medius, Hip Abductors",
+        tempo: "Controlled steps, ~1s per step"
     },
     {
         id: "mini-squat",
         name: "Mini Squats (Partial Range)",
-        category: "Functional Quad Strength",
-        target: "Quadriceps, Glutes (Joint-Sparing)",
-        description: "Controlled squats to 60° knee flexion only. Protects lateral compartment while building functional strength.",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 10-15 reps",
         setup: [
-            "Feet shoulder-width",
-            "Toes slightly out (10-15°)",
-            "Place chair/box behind as depth guide",
-            "Arms forward for balance or hold support"
+            "Feet shoulder-width apart",
+            "Toes slightly turned out",
+            "Hold support or arms forward"
         ],
         execution: [
-            "Lower slowly (3 sec) until knees at 60°",
-            "Tap box/chair with butt lightly",
+            "Lower slowly to ~60° knee bend",
             "Keep weight in heels",
-            "Knees track over 2nd toe (not past toes)",
-            "Drive through heels to stand (2 sec)",
-            "Squeeze glutes at top"
+            "Knees track over 2nd toe",
+            "Drive up through heels to stand"
         ],
-        dosage: {
-            sets: 3,
-            reps: 10,
-            holdTime: 0,
-            restBetweenSets: 60,
-            tempo: "Down 3s - Tap - Up 2s"
-        },
-        why: "Limited range avoids deep flexion angles that spike lateral compartment pressure. Builds functional strength for daily activities. Per specialist: most quad activation happens in early range anyway.",
-        watchFor: [
-            "Going too deep (>70° flexion)",
-            "Knees caving inward (valgus)",
-            "Heels lifting off ground",
-            "Pain increasing with depth"
-        ],
-        rpe: "6-7/10",
-        phase: ["Build", "Prime"],
-        modifications: {
-            easier: "Higher box (less depth), or use TRX/support for assistance",
-            harder: "Hold goblet position with 20-30 lb dumbbell, or slow tempo (4s down)"
-        }
+        targetMuscles: "Quadriceps, Glutes",
+        tempo: "3s down, 1s bottom, 2s up"
     },
     {
         id: "calf-raise",
         name: "Calf Raises (Single-Leg)",
-        category: "Ankle Stability + Landing Prep",
-        target: "Gastrocnemius, Soleus, Ankle Stability",
-        description: "Rise onto ball of foot, hold at top, lower slowly. Strong calves absorb landing forces before they reach knee.",
+        category: "Calf/Ankle + Foot",
+        availability: "always",
+        phase: ["PRIME"],
+        dosage: "3 sets x 15 reps",
         setup: [
             "Stand on affected leg",
-            "Use wall/support for balance",
-            "Opposite leg bent behind you",
-            "Start with foot flat"
+            "Use wall for balance",
+            "Opposite leg bent behind you"
         ],
         execution: [
-            "Rise onto ball of foot (2 sec)",
-            "Get as high as possible",
-            "Hold top position (1 sec)",
-            "Lower slowly back to flat foot (3 sec)",
-            "Control the descent (eccentric phase)",
+            "Rise onto ball of foot high",
+            "Hold top position for 1s",
+            "Lower slowly with control",
             "Don't let heel slam down"
         ],
-        dosage: {
-            sets: 3,
-            reps: 15,
-            holdTime: 1,
-            restBetweenSets: 45,
-            tempo: "Up 2s - Hold 1s - Down 3s"
-        },
-        why: "First line of defense in landing. Strong calves absorb shock before it reaches knee joint. Slow eccentric lowers train deceleration control critical for volleyball.",
-        watchFor: [
-            "Wobbling/balance loss",
-            "Not getting full height",
-            "Dropping too fast (lose eccentric benefit)",
-            "Achilles pain (back off if sharp)"
-        ],
-        rpe: "6-7/10",
-        phase: ["Build", "Prime"],
-        modifications: {
-            easier: "Double-leg version, or hold support throughout",
-            harder: "Add weight (backpack or hold dumbbell), or do on step for more range"
-        }
+        targetMuscles: "Gastrocnemius, Soleus, Ankle Stabilizers",
+        tempo: "2s up, 1s hold, 3s down"
     },
     {
         id: "balance-single-leg",
         name: "Single-Leg Balance",
-        category: "Proprioception + Stability",
-        target: "Ankle/Knee Stabilizers, Proprioception",
-        description: "Stand on one leg maintaining balance. Progress to unstable surface or eyes closed. Rebuilds knee awareness.",
+        category: "Calf/Ankle + Foot",
+        availability: "always",
+        phase: ["PRIME"],
+        dosage: "3 sets x 30-45s",
         setup: [
             "Stand near wall/support",
-            "Affected leg weight-bearing",
-            "Opposite leg lifted (bent or straight)",
-            "Arms out for balance initially"
+            "Weight on affected leg",
+            "Opposite foot 6 inches off floor"
         ],
         execution: [
-            "Lift opposite foot 6 inches off ground",
-            "Maintain slight bend in standing knee (10-15°)",
+            "Maintain slight bend in standing knee",
             "Hold position steadily",
-            "Eyes open initially, then closed for challenge",
-            "Focus on keeping knee stable (no wobble)",
-            "If losing balance, tap down and restart"
+            "Eyes open (easier) or closed (harder)"
         ],
-        dosage: {
-            sets: 3,
-            reps: 1,
-            holdTime: 30,
-            restBetweenSets: 30,
-            tempo: "Steady hold 30 seconds"
-        },
-        why: "Effusion and OA impair proprioception. This rebuilds your brain's map of knee position - critical for preventing awkward movements that trigger flares. Prepares for volleyball's quick direction changes.",
-        watchFor: [
-            "Knee locking out completely (keep slight bend)",
-            "Hip hiking up on lifted side",
-            "Excessive wobbling (regress difficulty)",
-            "Holding breath (stay relaxed)"
-        ],
-        rpe: "4-5/10 (more coordination than strength)",
-        phase: ["Build", "Prime"],
-        modifications: {
-            easier: "Fingertip support on wall, or tandem stance (one foot in front)",
-            harder: "Stand on foam pad or pillow, or eyes closed, or add ball toss"
-        }
+        targetMuscles: "Ankle/Knee Stabilizers, Core",
+        tempo: "Steady hold"
     },
     {
         id: "mini-jumps",
         name: "Mini Vertical Jumps",
-        category: "Impact Introduction + Landing Mechanics",
-        target: "Full Lower Body, Tendon Stiffness",
-        description: "Small vertical jumps (2-4 inches) focusing on soft, controlled landings. Introduces impact in minimal dose.",
+        category: "Low-Impact Return-to-Jump",
+        availability: "GREEN-only",
+        phase: ["PRIME"],
+        dosage: "3 sets x 5-8 reps",
         setup: [
             "Athletic stance, feet hip-width",
-            "Slight knee bend to start (~30°)",
-            "Arms can swing for momentum",
+            "Slight knee bend",
             "Clear space around you"
         ],
         execution: [
-            "Small dip (quarter squat)",
-            "Jump up just 2-4 inches",
-            "Land on balls of feet FIRST",
-            "Immediately absorb into soft landing (~40° knees)",
-            "Make landing as QUIET as possible",
-            "Pause 1-2 seconds between jumps"
+            "Small jump up (2-4 inches)",
+            "Land on balls of feet first",
+            "Absorb into soft, quiet landing",
+            "Pause between jumps"
         ],
-        dosage: {
-            sets: 3,
-            reps: 5,
-            holdTime: 0,
-            restBetweenSets: 90,
-            tempo: "Dip - Jump - Soft land - Pause - Repeat"
-        },
-        why: "Reintroduces impact to build bone/tendon tolerance. Teaches proper landing mechanics (soft, knees bent) essential for volleyball. Start small - your body adapts to impact over time.",
-        watchFor: [
-            "Stiff landings (knees straight)",
-            "Loud landings (means high impact)",
-            "Knee pain during or after",
-            "Asymmetric landings (land both feet evenly)"
-        ],
-        rpe: "5-6/10 (focus on quality, not exhaustion)",
-        phase: ["Prime"],
-        modifications: {
-            easier: "Even smaller jumps (1-2 inches), or do just 3 reps",
-            harder: "Slightly higher jumps (4-6 inches), or increase to 8 reps, or single-leg hops (advanced)"
-        }
+        targetMuscles: "Full Lower Body, Tendons",
+        tempo: "Explosive up, soft landing"
     },
     {
         id: "quad-sets",
         name: "Quad Sets (Isometric)",
-        category: "Quad Activation (Gentle)",
-        target: "Quadriceps Activation, VMO Wake-Up",
-        description: "Lying or sitting, squeeze thigh muscle to straighten knee fully. Hold. This is the gentlest quad activation.",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["CALM"],
+        dosage: "3 sets x 10 reps",
         setup: [
             "Sit or lie with legs straight",
-            "Place small rolled towel under knee",
-            "Completely relax to start"
+            "Place small towel under knee",
+            "Relax completely to start"
         ],
         execution: [
-            "Tighten thigh muscle maximally",
-            "Push back of knee down into towel",
-            "Knee should straighten fully",
-            "Hold squeeze for 5 seconds",
-            "Relax completely",
-            "Rest 3 seconds, repeat"
+            "Squeeze quad to push knee into towel",
+            "Hold maximal squeeze 5s",
+            "Relax completely for 3s"
         ],
-        dosage: {
-            sets: 3,
-            reps: 10,
-            holdTime: 5,
-            restBetweenSets: 30,
-            tempo: "Squeeze 5s - Relax 3s"
-        },
-        why: "After swelling, quads 'forget' how to fire (arthrogenic inhibition). This retrains the quad-brain connection. Use this EVERY morning if knee swollen, before attempting other exercises.",
-        watchFor: [
-            "Not achieving full knee extension",
-            "Using other leg to help",
-            "Cramping (ease intensity)",
-            "Breath holding"
-        ],
-        rpe: "3-4/10 (low intensity, focus on activation)",
-        phase: ["Calm"],
-        modifications: {
-            easier: "Without towel, or just 3-second holds",
-            harder: "Lift heel off ground during hold (straight leg raise variation)"
-        }
+        targetMuscles: "Quadriceps, VMO",
+        tempo: "5s squeeze, 3s rest"
     },
     {
         id: "heel-slides",
         name: "Heel Slides (ROM)",
-        category: "Range of Motion Restoration",
-        target: "Knee Flexion/Extension, Joint Mobility",
-        description: "Gentle sliding of heel toward/away from butt to maintain range. Critical after flare-ups.",
+        category: "Knee Mobility + ROM",
+        availability: "always",
+        phase: ["CALM"],
+        dosage: "2 sets x 15 reps",
         setup: [
             "Lie on back or sit in chair",
-            "Leg extended",
-            "Can place towel under heel on smooth floor"
+            "Leg extended on smooth surface",
+            "Towel under heel if needed"
         ],
         execution: [
-            "Slowly slide heel toward butt (3 sec)",
-            "Bend knee as far as comfortable",
-            "Hold bent position 2 seconds",
-            "Slowly slide back to straight (3 sec)",
-            "Gentle, no forcing range",
-            "Should feel stretch but not pain"
+            "Slowly slide heel toward butt",
+            "Bend as far as comfortable",
+            "Hold 2s, then slide back straight"
         ],
-        dosage: {
-            sets: 2,
-            reps: 15,
-            holdTime: 2,
-            restBetweenSets: 30,
-            tempo: "Slide in 3s - Hold 2s - Slide out 3s"
-        },
-        why: "Maintains knee flexion range during flare-ups when you can't do full exercises. Prevents stiffness from turning into permanent range loss. Gentle movement promotes synovial fluid circulation.",
-        watchFor: [
-            "Forcing into pain (stay gentle)",
-            "Losing full extension (make sure you straighten completely)",
-            "Hip hiking or compensating",
-            "Sharp catching sensation (could be meniscus - stop and assess)"
+        targetMuscles: "Knee Flexors/Extensors",
+        tempo: "3s in, 2s hold, 3s out"
+    },
+    {
+        id: "side-plank-leg-raise",
+        name: "Side Plank + Top-Leg Raise",
+        category: "Hip + Pelvis Control",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 8-12 reps/side",
+        setup: [
+            "Lie on side, elbow under shoulder",
+            "Stack feet or stagger for stability",
+            "Engage core before lifting"
         ],
-        rpe: "2-3/10 (very gentle)",
-        phase: ["Calm"],
-        modifications: {
-            easier: "Even smaller range, or use hands to assist heel",
-            harder: "Add light ankle weight for resistance"
-        }
+        execution: [
+            "Lift into side plank (straight line)",
+            "Raise top leg 6-12 inches slowly",
+            "Hold 2s at top",
+            "Lower with control"
+        ],
+        targetMuscles: "Glute medius, hip abductors, core stabilizers",
+        tempo: "Slow controlled raise, 2s hold, slow lower"
+    },
+    {
+        id: "hip-airplanes",
+        name: "Hip Airplanes (Assisted)",
+        category: "Hip + Pelvis Control",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 5-8 reps/side",
+        setup: [
+            "One hand on wall/support",
+            "Stand on one leg",
+            "Slight knee bend"
+        ],
+        execution: [
+            "Hinge torso forward flat",
+            "Rotate hips 'open' to side",
+            "Rotate hips 'closed' to ground",
+            "Move slowly and feel hip work"
+        ],
+        targetMuscles: "Deep Hip Rotators, Glute Medius",
+        tempo: "3s open, 3s closed"
+    },
+    {
+        id: "copenhagen-plank-short",
+        name: "Copenhagen Plank (Short Lever)",
+        category: "Hip + Pelvis Control",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 20-30s hold",
+        setup: [
+            "Top knee on bench/chair",
+            "Bottom leg free below",
+            "Elbow under shoulder"
+        ],
+        execution: [
+            "Lift hips into side plank",
+            "Maintain straight line head to knee",
+            "Hold position steadily"
+        ],
+        targetMuscles: "Adductors (Inner Thigh), Core",
+        tempo: "Steady hold"
+    },
+    {
+        id: "lateral-step-up",
+        name: "Lateral Step-Up (Controlled)",
+        category: "Hip + Pelvis Control",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 6-10 reps/side",
+        setup: [
+            "Stand sideways to step",
+            "Inner foot on step, outer on floor",
+            "Chest up, hands for balance"
+        ],
+        execution: [
+            "Drive through inner heel to stand",
+            "Lower outer foot slowly (3s)",
+            "Light push off ground to return"
+        ],
+        targetMuscles: "Quadriceps, Glute Medius, Balance",
+        tempo: "2s up, 3s down"
+    },
+    {
+        id: "slider-hamstring-curls",
+        name: "Slider Hamstring Curls",
+        category: "Hamstrings + Posterior Chain",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 6-10 reps",
+        setup: [
+            "Lie on back, heels on towels/sliders",
+            "Hips lifted in bridge position",
+            "Arms at sides for stability"
+        ],
+        execution: [
+            "Slide heels out slowly",
+            "Pull heels back toward butt",
+            "Keep hips elevated throughout"
+        ],
+        targetMuscles: "Hamstrings, Glutes",
+        tempo: "3s out, 2s in"
+    },
+    {
+        id: "nordic-hamstring-assisted",
+        name: "Nordic Hamstring Eccentrics (Assisted)",
+        category: "Hamstrings + Posterior Chain",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 3-6 reps",
+        setup: [
+            "Anchor heels under rail or partner",
+            "Kneeling on pad, core braced",
+            "Band or hands ready for support"
+        ],
+        execution: [
+            "Lower torso slowly forward",
+            "Use hamstrings to resist gravity",
+            "Catch self with hands at bottom"
+        ],
+        targetMuscles: "Hamstrings (Maximal Eccentric)",
+        tempo: "4-5s slow lower"
+    },
+    {
+        id: "hip-thrust",
+        name: "Hip Thrust (Double or Single)",
+        category: "Hamstrings + Posterior Chain",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 8-12 reps",
+        setup: [
+            "Upper back on bench edge",
+            "Feet flat, hip-width",
+            "Hips off ground to start"
+        ],
+        execution: [
+            "Drive through heels to lift hips",
+            "Squeeze glutes at top",
+            "Lower with control"
+        ],
+        targetMuscles: "Glute Max, Hamstrings",
+        tempo: "2s up, 1s hold, 2s down"
+    },
+    {
+        id: "good-morning-light",
+        name: "Good Morning (Light/Mod)",
+        category: "Hamstrings + Posterior Chain",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 8 reps",
+        setup: [
+            "Feet shoulder-width, soft knees",
+            "Hands behind head (prisoner style)",
+            "Back flat, core engaged"
+        ],
+        execution: [
+            "Hinge forward at hips",
+            "Lower until stretch in hamstrings",
+            "Drive hips forward to stand"
+        ],
+        targetMuscles: "Hamstrings, Erector Spinae",
+        tempo: "3s down, 2s up"
+    },
+    {
+        id: "soleus-raises-bent",
+        name: "Soleus Raises (Bent-Knee)",
+        category: "Calf/Ankle + Foot",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 12-20 reps",
+        setup: [
+            "Seated or in quarter-squat",
+            "Knees bent to 90°",
+            "Feet flat on floor"
+        ],
+        execution: [
+            "Rise onto balls of feet",
+            "Hold 1s at top",
+            "Lower slowly with control"
+        ],
+        targetMuscles: "Soleus (Deep Calf)",
+        tempo: "2s up, 1s hold, 3s down"
+    },
+    {
+        id: "tibialis-raises-wall",
+        name: "Tibialis Raises (Against Wall)",
+        category: "Calf/Ankle + Foot",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 15-25 reps",
+        setup: [
+            "Back against wall",
+            "Feet 12 inches from wall",
+            "Legs straight"
+        ],
+        execution: [
+            "Lift toes as high as possible",
+            "Hold 1s at top",
+            "Lower slowly to floor"
+        ],
+        targetMuscles: "Tibialis Anterior (Front of Shin)",
+        tempo: "1s up, 1s hold, 2s down"
+    },
+    {
+        id: "foot-tripod-holds",
+        name: "Foot Tripod Short-Foot Holds",
+        category: "Calf/Ankle + Foot",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 30-45s hold",
+        setup: [
+            "Standing or sitting, feet flat",
+            "Weight even on big toe, pinky, heel",
+            "Keep toes long (don't curl)"
+        ],
+        execution: [
+            "Pull arch up by shortening foot",
+            "Maintain 3 points of contact",
+            "Hold the contraction steadily"
+        ],
+        targetMuscles: "Intrinsic Foot Muscles, Arch Support",
+        tempo: "Steady hold"
+    },
+    {
+        id: "ankle-band-work",
+        name: "Ankle Eversion/Inversion Band Work",
+        category: "Calf/Ankle + Foot",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "2-3 sets x 15 reps/side",
+        setup: [
+            "Seated, legs straight",
+            "Band around mid-foot",
+            "Resistance from side anchor"
+        ],
+        execution: [
+            "Turn foot 'out' (eversion)",
+            "Return slowly to neutral",
+            "Turn foot 'in' (inversion)"
+        ],
+        targetMuscles: "Ankle Stabilizers (Peroneals/Tibials)",
+        tempo: "2s out, 2s in"
+    },
+    {
+        id: "reverse-sled-drag",
+        name: "Reverse Sled Drag",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "6-10 min intervals",
+        setup: [
+            "Sled or heavy band to waist",
+            "Face the anchor point",
+            "Step back until tension felt"
+        ],
+        execution: [
+            "Walk backward with small steps",
+            "Focus on pushing through toes",
+            "Maintain upright torso"
+        ],
+        targetMuscles: "Quadriceps, Knee Tendon Health",
+        tempo: "Constant pace"
+    },
+    {
+        id: "poliquin-step-up",
+        name: "Poliquin Step-Up",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 8 reps/side",
+        setup: [
+            "Inner heel on 2-4 inch block",
+            "One foot on block, other in air",
+            "Hands for balance"
+        ],
+        execution: [
+            "Lower outer heel to floor",
+            "Drive through block heel to return",
+            "Keep inner heel elevated throughout"
+        ],
+        targetMuscles: "VMO, Knee Terminal Extension",
+        tempo: "2s down, 1s up"
+    },
+    {
+        id: "split-squat-iso",
+        name: "Split Squat Iso Hold",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "3 sets x 30-45s/side",
+        setup: [
+            "One foot forward, one back",
+            "Lower into mid-range lunge",
+            "Maintain upright torso"
+        ],
+        execution: [
+            "Hold the static position steadily",
+            "Keep weight distributed evenly",
+            "Breathe and engage core"
+        ],
+        targetMuscles: "Quadriceps, Glutes, Tendon Tolerance",
+        tempo: "Steady hold"
+    },
+    {
+        id: "leg-extension-iso-mid",
+        name: "Leg Extension Isometric (Mid-Range)",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["BUILD"],
+        dosage: "4 sets x 30-45s",
+        setup: [
+            "Seated, resistance at ankles",
+            "Knee at 60° angle",
+            "Core braced"
+        ],
+        execution: [
+            "Push against resistance hard",
+            "Maintain the 60° angle",
+            "Hold maximal effort steadily"
+        ],
+        targetMuscles: "Quadriceps (Maximal Activation)",
+        tempo: "Steady hold"
+    },
+    {
+        id: "pogo-hops",
+        name: "Pogo Hops (Low Amplitude)",
+        category: "Low-Impact Return-to-Jump",
+        availability: "GREEN-only",
+        phase: ["PRIME"],
+        dosage: "3 sets x 20-30s",
+        setup: [
+            "Athletic stance, feet together",
+            "Hands on hips",
+            "Stay on balls of feet"
+        ],
+        execution: [
+            "Bouncy hops using only ankles",
+            "Minimize ground contact time",
+            "Keep landings quiet"
+        ],
+        targetMuscles: "Tendon Stiffness, Ankle Reactivity",
+        tempo: "Fast, bouncy rhythm"
+    },
+    {
+        id: "snap-down-to-stick",
+        name: "Snap-Down to Stick",
+        category: "Low-Impact Return-to-Jump",
+        availability: "GREEN-only",
+        phase: ["PRIME"],
+        dosage: "3 sets x 5 reps",
+        setup: [
+            "Stand high on toes",
+            "Arms overhead",
+            "Ready to drop"
+        ],
+        execution: [
+            "Quickly snap into athletic landing",
+            "Absorb force softly",
+            "Hold position 2s ('stick it')"
+        ],
+        targetMuscles: "Landing Mechanics, Deceleration",
+        tempo: "Explosive snap, 2s hold"
+    },
+    {
+        id: "lateral-line-hops-tiny",
+        name: "Lateral Line Hops (Tiny Range)",
+        category: "Low-Impact Return-to-Jump",
+        availability: "GREEN-only",
+        phase: ["PRIME"],
+        dosage: "3 sets x 15-25s",
+        setup: [
+            "Find a line on ground",
+            "Athletic stance",
+            "Ready to move sideways"
+        ],
+        execution: [
+            "Quick sideways hops over line",
+            "Keep range tiny and fast",
+            "Stay light on feet"
+        ],
+        targetMuscles: "Lateral Stability, Reactive Strength",
+        tempo: "Quick, rhythmic hops"
     }
 ];
 
@@ -539,17 +660,7 @@ window.getExerciseById = (id) => EXERCISES.find(ex => ex.id === id);
 
 // Helper function to format duration for display
 window.formatExerciseDuration = (ex) => {
-    const { sets, reps, holdTime, restBetweenSets } = ex.dosage;
-    let duration = "";
-    
-    if (holdTime > 0) {
-        duration = `${sets} sets x ${reps} reps x ${holdTime}s hold`;
-    } else {
-        duration = `${sets} sets x ${reps} reps`;
-    }
-    
-    duration += ` (${restBetweenSets}s rest between sets)`;
-    return duration;
+    return ex.dosage;
 };
 
 window.EXERCISES = EXERCISES;

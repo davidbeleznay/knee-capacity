@@ -1,6 +1,5 @@
 // App Initialization
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 KneeCapacity starting...');
     
     // Initialize data
     DataManager.init();
@@ -24,5 +23,4 @@ document.addEventListener('DOMContentLoaded', () => {
     updateMeasurementDisplay();
     loadTodayCheckIn();
     
-    console.log('Ready!');
 });

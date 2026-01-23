@@ -1,6 +1,5 @@
 // View Router Module
 function switchView(viewName) {
-    console.log('→', viewName);
     
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
