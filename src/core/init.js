@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupWorkoutHandlers();
     setupAnalyticsHandlers();
     setupMeasurementHandlers();
+    setupEventHandlers();
     setupNavigation();
     Stopwatch.init();
     if (typeof populateAnalyticsExerciseSelect === 'function') {
@@ -21,6 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateKneeStatusCard();
     updateWeekSummary();
     updateMeasurementDisplay();
+    renderRecentEventsPreview();
+    renderEventsTimeline();
     loadTodayCheckIn();
     
 });

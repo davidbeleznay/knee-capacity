@@ -16,6 +16,7 @@ const DataManager = {
             if (!localStorage.getItem('exerciseLogs')) localStorage.setItem('exerciseLogs', JSON.stringify([]));
             if (!localStorage.getItem('customWorkouts')) localStorage.setItem('customWorkouts', JSON.stringify([]));
             if (!localStorage.getItem('bodyMeasurements')) localStorage.setItem('bodyMeasurements', JSON.stringify([]));
+            if (!localStorage.getItem('significantEvents')) localStorage.setItem('significantEvents', JSON.stringify([]));
             if (!localStorage.getItem('streak')) localStorage.setItem('streak', '0');
             if (!localStorage.getItem('longestStreak')) localStorage.setItem('longestStreak', '0');
             
@@ -451,11 +452,155 @@ const DataManager = {
         return descriptions[lane] || '';
     },
     
+    // Significant Events
+    saveSignificantEvent(eventData) {
+        try {
+            const events = this.getSignificantEvents();
+            const event = {
+                ...eventData,
+                id: Date.now().toString(),
+                timestamp: new Date().toISOString(),
+                date: eventData.date || new Date().toISOString().split('T')[0]
+            };
+            events.push(event);
+            localStorage.setItem('significantEvents', JSON.stringify(events));
+            return true;
+        } catch (e) {
+            return false;
+        }
+    },
+    
+    getSignificantEvents(days = 90) {
+        try {
+            const events = JSON.parse(localStorage.getItem('significantEvents') || '[]');
+            if (!days) return events;
+            
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - days);
+            
+            return events
+                .filter(e => new Date(e.date) >= cutoff)
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+        } catch (e) {
+            return [];
+        }
+    },
+    
+    getEventById(id) {
+        try {
+            const events = JSON.parse(localStorage.getItem('significantEvents') || '[]');
+            return events.find(e => e.id === id);
+        } catch (e) {
+            return null;
+        }
+    },
+    
+    updateEvent(id, updates) {
+        try {
+            const events = JSON.parse(localStorage.getItem('significantEvents') || '[]');
+            const index = events.findIndex(e => e.id === id);
+            if (index === -1) return false;
+            
+            events[index] = { ...events[index], ...updates };
+            localStorage.setItem('significantEvents', JSON.stringify(events));
+            return true;
+        } catch (e) {
+            return false;
+        }
+    },
+    
+    deleteEvent(id) {
+        try {
+            const events = JSON.parse(localStorage.getItem('significantEvents') || '[]');
+            const filtered = events.filter(e => e.id !== id);
+            localStorage.setItem('significantEvents', JSON.stringify(filtered));
+            return true;
+        } catch (e) {
+            return false;
+        }
+    },
+    
+    generateSpecialistSummary() {
+        const events = this.getSignificantEvents(90);
+        const checkIns = this.getRecentCheckIns(90);
+        const exercises = this.getExerciseLogs().filter(e => {
+            const daysDiff = (new Date() - new Date(e.date)) / (1000 * 60 * 60 * 24);
+            return daysDiff <= 90;
+        });
+        
+        let summary = "=== KNEE CAPACITY SPECIALIST SUMMARY ===\n\n";
+        
+        // Patient info
+        summary += "Patient: 44yo, Severe Lateral OA + Degenerative Meniscus\n";
+        summary += "Goal: Avoid surgery, continue volleyball\n";
+        const startDate = new Date(Date.now() - 90*24*60*60*1000).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+        const endDate = new Date().toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+        summary += `Report Period: ${startDate} - ${endDate}\n\n`;
+        
+        // Significant Events
+        summary += "SIGNIFICANT EVENTS (Last 90 Days):\n";
+        if (events.length === 0) {
+            summary += "- No significant events logged\n\n";
+        } else {
+            events.forEach(e => {
+                const date = new Date(e.date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+                const eventTypes = {
+                    pain_spike: 'Pain Spike',
+                    instability: 'Instability Event',
+                    mechanical: 'Mechanical Symptoms',
+                    swelling_spike: 'Swelling Spike',
+                    post_activity_flare: 'Post-Activity Flare',
+                    other: 'Other'
+                };
+                const type = eventTypes[e.eventType] || e.eventType;
+                summary += `- ${date}: ${type} (Pain: ${e.painLevel}/10)\n`;
+                summary += `  Activity: ${e.activity}\n`;
+                summary += `  Duration: ${e.duration}\n`;
+                summary += `  Resolution: ${e.resolution}\n`;
+                
+                // Red flags
+                if (e.redFlags) {
+                    const flags = Object.entries(e.redFlags)
+                        .filter(([k, v]) => v)
+                        .map(([k]) => {
+                            const flagNames = {
+                                locking: 'Knee locking/catching',
+                                cantBearWeight: 'Unable to bear weight',
+                                severeSwelling7Days: 'Severe swelling >7 days',
+                                suddenGivingWay: 'Sudden giving way'
+                            };
+                            return flagNames[k] || k;
+                        });
+                    if (flags.length > 0) {
+                        summary += `  🚨 RED FLAGS: ${flags.join(', ')}\n`;
+                    }
+                }
+                summary += '\n';
+            });
+        }
+        
+        // Pain trend
+        if (checkIns.length > 0) {
+            const avgPain = checkIns.reduce((s, c) => s + (c.pain || 0), 0) / checkIns.length;
+            summary += `PAIN TREND:\n`;
+            summary += `- Average pain: ${avgPain.toFixed(1)}/10\n`;
+            summary += `- Check-ins logged: ${checkIns.length}\n\n`;
+        }
+        
+        // Activity summary
+        summary += `ACTIVITY SUMMARY:\n`;
+        summary += `- Exercise sessions: ${exercises.length}\n`;
+        summary += `- Current streak: ${this.getCurrentStreak()} days\n\n`;
+        
+        return summary;
+    },
+    
     // Export
     exportData() {
         try {
             const data = {
                 exportDate: new Date().toISOString(),
+                specialistSummary: this.generateSpecialistSummary(),
                 patientInfo: {
                     note: "44yo severe lateral OA + degenerative meniscus",
                     goal: "Avoid surgery, continue volleyball"
@@ -464,11 +609,13 @@ const DataManager = {
                     totalExercises: this.getExerciseLogs().length,
                     totalCustomWorkouts: this.getCustomWorkouts().length,
                     totalBodyMeasurements: this.getBodyMeasurements().length,
+                    totalSignificantEvents: this.getSignificantEvents().length,
                     currentStreak: this.getCurrentStreak(),
                     last30Days: {
                         avgPain: this.getRecentCheckIns(30).reduce((s, c) => s + (c.pain || 0), 0) / Math.max(this.getRecentCheckIns(30).length, 1)
                     }
                 },
+                significantEvents: this.getSignificantEvents(90),
                 dailyCheckIns: this.getCheckIns(),
                 exerciseDetails: this.getExerciseLogs(),
                 customWorkouts: this.getCustomWorkouts(),

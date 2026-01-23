@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="custom-styles.css">
     <link rel="stylesheet" href="stopwatch-styles.css">
     <link rel="stylesheet" href="measurement-styles.css">
+    <link rel="stylesheet" href="event-styles.css">
     <link rel="stylesheet" href="toggle-fix.css">
 </head>
 <body>
@@ -82,6 +83,14 @@
             <section class="card clickable-card" onclick="openMeasurementModal()">
                 <h3 style="color: #1976D2;">📏 Body Measurements</h3>
                 <p id="last-measurement-date" style="font-size: 14px; margin: 8px 0 0 0;">Tap to add</p>
+            </section>
+
+            <section class="card clickable-card" onclick="openEventModal()">
+                <h3 style="color: #F44336;">⚠️ Significant Event</h3>
+                <p style="font-size: 14px; margin: 8px 0 0 0;">Log incident for specialist</p>
+                <div id="recent-events-preview" style="margin-top: 12px;">
+                    <!-- Recent events preview -->
+                </div>
             </section>
         </div>
 
@@ -258,6 +267,12 @@
                 </div>
             </div>
             <div id="history-list"></div>
+            
+            <section class="card" style="margin-top:16px;">
+                <h3>⚠️ Significant Events (Last 90 Days)</h3>
+                <div id="events-timeline"></div>
+            </section>
+            
             <div id="measurement-summary" class="card" style="margin-top:16px;"></div>
         </div>
 
@@ -349,6 +364,97 @@
                 </div>
                 <div class="form-group"><label>Notes</label><textarea id="measurement-notes" rows="2"></textarea></div>
                 <button class="primary-button" id="save-measurement" onclick="saveMeasurement()">💾 Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="event-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="event-modal-title">⚠️ Log Significant Event</h2>
+                <button onclick="closeEventModal()" class="close-btn">x</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="event-id">
+                
+                <div class="form-group">
+                    <label>Event Type</label>
+                    <select id="event-type" style="width: 100%; padding: 10px; font-size: 14px; border: 2px solid var(--gray-300); border-radius: 8px;">
+                        <option value="pain_spike">⚡ Pain Spike</option>
+                        <option value="instability">⚠️ Instability Event</option>
+                        <option value="mechanical">⚙️ Mechanical Symptoms</option>
+                        <option value="swelling_spike">💧 Swelling Spike</option>
+                        <option value="post_activity_flare">🔥 Post-Activity Flare</option>
+                        <option value="other">📝 Other</option>
+                    </select>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 16px;">
+                    <div>
+                        <label>Date</label>
+                        <input type="date" id="event-date" style="width: 100%; padding: 10px; font-size: 14px; border: 2px solid var(--gray-300); border-radius: 8px;">
+                    </div>
+                    <div>
+                        <label>Time</label>
+                        <input type="time" id="event-time" style="width: 100%; padding: 10px; font-size: 14px; border: 2px solid var(--gray-300); border-radius: 8px;">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Pain Level During Event: <span id="event-pain-value">5</span>/10</label>
+                    <input type="range" id="event-pain-slider" min="0" max="10" value="5" class="slider">
+                </div>
+                
+                <div class="form-group">
+                    <label>What were you doing?</label>
+                    <input type="text" id="event-activity" placeholder="e.g., Playing volleyball, descending stairs..." style="width: 100%; padding: 10px; font-size: 14px; border: 2px solid var(--gray-300); border-radius: 8px;">
+                </div>
+                
+                <div class="form-group">
+                    <label>Duration</label>
+                    <select id="event-duration" style="width: 100%; padding: 10px; font-size: 14px; border: 2px solid var(--gray-300); border-radius: 8px;">
+                        <option value="< 1 hour">< 1 hour</option>
+                        <option value="1-6 hours">1-6 hours</option>
+                        <option value="6-24 hours">6-24 hours</option>
+                        <option value="1-2 days">1-2 days</option>
+                        <option value="3-7 days">3-7 days</option>
+                        <option value="> 7 days (ongoing)">> 7 days (ongoing)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>What helped? (Resolution)</label>
+                    <input type="text" id="event-resolution" placeholder="e.g., Ice, rest, medication..." style="width: 100%; padding: 10px; font-size: 14px; border: 2px solid var(--gray-300); border-radius: 8px;">
+                </div>
+                
+                <div class="form-group">
+                    <label>Notes (Optional)</label>
+                    <textarea id="event-notes" rows="3" placeholder="Additional details..." style="width: 100%; padding: 10px; font-size: 14px; border: 2px solid var(--gray-300); border-radius: 8px;"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label style="font-weight: 700; color: #F44336;">🚨 Red Flag Indicators</label>
+                    <div style="background: #FFEBEE; padding: 12px; border-radius: 8px; margin-top: 8px;">
+                        <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" id="flag-locking" style="width: 20px; height: 20px; margin-right: 8px;">
+                            <span>Knee locked/caught</span>
+                        </label>
+                        <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" id="flag-cant-bear-weight" style="width: 20px; height: 20px; margin-right: 8px;">
+                            <span>Couldn't bear weight</span>
+                        </label>
+                        <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" id="flag-severe-swelling" style="width: 20px; height: 20px; margin-right: 8px;">
+                            <span>Severe swelling >7 days</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="flag-giving-way" style="width: 20px; height: 20px; margin-right: 8px;">
+                            <span>Sudden giving way</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <button class="primary-button" id="save-event" style="margin-top: 16px;">💾 Save Event</button>
             </div>
         </div>
     </div>

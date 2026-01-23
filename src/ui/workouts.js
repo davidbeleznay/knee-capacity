@@ -344,7 +344,7 @@ function renderTodaysSummary() {
 function renderExerciseTrends(id) {
     const history = DataManager.getExerciseHistory(id, 30);
     const container = document.getElementById('trend-chart');
-    if (history.length < 2) { container.innerHTML = '<p style="text-align: center; padding: 20px;">Log more</p>'; return; }
+    if (history.length < 2) { container.innerHTML = ''; return; }
     
     const recent = history.slice(0, 10).reverse();
     const metric = recent.some(h => h.holdTimeSeconds > 0) ? 'hold' : 'reps';
@@ -387,7 +387,7 @@ function renderExerciseLibrary() {
                             </div>
                             <p style="font-size: 14px; margin-bottom: 8px; line-height: 1.4;">${ex.description}</p>
                             <div style="font-size: 13px; color: var(--gray-600); margin-bottom: 8px;">
-                                <strong>Target:</strong> ${ex.target}
+                                <strong>Target:</strong> ${ex.targetMuscles}
                             </div>
                             <div style="background: #f5f5f5; padding: 8px; border-radius: 6px; font-size: 13px;">
                                 <strong>Why:</strong> ${ex.why}
