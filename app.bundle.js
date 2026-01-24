@@ -272,7 +272,7 @@ function renderKCIResult(score) {
     // 5. Update Recommendations
     const recommendations = DataManager.getRecommendedExercises(info.lane.split(' ')[0]);
     recommendationsList.innerHTML = recommendations.map(ex => `
-        <div class="kci-recommendation-tile" onclick="selectExerciseForLogging('${ex.id}')">
+        <div class="kci-recommendation-tile" onclick="switchView('log'); selectExerciseForLogging('${ex.id}')">
             <span class="tile-icon">${getExerciseIcon(ex.id)}</span>
             <span class="tile-name">${ex.name}</span>
             <span class="plus-log-btn">+</span>
@@ -282,6 +282,7 @@ function renderKCIResult(score) {
     // 6. Setup Buttons
     document.getElementById('kci-start-workout').onclick = () => {
         if (recommendations.length > 0) {
+            switchView('log');
             selectExerciseForLogging(recommendations[0].id);
         }
     };
@@ -763,7 +764,7 @@ function selectExerciseForLogging(id) {
     instructionsContent.style.display = 'none';
     document.getElementById('toggle-instructions-icon').textContent = '▶';
     
-    // Parse dosage string to extract sets/reps/hold
+    // Parse dosage string to extract sets/reps
     const dosageParts = ex.dosage.match(/(\d+)\s*sets?\s*x\s*(\d+)(?:-(\d+))?\s*(?:reps?|s)?/i);
     if (dosageParts) {
         document.getElementById('sets-completed').value = parseInt(dosageParts[1]) || 3;
@@ -773,19 +774,49 @@ function selectExerciseForLogging(id) {
         document.getElementById('reps-completed').value = 10;
     }
     
-    // Check if it's a hold-based exercise
-    const isHold = ex.dosage.toLowerCase().includes('hold') || ex.dosage.includes('s');
-    document.getElementById('hold-time').value = isHold ? 30 : 0;
+    // Smart Defaults: Hold Time
+    const defaultHold = ex.defaultHoldTime || 0;
+    document.getElementById('hold-time').value = defaultHold;
+    document.getElementById('hold-tracker').style.display = defaultHold > 0 ? 'block' : 'none';
     
-    document.getElementById('weight-used').value = 0;
+    // Smart Defaults: Weight
+    let defaultWeight = 0;
+    if (ex.defaultWeight === 'last-used') {
+        const history = DataManager.getExerciseHistory(id, 90);
+        if (history.length > 0) {
+            defaultWeight = history[0].weightUsed || 0;
+        }
+    } else if (typeof ex.defaultWeight === 'number') {
+        defaultWeight = ex.defaultWeight;
+    }
+    document.getElementById('weight-used').value = defaultWeight;
+    
+    // Reset other fields
     document.getElementById('rpe-slider').value = 5;
     document.getElementById('rpe-value').textContent = '5';
     document.getElementById('exercise-pain-slider').value = 0;
     document.getElementById('exercise-pain-value').textContent = '0';
     document.getElementById('exercise-notes').value = '';
     
-    document.getElementById('hold-tracker').style.display = isHold ? 'block' : 'none';
     renderExerciseTrends(id);
+    renderExerciseHint(ex, defaultWeight);
+}
+
+function renderExerciseHint(ex, lastWeight) {
+    const hintContainer = document.getElementById('exercise-hint');
+    if (!hintContainer) return;
+    
+    let hint = '';
+    if (ex.trackingFocus === 'hold') {
+        hint = `💡 Typical hold: ${ex.defaultHoldTime || 30}-60s`;
+    } else if (ex.trackingFocus === 'weight' && lastWeight > 0) {
+        hint = `💡 Last used: ${lastWeight} lbs`;
+    } else if (ex.trackingFocus === 'reps') {
+        hint = `💡 Focus on controlled reps`;
+    }
+    
+    hintContainer.textContent = hint;
+    hintContainer.style.display = hint ? 'block' : 'none';
 }
 
 function closeExerciseForm() {

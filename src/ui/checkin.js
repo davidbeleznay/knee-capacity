@@ -125,7 +125,7 @@ function renderKCIResult(score) {
     // 5. Update Recommendations
     const recommendations = DataManager.getRecommendedExercises(info.lane.split(' ')[0]);
     recommendationsList.innerHTML = recommendations.map(ex => `
-        <div class="kci-recommendation-tile" onclick="selectExerciseForLogging('${ex.id}')">
+        <div class="kci-recommendation-tile" onclick="switchView('log'); selectExerciseForLogging('${ex.id}')">
             <span class="tile-icon">${getExerciseIcon(ex.id)}</span>
             <span class="tile-name">${ex.name}</span>
             <span class="plus-log-btn">+</span>
@@ -135,6 +135,7 @@ function renderKCIResult(score) {
     // 6. Setup Buttons
     document.getElementById('kci-start-workout').onclick = () => {
         if (recommendations.length > 0) {
+            switchView('log');
             selectExerciseForLogging(recommendations[0].id);
         }
     };
