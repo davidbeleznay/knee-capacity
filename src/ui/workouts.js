@@ -215,7 +215,6 @@ function renderExerciseTiles() {
             `;
         });
     });
-    });
 
     container.innerHTML = html;
 }
