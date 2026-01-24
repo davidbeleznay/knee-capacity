@@ -1179,3 +1179,56 @@ details[open] {
 }
 
 /* Desktop: Allow collapsing (removed always-expanded override) */
+
+/* KCI Progress Bar */
+.kci-progress-bar div {
+    width: 20px;
+    height: 10px;
+    background: var(--gray-200);
+    border-radius: 2px;
+    transition: background 0.3s ease;
+}
+
+.kci-recommendation-tile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.kci-recommendation-tile:active {
+    transform: scale(0.98);
+    background: #f0f0f0;
+}
+
+.kci-recommendation-tile .tile-icon {
+    font-size: 24px;
+    margin: 0;
+}
+
+.kci-recommendation-tile .tile-name {
+    margin: 0;
+    font-size: 14px;
+    flex: 1;
+}
+
+.kci-recommendation-tile .plus-log-btn {
+    font-size: 20px;
+    color: var(--primary);
+    font-weight: 700;
+}
+
+@keyframes countUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#kci-score-display {
+    animation: countUp 0.5s ease-out;
+}
+

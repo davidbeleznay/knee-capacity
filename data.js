@@ -265,18 +265,21 @@ const DataManager = {
             const today = new Date().toISOString().split('T')[0];
             const existingIndex = checkIns.findIndex(c => c.date === today);
             
+            const kciScore = this.calculateKCI(checkInData);
+            const enrichedData = { ...checkInData, date: today, kciScore };
+            
             if (existingIndex >= 0) {
-                checkIns[existingIndex] = { ...checkInData, date: today };
+                checkIns[existingIndex] = enrichedData;
             } else {
-                checkIns.push({ ...checkInData, date: today });
+                checkIns.push(enrichedData);
             }
             localStorage.setItem('checkIns', JSON.stringify(checkIns));
-            console.log('✅ Check-in saved for', today);
-            return true;
+            console.log('✅ Check-in saved for', today, 'KCI:', kciScore);
+            return enrichedData;
         } catch (e) {
             console.error('Save check-in error:', e);
             alert('! Failed to save check-in: ' + e.message);
-            return false;
+            return null;
         }
     },
     
@@ -433,6 +436,116 @@ const DataManager = {
         if (swelling === 'none' || (swelling === 'mild' && pain <= 4)) return 'GREEN';
         
         return 'YELLOW';
+    },
+
+    calculateKCI(checkInData) {
+        let score = 100;
+        const { swelling, pain, activityLevel } = checkInData;
+
+        // 1. Swelling Deductions
+        const swellingDeductions = { 'none': 0, 'mild': 10, 'moderate': 25, 'severe': 40 };
+        score -= (swellingDeductions[swelling] || 0);
+
+        // 2. Pain Deductions
+        if (pain >= 9) score -= 40;
+        else if (pain >= 7) score -= 25;
+        else if (pain >= 5) score -= 15;
+        else if (pain >= 3) score -= 5;
+
+        // 3. Activity Spike Logic (High followed by High)
+        const checkIns = this.getCheckIns();
+        const yesterday = this.getCheckIn(new Date(Date.now() - 86400000).toISOString().split('T')[0]);
+        if (yesterday && yesterday.activityLevel === 'Active' && activityLevel === 'Active') {
+            score -= 10;
+        }
+
+        // 4. Trend Detection (Getting Worse)
+        const recentCheckIns = this.getRecentCheckIns(4); // Today + last 3
+        if (recentCheckIns.length >= 3) {
+            const todayPain = pain;
+            const prevPain = recentCheckIns[1].pain || 0;
+            const swellingValues = { 'none': 0, 'mild': 1, 'moderate': 2, 'severe': 3 };
+            const todaySwelling = swellingValues[swelling] || 0;
+            const prevSwelling = swellingValues[recentCheckIns[1].swelling] || 0;
+
+            if (todayPain >= prevPain + 2 || todaySwelling > prevSwelling) {
+                score -= 5;
+            }
+        }
+
+        // 5. Bonuses
+        // Improving trend
+        if (recentCheckIns.length >= 2) {
+            const prevPain = recentCheckIns[1].pain || 0;
+            const swellingValues = { 'none': 0, 'mild': 1, 'moderate': 2, 'severe': 3 };
+            const prevSwelling = swellingValues[recentCheckIns[1].swelling] || 0;
+            if (pain < prevPain || swellingValues[swelling] < prevSwelling) {
+                score += 5;
+            }
+        }
+
+        // Consistent workouts (2+ in last 7 days)
+        const last7DaysLogs = this.getExerciseLogs().filter(log => {
+            const diff = (new Date() - new Date(log.date)) / (1000 * 60 * 60 * 24);
+            return diff <= 7;
+        });
+        if (last7DaysLogs.length >= 2) {
+            score += 5;
+        }
+
+        // Streak (7+ days with KCI > 70)
+        let greenStreak = 0;
+        const allCheckInsSorted = this.getCheckIns().sort((a, b) => new Date(b.date) - new Date(a.date));
+        for (const c of allCheckInsSorted) {
+            if (c.kciScore > 70) greenStreak++;
+            else break;
+        }
+        if (greenStreak >= 7) {
+            score += 10;
+        }
+
+        return Math.max(0, Math.min(100, score));
+    },
+
+    getKCIMessage(score) {
+        const patientName = localStorage.getItem('patientName') || '';
+        const namePrefix = patientName ? `${patientName}, ` : '';
+        
+        if (score >= 85) return {
+            text: `Good day, ${namePrefix}👍 Your knee is ready to work.`,
+            lane: 'BUILD or PRIME',
+            plan: 'Do a strength session (2-3 exercises, 20-30 min)',
+            color: '#4CAF50',
+            range: 'excellent'
+        };
+        if (score >= 70) return {
+            text: `You're doing well, ${namePrefix}Keep building - you're trending up! 💪`,
+            lane: 'BUILD',
+            plan: 'Consistent strength work is key today.',
+            color: '#8BC34A',
+            range: 'good'
+        };
+        if (score >= 50) return {
+            text: `Tough day, ${namePrefix}💛 - modify if needed. Listen to your body today.`,
+            lane: 'CALM or light BUILD',
+            plan: 'Focus on isometrics and controlled movement.',
+            color: '#FFC107',
+            range: 'caution'
+        };
+        if (score >= 30) return {
+            text: `Your knee needs care today, ${namePrefix}Rest if you need it.`,
+            lane: 'CALM',
+            plan: 'Stick to gentle range of motion and quad sets.',
+            color: '#FF9800',
+            range: 'rest'
+        };
+        return {
+            text: `Recover, ${namePrefix}Rest up - this will pass.`,
+            lane: 'CALM + rest emphasis',
+            plan: 'Strategic rest and pain management.',
+            color: '#F44336',
+            range: 'recover'
+        };
     },
 
     getRecommendedLanes() {
@@ -963,7 +1076,28 @@ const DataManager = {
             .slice(0, limit)
             .map(([name, count]) => ({ name, count }));
     },
-    
+
+    getRecommendedExercises(lane) {
+        const allExercises = window.EXERCISES || [];
+        const logs = this.getExerciseLogs();
+        
+        // Filter by lane
+        const laneExercises = allExercises.filter(ex => ex.phase.includes(lane));
+        
+        // Sort by variety (last done date)
+        const sorted = laneExercises.sort((a, b) => {
+            const lastA = logs.filter(l => l.exerciseId === a.id).sort((x, y) => new Date(y.date) - new Date(x.date))[0];
+            const lastB = logs.filter(l => l.exerciseId === b.id).sort((x, y) => new Date(y.date) - new Date(x.date))[0];
+            
+            const dateA = lastA ? new Date(lastA.date) : new Date(0);
+            const dateB = lastB ? new Date(lastB.date) : new Date(0);
+            
+            return dateA - dateB; // Oldest first
+        });
+        
+        return sorted.slice(0, 3);
+    },
+
     getExerciseProgression(exerciseId) {
         const logs = this.getExerciseHistory(exerciseId, 90);
         if (logs.length < 2) return null;

@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initial rendering
     updateStreakDisplay();
-    updateKneeStatusCard();
     updateWeekSummary();
     updateMeasurementDisplay();
     renderRecentEventsPreview();

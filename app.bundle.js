@@ -191,28 +191,111 @@ function saveCheckIn() {
         return;
     }
     
-    console.log('💾 Saving check-in...');
+    console.log('💾 Saving check-in and calculating KCI...');
     
-    const success = DataManager.saveCheckIn({ 
+    const checkInData = { 
         swelling: AppState.swelling, 
         pain: AppState.pain,
         activityLevel: AppState.activityLevel,
         timeOfDay: AppState.timeOfDay,
         notes: document.getElementById('checkin-notes').value
-    });
+    };
     
-    if (success) {
-        updateKneeStatusCard();
+    const enrichedData = DataManager.saveCheckIn(checkInData);
+    
+    if (enrichedData) {
         updateWeekSummary();
+        renderKCIResult(enrichedData.kciScore);
         
         const btn = document.getElementById('save-checkin');
-        btn.textContent = 'Saved!';
+        btn.textContent = 'Calculated!';
         btn.style.background = '#4CAF50';
         setTimeout(() => {
-            btn.textContent = 'Save Check-In';
+            btn.textContent = 'Calculate My Knee Status';
             btn.style.background = '';
         }, 2000);
     }
+}
+
+function renderKCIResult(score) {
+    const container = document.getElementById('kci-result-container');
+    const scoreDisplay = document.getElementById('kci-score-display');
+    const progressBar = document.getElementById('kci-progress-bar');
+    const messageDisplay = document.getElementById('kci-message');
+    const laneName = document.getElementById('kci-lane-name');
+    const planDesc = document.getElementById('kci-plan-desc');
+    const recommendationsList = document.getElementById('kci-recommendations');
+    
+    const info = DataManager.getKCIMessage(score);
+    
+    // 1. Show container
+    container.style.display = 'block';
+    
+    // 2. Animate score count up
+    let current = 0;
+    const duration = 1000; // 1 second
+    const start = performance.now();
+    
+    function animate(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOutQuad = t => t * (2 - t);
+        const val = Math.floor(easeOutQuad(progress) * score);
+        
+        scoreDisplay.textContent = `${val}/100`;
+        
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            scoreDisplay.textContent = `${score}/100`;
+        }
+    }
+    requestAnimationFrame(animate);
+    
+    // 3. Update Progress Bar (10 blocks)
+    progressBar.innerHTML = '';
+    for (let i = 1; i <= 10; i++) {
+        const block = document.createElement('div');
+        if (i <= score / 10) {
+            block.style.background = info.color;
+        }
+        progressBar.appendChild(block);
+    }
+    
+    // 4. Update Message & Plan
+    messageDisplay.textContent = info.text;
+    messageDisplay.style.color = info.color;
+    laneName.textContent = info.lane;
+    laneName.style.color = info.color;
+    planDesc.textContent = info.plan;
+    
+    // 5. Update Recommendations
+    const recommendations = DataManager.getRecommendedExercises(info.lane.split(' ')[0]);
+    recommendationsList.innerHTML = recommendations.map(ex => `
+        <div class="kci-recommendation-tile" onclick="selectExerciseForLogging('${ex.id}')">
+            <span class="tile-icon">${getExerciseIcon(ex.id)}</span>
+            <span class="tile-name">${ex.name}</span>
+            <span class="plus-log-btn">+</span>
+        </div>
+    `).join('');
+    
+    // 6. Setup Buttons
+    document.getElementById('kci-start-workout').onclick = () => {
+        if (recommendations.length > 0) {
+            selectExerciseForLogging(recommendations[0].id);
+        }
+    };
+    document.getElementById('kci-view-all').onclick = () => {
+        switchView('log');
+        // Pre-filter log view to today's lane
+        AppState.selectedLane = info.lane.split(' ')[0];
+        if (typeof renderExerciseTiles === 'function') renderExerciseTiles();
+    };
+    
+    // 7. Smooth Scroll
+    setTimeout(() => {
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 300);
 }
 
 function loadTodayCheckIn() {
@@ -254,70 +337,11 @@ function loadTodayCheckIn() {
     if (checkIn.notes) {
         document.getElementById('checkin-notes').value = checkIn.notes;
     }
-}
 
-function updateKneeStatusCard() {
-    const statusInfo = DataManager.getKneeStatusMessage();
-    const status = DataManager.getKneeStatus();
-    AppState.kneeStatus = status;
-    
-    const card = document.getElementById('knee-status-card');
-    card.className = `status-card status-${status} text-center`;
-    card.innerHTML = `
-        <div class="status-icon">${statusInfo.icon}</div>
-        <h2>${statusInfo.title}</h2>
-        <div style="text-align: left; margin-top: 16px;">
-            <div style="margin-bottom: 12px;">
-                <strong style="color: var(--primary); display: block; margin-bottom: 4px;">🛤️ Today's Lane:</strong>
-                <span style="font-weight: 700; font-size: 16px;">${statusInfo.lane}</span>
-            </div>
-            <div style="margin-bottom: 12px;">
-                <strong style="display: block; margin-bottom: 4px;">📝 Plan:</strong>
-                <span style="font-size: 14px; line-height: 1.4;">${statusInfo.plan}</span>
-            </div>
-            <div style="font-size: 13px; color: var(--gray-600); font-style: italic; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.05);">
-                ${statusInfo.reason}
-            </div>
-        </div>
-    `;
-    
-    updateLaneGuidance();
-}
-
-function updateLaneGuidance() {
-    const status = DataManager.getKneeStatus();
-    const laneCard = document.getElementById('lane-guidance-card');
-    const laneOptions = document.getElementById('lane-options');
-    
-    if (status === 'unknown') {
-        laneCard.style.display = 'none';
-        return;
+    if (checkIn.kciScore !== undefined) {
+        renderKCIResult(checkIn.kciScore);
     }
-    
-    laneCard.style.display = 'block';
-    const recommendedLanes = DataManager.getRecommendedLanes();
-    
-    // Auto-select first recommended lane if none selected
-    if (!AppState.selectedLane || !recommendedLanes.includes(AppState.selectedLane)) {
-        AppState.selectedLane = recommendedLanes[0];
-    }
-    
-    laneOptions.innerHTML = recommendedLanes.map(lane => `
-        <button class="lane-btn lane-${lane.toLowerCase()} ${AppState.selectedLane === lane ? 'active' : ''}" 
-                onclick="selectLane('${lane}')">
-            ${lane}
-        </button>
-    `).join('');
-    
-    document.getElementById('lane-explanation').textContent = DataManager.getLaneDescription(AppState.selectedLane);
 }
-
-window.selectLane = (lane) => {
-    AppState.selectedLane = lane;
-    updateLaneGuidance();
-    // Render exercise tiles if we switch to log view
-    if (AppState.currentView === 'log') renderExerciseTiles();
-};
 
 function updateWeekSummary() {
     const weekStart = new Date();
@@ -1655,7 +1679,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initial rendering
     updateStreakDisplay();
-    updateKneeStatusCard();
     updateWeekSummary();
     updateMeasurementDisplay();
     renderRecentEventsPreview();

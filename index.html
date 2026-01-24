@@ -28,18 +28,37 @@
                 <div id="home-milestone-badges" class="home-badges"></div>
             </div>
 
-            <section id="knee-status-card" class="status-card text-center">
-                <div class="status-icon">❓</div>
-                <h2>Complete Check-In</h2>
-            </section>
-
-            <section id="lane-guidance-card" class="card" style="display: none;">
-                <h3 style="margin-top: 0; color: var(--primary);">🛤️ Your Training Lane</h3>
-                <div id="lane-options" class="lane-options" style="display: flex; gap: 8px; margin: 16px 0;">
-                    <!-- Lane buttons will be injected here -->
+            <section id="kci-result-container" class="card" style="display: none; margin-top: 16px; border: 2px solid var(--primary); background: #f9fff9;">
+                <div style="text-align: center;">
+                    <div style="font-size: 14px; color: var(--gray-600); text-transform: uppercase; letter-spacing: 1px;">Knee Capacity Index</div>
+                    <div id="kci-score-display" style="font-size: 48px; font-weight: 900; color: var(--primary); margin: 8px 0;">0/100</div>
+                    <div id="kci-progress-bar" class="kci-progress-bar" style="display: flex; gap: 4px; justify-content: center; margin-bottom: 16px;">
+                        <!-- 10 blocks will be injected here -->
+                    </div>
                 </div>
-                <div id="lane-explanation" style="font-size: 14px; color: var(--gray-600); line-height: 1.4;">
-                    Select a lane based on today's status.
+                
+                <div id="kci-message" style="font-size: 18px; font-weight: 700; text-align: center; margin-bottom: 20px; line-height: 1.4;">
+                    <!-- Empathetic message -->
+                </div>
+
+                <div style="background: white; padding: 16px; border-radius: 12px; border: 1px solid var(--gray-200);">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                        <span style="font-size: 20px;">🛤️</span>
+                        <strong style="font-size: 16px; text-transform: uppercase; color: var(--gray-600);">Today's Plan: <span id="kci-lane-name" style="color: var(--primary);">BUILD</span></strong>
+                    </div>
+                    <div id="kci-plan-desc" style="font-size: 14px; color: var(--gray-700); margin-bottom: 16px; line-height: 1.5;">
+                        <!-- Plan description -->
+                    </div>
+
+                    <div style="font-weight: 700; font-size: 13px; color: var(--gray-500); text-transform: uppercase; margin-bottom: 12px;">Recommended Exercises</div>
+                    <div id="kci-recommendations" class="kci-recommendations-list" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Exercise tiles will be injected here -->
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px;">
+                        <button id="kci-start-workout" class="primary-button" style="margin: 0;">Start Workout</button>
+                        <button id="kci-view-all" class="secondary-button" style="margin: 0;">View All</button>
+                    </div>
                 </div>
             </section>
 
@@ -75,7 +94,7 @@
                     </div>
                 </div>
                 <div class="form-group"><label>Notes</label><textarea id="checkin-notes" rows="2"></textarea></div>
-                <button class="primary-button" id="save-checkin" onclick="saveCheckIn()">Save Check-In</button>
+                <button class="primary-button" id="save-checkin" onclick="saveCheckIn()">Calculate My Knee Status</button>
             </section>
 
             <section class="card"><h3>This Week</h3><div id="week-summary"></div></section>
