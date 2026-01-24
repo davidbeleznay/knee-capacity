@@ -238,20 +238,26 @@ function selectExerciseForLogging(id) {
     instructionsContent.style.display = 'none';
     document.getElementById('toggle-instructions-icon').textContent = '▶';
     
-    // Parse dosage string to extract sets/reps
-    const dosageParts = ex.dosage.match(/(\d+)\s*sets?\s*x\s*(\d+)(?:-(\d+))?\s*(?:reps?|s)?/i);
-    if (dosageParts) {
-        document.getElementById('sets-completed').value = parseInt(dosageParts[1]) || 3;
-        document.getElementById('reps-completed').value = parseInt(dosageParts[2]) || 10;
-    } else {
-        document.getElementById('sets-completed').value = 3;
-        document.getElementById('reps-completed').value = 10;
-    }
-    
     // Smart Defaults: Hold Time
     const defaultHold = ex.defaultHoldTime || 0;
     document.getElementById('hold-time').value = defaultHold;
     document.getElementById('hold-tracker').style.display = defaultHold > 0 ? 'block' : 'none';
+    
+    // Parse dosage string to extract sets/reps
+    // For hold-based exercises, reps = 1 (one hold per set)
+    const dosageParts = ex.dosage.match(/(\d+)\s*sets?\s*x\s*(\d+)(?:-(\d+))?\s*(?:reps?|s)?/i);
+    if (dosageParts) {
+        document.getElementById('sets-completed').value = parseInt(dosageParts[1]) || 3;
+        // If it's a hold exercise, default to 1 rep per set (one hold)
+        if (defaultHold > 0) {
+            document.getElementById('reps-completed').value = 1;
+        } else {
+            document.getElementById('reps-completed').value = parseInt(dosageParts[2]) || 10;
+        }
+    } else {
+        document.getElementById('sets-completed').value = 3;
+        document.getElementById('reps-completed').value = defaultHold > 0 ? 1 : 10;
+    }
     
     // Smart Defaults: Weight
     let defaultWeight = 0;

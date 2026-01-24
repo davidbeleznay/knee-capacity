@@ -24,6 +24,5 @@ document.addEventListener('DOMContentLoaded', () => {
     renderRecentEventsPreview();
     renderEventsTimeline();
     loadTodayCheckIn();
-    loadPatientName();
     
 });

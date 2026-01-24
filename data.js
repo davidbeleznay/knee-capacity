@@ -508,39 +508,36 @@ const DataManager = {
     },
 
     getKCIMessage(score) {
-        const patientName = localStorage.getItem('patientName') || '';
-        const namePrefix = patientName ? `${patientName}, ` : '';
-        
         if (score >= 85) return {
-            text: `Good day, ${namePrefix}👍 Your knee is ready to work.`,
+            text: `Good day 👍 Your knee is ready to work.`,
             lane: 'BUILD or PRIME',
             plan: 'Do a strength session (2-3 exercises, 20-30 min)',
             color: '#4CAF50',
             range: 'excellent'
         };
         if (score >= 70) return {
-            text: `You're doing well, ${namePrefix}Keep building - you're trending up! 💪`,
+            text: `You're doing well. Keep building - you're trending up! 💪`,
             lane: 'BUILD',
             plan: 'Consistent strength work is key today.',
             color: '#8BC34A',
             range: 'good'
         };
         if (score >= 50) return {
-            text: `Tough day, ${namePrefix}💛 - modify if needed. Listen to your body today.`,
+            text: `Tough day 💛 - modify if needed. Listen to your body today.`,
             lane: 'CALM or light BUILD',
             plan: 'Focus on isometrics and controlled movement.',
             color: '#FFC107',
             range: 'caution'
         };
         if (score >= 30) return {
-            text: `Your knee needs care today, ${namePrefix}Rest if you need it.`,
+            text: `Your knee needs care today. Rest if you need it.`,
             lane: 'CALM',
             plan: 'Stick to gentle range of motion and quad sets.',
             color: '#FF9800',
             range: 'rest'
         };
         return {
-            text: `Recover, ${namePrefix}Rest up - this will pass.`,
+            text: `Recover and rest up - this will pass.`,
             lane: 'CALM + rest emphasis',
             plan: 'Strategic rest and pain management.',
             color: '#F44336',
@@ -714,7 +711,6 @@ const DataManager = {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
-            const patientName = localStorage.getItem('patientName') || 'Patient';
             const endDate = new Date();
             const startDate = new Date(endDate.getTime() - 90*24*60*60*1000);
             
@@ -739,8 +735,7 @@ const DataManager = {
             
             doc.setFontSize(12);
             doc.setTextColor(0);
-            doc.text(`Patient: ${patientName}`, 20, 65);
-            doc.text(`Period: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`, 20, 72);
+            doc.text(`Period: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`, 20, 65);
             
             // Summary Stats
             const checkIns = this.getRecentCheckIns(90);
