@@ -90,6 +90,25 @@ function updateStreakDisplay() {
         ).join('');
     }
 }
+
+// Patient Name Settings
+function savePatientName() {
+    const name = document.getElementById('patient-name').value.trim();
+    if (!name) {
+        alert('! Please enter a name');
+        return;
+    }
+    localStorage.setItem('patientName', name);
+    alert('Name saved!');
+}
+
+function loadPatientName() {
+    const name = localStorage.getItem('patientName') || '';
+    const input = document.getElementById('patient-name');
+    if (input) {
+        input.value = name;
+    }
+}
 // View Router Module
 function switchView(viewName) {
     
@@ -715,15 +734,10 @@ function selectExerciseForLogging(id) {
         document.getElementById('instructions-tempo').style.display = 'none';
     }
     
-    // Reset instructions to collapsed on mobile
+    // Start with instructions collapsed on ALL devices
     const instructionsContent = document.getElementById('instructions-content');
-    if (window.innerWidth <= 600) {
-        instructionsContent.style.display = 'none';
-        document.getElementById('toggle-instructions-icon').textContent = '▶';
-    } else {
-        instructionsContent.style.display = 'block';
-        document.getElementById('toggle-instructions-icon').textContent = '▼';
-    }
+    instructionsContent.style.display = 'none';
+    document.getElementById('toggle-instructions-icon').textContent = '▶';
     
     // Parse dosage string to extract sets/reps/hold
     const dosageParts = ex.dosage.match(/(\d+)\s*sets?\s*x\s*(\d+)(?:-(\d+))?\s*(?:reps?|s)?/i);
@@ -936,8 +950,17 @@ function setupAnalyticsHandlers() {
         btn.onclick = h;
     });
     
-    const exportBtn = document.getElementById('export-data');
-    if (exportBtn) { exportBtn.ontouchstart = () => DataManager.exportData(); exportBtn.onclick = () => DataManager.exportData(); }
+    const exportJsonBtn = document.getElementById('export-json');
+    if (exportJsonBtn) { 
+        exportJsonBtn.ontouchstart = () => DataManager.exportData(); 
+        exportJsonBtn.onclick = () => DataManager.exportData(); 
+    }
+    
+    const exportPdfBtn = document.getElementById('export-pdf');
+    if (exportPdfBtn) { 
+        exportPdfBtn.ontouchstart = () => DataManager.exportPDF(); 
+        exportPdfBtn.onclick = () => DataManager.exportPDF(); 
+    }
     
     const exerciseSelect = document.getElementById('analytics-exercise-select');
     if (exerciseSelect) {
@@ -1638,5 +1661,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderRecentEventsPreview();
     renderEventsTimeline();
     loadTodayCheckIn();
+    loadPatientName();
     
 });

@@ -12,8 +12,17 @@ function setupAnalyticsHandlers() {
         btn.onclick = h;
     });
     
-    const exportBtn = document.getElementById('export-data');
-    if (exportBtn) { exportBtn.ontouchstart = () => DataManager.exportData(); exportBtn.onclick = () => DataManager.exportData(); }
+    const exportJsonBtn = document.getElementById('export-json');
+    if (exportJsonBtn) { 
+        exportJsonBtn.ontouchstart = () => DataManager.exportData(); 
+        exportJsonBtn.onclick = () => DataManager.exportData(); 
+    }
+    
+    const exportPdfBtn = document.getElementById('export-pdf');
+    if (exportPdfBtn) { 
+        exportPdfBtn.ontouchstart = () => DataManager.exportPDF(); 
+        exportPdfBtn.onclick = () => DataManager.exportPDF(); 
+    }
     
     const exerciseSelect = document.getElementById('analytics-exercise-select');
     if (exerciseSelect) {

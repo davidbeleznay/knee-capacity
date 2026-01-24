@@ -595,6 +595,288 @@ const DataManager = {
         return summary;
     },
     
+    // PDF Export for Specialists
+    exportPDF() {
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const patientName = localStorage.getItem('patientName') || 'Patient';
+            const endDate = new Date();
+            const startDate = new Date(endDate.getTime() - 90*24*60*60*1000);
+            
+            // Helper function for page numbers
+            let pageNum = 1;
+            const addPageNumber = () => {
+                doc.setFontSize(10);
+                doc.setTextColor(150);
+                doc.text(`Page ${pageNum}`, 105, 285, { align: 'center' });
+                doc.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 290, { align: 'center' });
+                pageNum++;
+            };
+            
+            // PAGE 1: Cover & Summary Stats
+            doc.setFontSize(28);
+            doc.setTextColor(46, 125, 50);
+            doc.text('KNEE CAPACITY', 105, 30, { align: 'center' });
+            
+            doc.setFontSize(18);
+            doc.setTextColor(100);
+            doc.text('Progress Summary', 105, 45, { align: 'center' });
+            
+            doc.setFontSize(12);
+            doc.setTextColor(0);
+            doc.text(`Patient: ${patientName}`, 20, 65);
+            doc.text(`Period: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`, 20, 72);
+            
+            // Summary Stats
+            const checkIns = this.getRecentCheckIns(90);
+            const statusDist = this.getStatusDistribution(90);
+            const avgPain = checkIns.length > 0 ? (checkIns.reduce((s, c) => s + (c.pain || 0), 0) / checkIns.length).toFixed(1) : 0;
+            
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text('SUMMARY STATS', 20, 90);
+            
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'normal');
+            doc.text(`• Total days tracked: ${checkIns.length}`, 25, 100);
+            doc.text(`• Green days: ${statusDist.green}%`, 25, 108);
+            doc.text(`• Yellow days: ${statusDist.yellow}%`, 25, 116);
+            doc.text(`• Red days: ${statusDist.red}%`, 25, 124);
+            doc.text(`• Average pain: ${avgPain}/10`, 25, 132);
+            doc.text(`• Total workouts: ${this.getTotalWorkouts()}`, 25, 140);
+            doc.text(`• Current streak: ${this.getCurrentStreak()} days`, 25, 148);
+            
+            addPageNumber();
+            
+            // PAGE 2: Trends & Charts
+            doc.addPage();
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text('TRENDS & CHARTS', 20, 20);
+            
+            // Swelling Trend (30 days)
+            doc.setFontSize(12);
+            doc.text('Swelling Trend (30 days)', 20, 35);
+            
+            const swellingData = this.getRecentCheckIns(30).reverse();
+            const swellingValues = { 'none': 0, 'mild': 1, 'moderate': 2, 'severe': 3 };
+            const swellingColors = [[76, 175, 80], [255, 193, 7], [255, 152, 0], [244, 67, 54]];
+            
+            swellingData.slice(0, 30).forEach((c, i) => {
+                const val = swellingValues[c.swelling] || 0;
+                const height = val * 10;
+                const color = swellingColors[val];
+                doc.setFillColor(color[0], color[1], color[2]);
+                doc.rect(25 + i * 5, 80 - height, 4, height, 'F');
+            });
+            
+            // Pain Trend (30 days)
+            doc.setFontSize(12);
+            doc.text('Pain Trend (30 days)', 20, 95);
+            
+            const painData = this.getRecentCheckIns(30).reverse();
+            painData.slice(0, 30).forEach((c, i) => {
+                const val = c.pain || 0;
+                const height = val * 3;
+                const color = val <= 2 ? [76, 175, 80] : val <= 5 ? [255, 193, 7] : [244, 67, 54];
+                doc.setFillColor(color[0], color[1], color[2]);
+                doc.rect(25 + i * 5, 140 - height, 4, height, 'F');
+            });
+            
+            // Status Distribution
+            doc.setFontSize(12);
+            doc.text('Knee Status Distribution', 20, 155);
+            
+            doc.setFillColor(76, 175, 80);
+            doc.rect(25, 165, statusDist.green * 1.5, 10, 'F');
+            doc.text(`Green: ${statusDist.green}%`, 25 + statusDist.green * 1.5 + 5, 172);
+            
+            doc.setFillColor(255, 193, 7);
+            doc.rect(25, 180, statusDist.yellow * 1.5, 10, 'F');
+            doc.text(`Yellow: ${statusDist.yellow}%`, 25 + statusDist.yellow * 1.5 + 5, 187);
+            
+            doc.setFillColor(244, 67, 54);
+            doc.rect(25, 195, statusDist.red * 1.5, 10, 'F');
+            doc.text(`Red: ${statusDist.red}%`, 25 + statusDist.red * 1.5 + 5, 202);
+            
+            addPageNumber();
+            
+            // PAGE 3: Exercise History
+            doc.addPage();
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text('EXERCISE HISTORY', 20, 20);
+            
+            const topExercises = this.getTopExercises(5);
+            doc.setFontSize(12);
+            doc.text('Top 5 Exercises', 20, 35);
+            
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'normal');
+            topExercises.forEach((ex, i) => {
+                doc.text(`${i + 1}. ${ex.name} - ${ex.count}x`, 25, 45 + i * 8);
+            });
+            
+            // Progressive Overload (top 3)
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text('Progressive Overload (Top 3)', 20, 95);
+            
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            let yPos = 105;
+            topExercises.slice(0, 3).forEach((ex) => {
+                const exerciseId = window.EXERCISES.find(e => e.name === ex.name)?.id;
+                if (exerciseId) {
+                    const progression = this.getExerciseProgression(exerciseId);
+                    if (progression) {
+                        doc.text(`${ex.name}:`, 25, yPos);
+                        doc.text(`  Start: ${progression.startWeight}lb`, 30, yPos + 7);
+                        doc.text(`  End: ${progression.endWeight}lb`, 30, yPos + 14);
+                        doc.text(`  Volume change: ${progression.volumeChange}%`, 30, yPos + 21);
+                        yPos += 35;
+                    }
+                }
+            });
+            
+            addPageNumber();
+            
+            // PAGE 4: Significant Events
+            doc.addPage();
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text('SIGNIFICANT EVENTS (90 days)', 20, 20);
+            
+            const events = this.getSignificantEvents(90);
+            
+            if (events.length === 0) {
+                doc.setFontSize(11);
+                doc.setFont(undefined, 'normal');
+                doc.text('No significant events logged', 25, 35);
+            } else {
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'normal');
+                let yPos = 35;
+                
+                events.slice(0, 8).forEach((e) => {
+                    const date = new Date(e.date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+                    const eventTypes = {
+                        pain_spike: 'Pain Spike',
+                        instability: 'Instability',
+                        mechanical: 'Mechanical',
+                        swelling_spike: 'Swelling Spike',
+                        post_activity_flare: 'Post-Activity Flare',
+                        other: 'Other'
+                    };
+                    const type = eventTypes[e.eventType] || e.eventType;
+                    
+                    doc.setFont(undefined, 'bold');
+                    doc.text(`${date}: ${type} (Pain: ${e.painLevel}/10)`, 25, yPos);
+                    doc.setFont(undefined, 'normal');
+                    doc.text(`Activity: ${e.activity}`, 30, yPos + 7);
+                    doc.text(`Duration: ${e.duration}`, 30, yPos + 14);
+                    doc.text(`Resolution: ${e.resolution}`, 30, yPos + 21);
+                    
+                    // Red flags
+                    if (e.redFlags && Object.values(e.redFlags).some(v => v)) {
+                        doc.setTextColor(244, 67, 54);
+                        doc.text('RED FLAGS', 30, yPos + 28);
+                        doc.setTextColor(0);
+                    }
+                    
+                    yPos += 40;
+                    if (yPos > 250) return;
+                });
+            }
+            
+            addPageNumber();
+            
+            // PAGE 5: Body Measurements
+            doc.addPage();
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text('BODY MEASUREMENTS', 20, 20);
+            
+            const measurements = this.getBodyMeasurements();
+            if (measurements.length >= 2) {
+                const baseline = measurements[0];
+                const current = measurements[measurements.length - 1];
+                const trend = this.getMeasurementTrend();
+                
+                doc.setFontSize(12);
+                doc.text('Knee Circumference', 20, 40);
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'normal');
+                doc.text(`Baseline: R ${baseline.measurements.knee_top_cm.right} | L ${baseline.measurements.knee_top_cm.left} cm`, 25, 50);
+                doc.text(`Current:  R ${current.measurements.knee_top_cm.right} | L ${current.measurements.knee_top_cm.left} cm`, 25, 58);
+                doc.text(`Change:   R ${trend.kneeChange.right} | L ${trend.kneeChange.left} cm`, 25, 66);
+                
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'bold');
+                doc.text('Thigh Circumference', 20, 85);
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'normal');
+                doc.text(`Baseline: R ${baseline.measurements.thigh_cm.right} | L ${baseline.measurements.thigh_cm.left} cm`, 25, 95);
+                doc.text(`Current:  R ${current.measurements.thigh_cm.right} | L ${current.measurements.thigh_cm.left} cm`, 25, 103);
+                doc.text(`Change:   R ${trend.thighChange.right} | L ${trend.thighChange.left} cm`, 25, 111);
+            } else {
+                doc.setFontSize(11);
+                doc.setFont(undefined, 'normal');
+                doc.text('Insufficient measurement data', 25, 40);
+            }
+            
+            addPageNumber();
+            
+            // PAGE 6: Notes Section
+            doc.addPage();
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text('OBSERVATIONS & NOTES', 20, 20);
+            
+            doc.setFontSize(12);
+            doc.text('Patterns Observed:', 20, 35);
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            
+            // Auto-generate insights
+            const insights = [];
+            if (statusDist.green > 50) {
+                insights.push('• Knee status predominantly GREEN - good progress');
+            }
+            if (avgPain < 3) {
+                insights.push('• Low average pain levels - well-managed');
+            }
+            if (this.getCurrentStreak() > 7) {
+                insights.push(`• Strong consistency - ${this.getCurrentStreak()} day streak`);
+            }
+            if (topExercises.length > 0) {
+                insights.push(`• Most frequent exercise: ${topExercises[0].name}`);
+            }
+            
+            insights.forEach((insight, i) => {
+                doc.text(insight, 25, 45 + i * 8);
+            });
+            
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text('What\'s Working:', 20, 45 + insights.length * 8 + 15);
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.text('• Consistent exercise logging', 25, 45 + insights.length * 8 + 25);
+            doc.text('• Regular check-ins for monitoring', 25, 45 + insights.length * 8 + 33);
+            
+            addPageNumber();
+            
+            // Save PDF
+            doc.save(`knee-capacity-summary-${new Date().toISOString().split('T')[0]}.pdf`);
+            
+        } catch (e) {
+            alert('PDF export failed: ' + e.message);
+        }
+    },
+    
     // Export
     exportData() {
         try {
@@ -646,6 +928,76 @@ const DataManager = {
             waistToHeight: m.waist_cm && m.height_cm ? this.calculateWaistToHeight(m.waist_cm, m.height_cm) : null,
             kneeDifference: this.getKneeDifference(latest),
             swellingTrend: this.getSwellingTrend(7)
+        };
+    },
+    
+    // PDF Export Helper Methods
+    getStatusDistribution(days = 30) {
+        const checkIns = this.getRecentCheckIns(days);
+        const total = checkIns.length;
+        if (total === 0) return { green: 0, yellow: 0, red: 0 };
+        
+        const counts = { green: 0, yellow: 0, red: 0 };
+        checkIns.forEach(c => {
+            const status = this.getKneeStatusForCheckIn(c);
+            counts[status.toLowerCase()]++;
+        });
+        
+        return {
+            green: Math.round((counts.green / total) * 100),
+            yellow: Math.round((counts.yellow / total) * 100),
+            red: Math.round((counts.red / total) * 100)
+        };
+    },
+    
+    getTopExercises(limit = 5) {
+        const logs = this.getExerciseLogs();
+        const counts = {};
+        
+        logs.forEach(log => {
+            counts[log.exerciseName] = (counts[log.exerciseName] || 0) + 1;
+        });
+        
+        return Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, limit)
+            .map(([name, count]) => ({ name, count }));
+    },
+    
+    getExerciseProgression(exerciseId) {
+        const logs = this.getExerciseHistory(exerciseId, 90);
+        if (logs.length < 2) return null;
+        
+        const first = logs[logs.length - 1];
+        const last = logs[0];
+        
+        const firstVolume = first.setsCompleted * first.repsPerSet;
+        const lastVolume = last.setsCompleted * last.repsPerSet;
+        const volumeChange = ((lastVolume - firstVolume) / firstVolume) * 100;
+        
+        return {
+            startWeight: first.weightUsed,
+            endWeight: last.weightUsed,
+            volumeChange: volumeChange.toFixed(0)
+        };
+    },
+    
+    getMeasurementTrend() {
+        const measurements = this.getBodyMeasurements();
+        if (measurements.length < 2) return null;
+        
+        const baseline = measurements[0];
+        const current = measurements[measurements.length - 1];
+        
+        return {
+            kneeChange: {
+                right: (current.measurements.knee_top_cm.right - baseline.measurements.knee_top_cm.right).toFixed(1),
+                left: (current.measurements.knee_top_cm.left - baseline.measurements.knee_top_cm.left).toFixed(1)
+            },
+            thighChange: {
+                right: (current.measurements.thigh_cm.right - baseline.measurements.thigh_cm.right).toFixed(1),
+                left: (current.measurements.thigh_cm.left - baseline.measurements.thigh_cm.left).toFixed(1)
+            }
         };
     }
 };

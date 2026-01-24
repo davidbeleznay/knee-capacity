@@ -67,3 +67,22 @@ function updateStreakDisplay() {
         ).join('');
     }
 }
+
+// Patient Name Settings
+function savePatientName() {
+    const name = document.getElementById('patient-name').value.trim();
+    if (!name) {
+        alert('! Please enter a name');
+        return;
+    }
+    localStorage.setItem('patientName', name);
+    alert('Name saved!');
+}
+
+function loadPatientName() {
+    const name = localStorage.getItem('patientName') || '';
+    const input = document.getElementById('patient-name');
+    if (input) {
+        input.value = name;
+    }
+}

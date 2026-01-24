@@ -92,6 +92,15 @@
                     <!-- Recent events preview -->
                 </div>
             </section>
+
+            <section class="card">
+                <h3>⚙️ Settings</h3>
+                <div class="form-group">
+                    <label>Patient Name (for PDF reports)</label>
+                    <input type="text" id="patient-name" placeholder="Enter your name" style="width: 100%; padding: 10px; font-size: 14px; border: 2px solid var(--gray-300); border-radius: 8px;">
+                </div>
+                <button class="secondary-button" onclick="savePatientName()" style="margin-top: 8px;">Save Name</button>
+            </section>
         </div>
 
             <div id="log-view" class="view">
@@ -277,7 +286,10 @@
                     <button class="filter-btn secondary-button" data-days="30">30d</button>
                     <button class="filter-btn secondary-button" data-days="90">90d</button>
                     </div>
-                    <button id="export-data" class="secondary-button" type="button">Export</button>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button id="export-json" class="secondary-button" type="button">Export JSON</button>
+                        <button id="export-pdf" class="secondary-button" type="button" style="background: var(--primary); color: white;">Export PDF</button>
+                    </div>
                 </div>
                 <div id="swelling-chart" class="chart-container"></div>
                 <div id="pain-chart" class="chart-container" style="margin-top:16px;"></div>
@@ -489,6 +501,7 @@
         <button class="nav-btn" data-view="exercises"><span class="nav-icon">💪</span><span class="nav-label">Library</span></button>
     </nav>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="exercises.js"></script>
     <script src="data.js"></script>
     <script src="app.bundle.js"></script>

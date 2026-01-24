@@ -233,15 +233,10 @@ function selectExerciseForLogging(id) {
         document.getElementById('instructions-tempo').style.display = 'none';
     }
     
-    // Reset instructions to collapsed on mobile
+    // Start with instructions collapsed on ALL devices
     const instructionsContent = document.getElementById('instructions-content');
-    if (window.innerWidth <= 600) {
-        instructionsContent.style.display = 'none';
-        document.getElementById('toggle-instructions-icon').textContent = '▶';
-    } else {
-        instructionsContent.style.display = 'block';
-        document.getElementById('toggle-instructions-icon').textContent = '▼';
-    }
+    instructionsContent.style.display = 'none';
+    document.getElementById('toggle-instructions-icon').textContent = '▶';
     
     // Parse dosage string to extract sets/reps/hold
     const dosageParts = ex.dosage.match(/(\d+)\s*sets?\s*x\s*(\d+)(?:-(\d+))?\s*(?:reps?|s)?/i);

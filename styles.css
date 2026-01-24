@@ -1178,18 +1178,4 @@ details[open] {
     }
 }
 
-/* Desktop: Always expanded */
-@media (min-width: 601px) {
-    .instructions-content {
-        display: block !important;
-    }
-    
-    #toggle-instructions-icon {
-        display: none;
-    }
-    
-    .toggle-instructions-btn {
-        cursor: default;
-        pointer-events: none;
-    }
-}
+/* Desktop: Allow collapsing (removed always-expanded override) */
