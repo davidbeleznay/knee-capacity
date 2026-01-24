@@ -480,6 +480,15 @@ textarea:focus {
     filter: grayscale(0.5);
 }
 
+.exercise-tile.favorite-tile {
+    border-color: #FFD700;
+    background: linear-gradient(to bottom right, #FFFDF0, white);
+}
+
+.exercise-tile.favorite-tile:hover {
+    border-color: #FFC107;
+}
+
 .tile-header {
     width: 100%;
 }

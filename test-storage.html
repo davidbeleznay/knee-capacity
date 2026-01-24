@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storage Persistence Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2E7D32; margin-top: 0; }
+        h2 { font-size: 18px; color: #555; border-bottom: 2px solid #2E7D32; padding-bottom: 8px; }
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 8px 0;
+            font-weight: 600;
+        }
+        .success { background: #E8F5E9; color: #2E7D32; }
+        .error { background: #FFEBEE; color: #C62828; }
+        .warning { background: #FFF3E0; color: #E65100; }
+        .info { background: #E3F2FD; color: #1565C0; }
+        button {
+            background: #2E7D32;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 8px 8px 8px 0;
+        }
+        button:hover { background: #1B5E20; }
+        button.secondary {
+            background: #757575;
+        }
+        button.secondary:hover { background: #616161; }
+        pre {
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+            border-left: 4px solid #2E7D32;
+        }
+        .test-result {
+            margin: 8px 0;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .platform-info {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            gap: 8px;
+            font-size: 14px;
+        }
+        .platform-info strong {
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔬 localStorage Persistence Test</h1>
+    
+    <div class="card">
+        <h2>Platform Detection</h2>
+        <div class="platform-info" id="platform-info"></div>
+    </div>
+
+    <div class="card">
+        <h2>Storage Availability</h2>
+        <div id="storage-status"></div>
+    </div>
+
+    <div class="card">
+        <h2>Write Test</h2>
+        <button onclick="testWrite()">📝 Test Write</button>
+        <button onclick="testLargeWrite()">📦 Test Large Write (1MB)</button>
+        <button onclick="testQuotaLimit()">⚠️ Test Quota Limit</button>
+        <div id="write-results"></div>
+    </div>
+
+    <div class="card">
+        <h2>Read Test</h2>
+        <button onclick="testRead()">📖 Test Read</button>
+        <button onclick="testPersistence()">🔄 Test Persistence</button>
+        <div id="read-results"></div>
+    </div>
+
+    <div class="card">
+        <h2>Knee Capacity Data Test</h2>
+        <button onclick="testKneeCapacityData()">🏥 Test Exercise Log Save</button>
+        <button onclick="verifyKneeCapacityData()">✅ Verify Saved Data</button>
+        <button class="secondary" onclick="clearKneeCapacityData()">🗑️ Clear Test Data</button>
+        <div id="kneecap-results"></div>
+    </div>
+
+    <div class="card">
+        <h2>Storage Usage</h2>
+        <button onclick="checkStorageUsage()">📊 Check Usage</button>
+        <div id="usage-results"></div>
+    </div>
+
+    <script>
+        // Platform Detection
+        function detectPlatform() {
+            const ua = navigator.userAgent;
+            const platform = navigator.platform;
+            const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+            const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+            const isPrivateMode = false; // Will be tested
+            
+            const info = {
+                'User Agent': ua,
+                'Platform': platform,
+                'iOS Device': isIOS ? 'Yes ✅' : 'No',
+                'Safari': isSafari ? 'Yes' : 'No',
+                'Screen Size': `${window.screen.width}x${window.screen.height}`,
+                'Viewport': `${window.innerWidth}x${window.innerHeight}`,
+                'Touch Support': 'ontouchstart' in window ? 'Yes' : 'No'
+            };
+            
+            const container = document.getElementById('platform-info');
+            container.innerHTML = Object.entries(info).map(([key, val]) => 
+                `<strong>${key}:</strong><span>${val}</span>`
+            ).join('');
+        }
+
+        // Check localStorage availability
+        function checkStorageAvailability() {
+            const container = document.getElementById('storage-status');
+            let html = '';
+            
+            try {
+                // Test basic availability
+                if (typeof(Storage) === "undefined") {
+                    html += '<div class="status error">❌ localStorage not supported</div>';
+                    container.innerHTML = html;
+                    return false;
+                }
+                
+                html += '<div class="status success">✅ localStorage API available</div>';
+                
+                // Test write permission
+                const testKey = '__storage_test__';
+                localStorage.setItem(testKey, 'test');
+                localStorage.removeItem(testKey);
+                html += '<div class="status success">✅ Write permission granted</div>';
+                
+                // Test private browsing (iOS Safari issue)
+                try {
+                    localStorage.setItem('test', '1');
+                    localStorage.removeItem('test');
+                    html += '<div class="status success">✅ Not in private browsing mode</div>';
+                } catch (e) {
+                    html += '<div class="status error">❌ Private browsing detected (localStorage disabled)</div>';
+                }
+                
+                container.innerHTML = html;
+                return true;
+                
+            } catch (e) {
+                html += `<div class="status error">❌ Error: ${e.message}</div>`;
+                container.innerHTML = html;
+                return false;
+            }
+        }
+
+        // Test Write
+        function testWrite() {
+            const container = document.getElementById('write-results');
+            let html = '';
+            
+            try {
+                const testData = {
+                    timestamp: new Date().toISOString(),
+                    test: 'write-test',
+                    number: Math.random()
+                };
+                
+                localStorage.setItem('test_write', JSON.stringify(testData));
+                html += '<div class="test-result success">✅ Write successful</div>';
+                html += `<pre>${JSON.stringify(testData, null, 2)}</pre>`;
+                
+            } catch (e) {
+                html += `<div class="test-result error">❌ Write failed: ${e.message}</div>`;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Test Large Write (1MB)
+        function testLargeWrite() {
+            const container = document.getElementById('write-results');
+            let html = '';
+            
+            try {
+                // Create ~1MB of data
+                const largeArray = Array(1000).fill(0).map((_, i) => ({
+                    id: i,
+                    data: 'x'.repeat(1000)
+                }));
+                
+                const startTime = performance.now();
+                localStorage.setItem('test_large', JSON.stringify(largeArray));
+                const endTime = performance.now();
+                
+                const size = new Blob([JSON.stringify(largeArray)]).size;
+                
+                html += '<div class="test-result success">✅ Large write successful</div>';
+                html += `<div class="test-result info">Size: ${(size / 1024).toFixed(2)} KB</div>`;
+                html += `<div class="test-result info">Time: ${(endTime - startTime).toFixed(2)} ms</div>`;
+                
+                localStorage.removeItem('test_large');
+                
+            } catch (e) {
+                html += `<div class="test-result error">❌ Large write failed: ${e.message}</div>`;
+                if (e.name === 'QuotaExceededError') {
+                    html += '<div class="test-result warning">⚠️ Storage quota exceeded</div>';
+                }
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Test Quota Limit
+        function testQuotaLimit() {
+            const container = document.getElementById('write-results');
+            let html = '';
+            
+            try {
+                let totalSize = 0;
+                const chunkSize = 100000; // 100KB chunks
+                let i = 0;
+                
+                while (true) {
+                    const data = 'x'.repeat(chunkSize);
+                    localStorage.setItem(`quota_test_${i}`, data);
+                    totalSize += chunkSize;
+                    i++;
+                    
+                    if (i > 100) break; // Safety limit
+                }
+                
+            } catch (e) {
+                html += `<div class="test-result warning">⚠️ Quota limit reached at ~${(totalSize / 1024 / 1024).toFixed(2)} MB</div>`;
+                
+                // Clean up
+                for (let j = 0; j < i; j++) {
+                    localStorage.removeItem(`quota_test_${j}`);
+                }
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Test Read
+        function testRead() {
+            const container = document.getElementById('read-results');
+            let html = '';
+            
+            try {
+                const data = localStorage.getItem('test_write');
+                if (data) {
+                    html += '<div class="test-result success">✅ Read successful</div>';
+                    html += `<pre>${JSON.stringify(JSON.parse(data), null, 2)}</pre>`;
+                } else {
+                    html += '<div class="test-result warning">⚠️ No test data found. Run "Test Write" first.</div>';
+                }
+                
+            } catch (e) {
+                html += `<div class="test-result error">❌ Read failed: ${e.message}</div>`;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Test Persistence
+        function testPersistence() {
+            const container = document.getElementById('read-results');
+            let html = '';
+            
+            const persistenceKey = 'persistence_test';
+            const existingData = localStorage.getItem(persistenceKey);
+            
+            if (existingData) {
+                const data = JSON.parse(existingData);
+                const now = new Date();
+                const saved = new Date(data.timestamp);
+                const diff = (now - saved) / 1000 / 60; // minutes
+                
+                html += '<div class="test-result success">✅ Data persisted across sessions!</div>';
+                html += `<div class="test-result info">Saved: ${saved.toLocaleString()}</div>`;
+                html += `<div class="test-result info">Age: ${diff.toFixed(1)} minutes</div>`;
+                html += `<div class="test-result info">Counter: ${data.counter}</div>`;
+                
+                // Increment counter
+                data.counter++;
+                data.lastAccess = now.toISOString();
+                localStorage.setItem(persistenceKey, JSON.stringify(data));
+                
+            } else {
+                const data = {
+                    timestamp: new Date().toISOString(),
+                    counter: 1,
+                    lastAccess: new Date().toISOString()
+                };
+                localStorage.setItem(persistenceKey, JSON.stringify(data));
+                html += '<div class="test-result info">📝 Persistence test initialized. Reload this page to verify.</div>';
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Test Knee Capacity Data
+        function testKneeCapacityData() {
+            const container = document.getElementById('kneecap-results');
+            let html = '';
+            
+            try {
+                // Simulate saving an exercise log
+                const exerciseLogs = JSON.parse(localStorage.getItem('exerciseLogs_test') || '[]');
+                
+                const newLog = {
+                    id: Date.now().toString(),
+                    timestamp: new Date().toISOString(),
+                    date: new Date().toISOString().split('T')[0],
+                    exerciseId: 'spanish-squat',
+                    exerciseName: 'Spanish Squat (Isometric)',
+                    setsCompleted: 4,
+                    repsCompleted: 1,
+                    holdTime: 45,
+                    weightUsed: 0,
+                    rpe: 6,
+                    painDuringExercise: 2,
+                    notes: 'Test exercise log'
+                };
+                
+                exerciseLogs.push(newLog);
+                localStorage.setItem('exerciseLogs_test', JSON.stringify(exerciseLogs));
+                
+                html += '<div class="test-result success">✅ Exercise log saved successfully</div>';
+                html += '<div class="test-result info">Total logs: ' + exerciseLogs.length + '</div>';
+                html += `<pre>${JSON.stringify(newLog, null, 2)}</pre>`;
+                
+            } catch (e) {
+                html += `<div class="test-result error">❌ Save failed: ${e.message}</div>`;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Verify Knee Capacity Data
+        function verifyKneeCapacityData() {
+            const container = document.getElementById('kneecap-results');
+            let html = '';
+            
+            try {
+                const exerciseLogs = JSON.parse(localStorage.getItem('exerciseLogs_test') || '[]');
+                
+                if (exerciseLogs.length === 0) {
+                    html += '<div class="test-result warning">⚠️ No test data found. Run "Test Exercise Log Save" first.</div>';
+                } else {
+                    html += '<div class="test-result success">✅ Data verified - ' + exerciseLogs.length + ' logs found</div>';
+                    
+                    // Check for date fields
+                    const hasDateFields = exerciseLogs.every(log => log.date);
+                    if (hasDateFields) {
+                        html += '<div class="test-result success">✅ All logs have date fields</div>';
+                    } else {
+                        html += '<div class="test-result error">❌ Some logs missing date fields</div>';
+                    }
+                    
+                    // Show unique dates
+                    const dates = [...new Set(exerciseLogs.map(log => log.date))].sort().reverse();
+                    html += '<div class="test-result info">Unique dates: ' + dates.join(', ') + '</div>';
+                    
+                    html += `<pre>${JSON.stringify(exerciseLogs, null, 2)}</pre>`;
+                }
+                
+            } catch (e) {
+                html += `<div class="test-result error">❌ Verification failed: ${e.message}</div>`;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Clear Test Data
+        function clearKneeCapacityData() {
+            if (confirm('Clear all test data?')) {
+                localStorage.removeItem('exerciseLogs_test');
+                localStorage.removeItem('test_write');
+                localStorage.removeItem('persistence_test');
+                document.getElementById('kneecap-results').innerHTML = 
+                    '<div class="test-result info">✅ Test data cleared</div>';
+            }
+        }
+
+        // Check Storage Usage
+        function checkStorageUsage() {
+            const container = document.getElementById('usage-results');
+            let html = '';
+            
+            try {
+                let totalSize = 0;
+                const items = [];
+                
+                for (let key in localStorage) {
+                    if (localStorage.hasOwnProperty(key)) {
+                        const value = localStorage.getItem(key);
+                        const size = new Blob([value]).size;
+                        totalSize += size;
+                        items.push({ key, size });
+                    }
+                }
+                
+                items.sort((a, b) => b.size - a.size);
+                
+                html += `<div class="test-result info">Total items: ${items.length}</div>`;
+                html += `<div class="test-result info">Total size: ${(totalSize / 1024).toFixed(2)} KB</div>`;
+                html += '<h3 style="margin-top: 16px;">Largest Items:</h3>';
+                
+                items.slice(0, 10).forEach(item => {
+                    html += `<div class="test-result">${item.key}: ${(item.size / 1024).toFixed(2)} KB</div>`;
+                });
+                
+            } catch (e) {
+                html += `<div class="test-result error">❌ Error: ${e.message}</div>`;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Run on load
+        detectPlatform();
+        checkStorageAvailability();
+    </script>
+</body>
+</html>

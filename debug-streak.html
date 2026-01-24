@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streak Debug Tool</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2E7D32; margin-top: 0; }
+        h2 { color: #555; font-size: 18px; border-bottom: 2px solid #2E7D32; padding-bottom: 8px; }
+        pre {
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 13px;
+            border-left: 4px solid #2E7D32;
+        }
+        .stat {
+            display: inline-block;
+            margin: 10px 20px 10px 0;
+            padding: 12px 20px;
+            background: #E8F5E9;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .stat span {
+            font-size: 24px;
+            color: #2E7D32;
+            display: block;
+        }
+        button {
+            background: #2E7D32;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover { background: #1B5E20; }
+        .error { color: #d32f2f; font-weight: 600; }
+        .success { color: #2E7D32; font-weight: 600; }
+        .date-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .date-item {
+            background: #E3F2FD;
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Knee Capacity - Streak Debug Tool</h1>
+    
+    <div class="card">
+        <h2>Current Status</h2>
+        <div class="stat">
+            Current Streak: <span id="current-streak">-</span>
+        </div>
+        <div class="stat">
+            Total Workouts: <span id="total-workouts">-</span>
+        </div>
+        <div class="stat">
+            Longest Streak: <span id="longest-streak">-</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Exercise Logs</h2>
+        <p id="exercise-count">-</p>
+        <div id="exercise-dates" class="date-list"></div>
+        <details style="margin-top: 12px;">
+            <summary style="cursor: pointer; font-weight: 600;">View Raw Data</summary>
+            <pre id="exercise-raw"></pre>
+        </details>
+    </div>
+
+    <div class="card">
+        <h2>Custom Workouts</h2>
+        <p id="custom-count">-</p>
+        <div id="custom-dates" class="date-list"></div>
+        <details style="margin-top: 12px;">
+            <summary style="cursor: pointer; font-weight: 600;">View Raw Data</summary>
+            <pre id="custom-raw"></pre>
+        </details>
+    </div>
+
+    <div class="card">
+        <h2>Streak Calculation Details</h2>
+        <pre id="streak-debug">Open browser console (F12) and click "Recalculate Streak" to see debug output.</pre>
+    </div>
+
+    <div class="card">
+        <h2>Actions</h2>
+        <button onclick="recalculateStreak()">🔄 Recalculate Streak</button>
+        <button onclick="location.reload()">🔃 Refresh Page</button>
+        <button onclick="exportDebugData()">📥 Export Debug Data</button>
+    </div>
+
+    <script>
+        function loadDebugData() {
+            // Load exercise logs
+            const exerciseLogs = JSON.parse(localStorage.getItem('exerciseLogs') || '[]');
+            document.getElementById('exercise-count').innerHTML = `<strong>${exerciseLogs.length}</strong> exercise logs found`;
+            
+            const exerciseDates = exerciseLogs.map(e => e.date || (e.timestamp ? e.timestamp.split('T')[0] : 'NO DATE'));
+            const uniqueExerciseDates = [...new Set(exerciseDates)].sort().reverse();
+            
+            document.getElementById('exercise-dates').innerHTML = uniqueExerciseDates.map(d => 
+                `<div class="date-item">${d}</div>`
+            ).join('');
+            document.getElementById('exercise-raw').textContent = JSON.stringify(exerciseLogs, null, 2);
+
+            // Load custom workouts
+            const customWorkouts = JSON.parse(localStorage.getItem('customWorkouts') || '[]');
+            document.getElementById('custom-count').innerHTML = `<strong>${customWorkouts.length}</strong> custom workouts found`;
+            
+            const customDates = customWorkouts.map(w => w.date || (w.timestamp ? w.timestamp.split('T')[0] : 'NO DATE'));
+            const uniqueCustomDates = [...new Set(customDates)].sort().reverse();
+            
+            document.getElementById('custom-dates').innerHTML = uniqueCustomDates.map(d => 
+                `<div class="date-item">${d}</div>`
+            ).join('');
+            document.getElementById('custom-raw').textContent = JSON.stringify(customWorkouts, null, 2);
+
+            // Load streak data
+            const streak = localStorage.getItem('streak') || '0';
+            const longestStreak = localStorage.getItem('longestStreak') || '0';
+            
+            document.getElementById('current-streak').textContent = streak;
+            document.getElementById('total-workouts').textContent = exerciseLogs.length + customWorkouts.length;
+            document.getElementById('longest-streak').textContent = longestStreak;
+
+            // Check for issues
+            const allDates = [...exerciseDates, ...customDates];
+            const hasNoDates = allDates.some(d => d === 'NO DATE');
+            
+            if (hasNoDates) {
+                document.getElementById('streak-debug').innerHTML = 
+                    '<span class="error">⚠️ WARNING: Some workouts are missing date fields!</span>\n' +
+                    'This will cause streak calculation to fail.\n' +
+                    'Check the raw data above for entries without a "date" field.';
+            }
+        }
+
+        function recalculateStreak() {
+            console.clear();
+            console.log('🔄 Manually recalculating streak...');
+            
+            // This will trigger the debug logging in data.js
+            if (typeof DataManager !== 'undefined') {
+                const newStreak = DataManager.updateStreak();
+                console.log(`\n✅ Streak recalculated: ${newStreak}`);
+                loadDebugData();
+            } else {
+                alert('DataManager not loaded. Open index.html first, then return to this debug page.');
+            }
+        }
+
+        function exportDebugData() {
+            const data = {
+                exerciseLogs: JSON.parse(localStorage.getItem('exerciseLogs') || '[]'),
+                customWorkouts: JSON.parse(localStorage.getItem('customWorkouts') || '[]'),
+                streak: localStorage.getItem('streak'),
+                longestStreak: localStorage.getItem('longestStreak'),
+                timestamp: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `streak-debug-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        }
+
+        // Load data on page load
+        loadDebugData();
+    </script>
+</body>
+</html>

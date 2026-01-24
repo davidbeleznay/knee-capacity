@@ -611,12 +611,25 @@ function renderExerciseTiles() {
     }
 
     // Filter exercises into groups
+    const favoriteIds = DataManager.getFavoriteExerciseIds(5);
+    
     const sections = groups.map(group => {
         const exercises = EXERCISES.filter(ex => {
             const phaseMatch = ex.phase.some(p => group.phases.includes(p.toUpperCase()));
             if (!phaseMatch) return false;
             if (ex.availability === 'GREEN-only' && kneeStatus !== 'green') return false;
             return true;
+        });
+
+        // Sort: Favorites first, then by name
+        exercises.sort((a, b) => {
+            const aFav = favoriteIds.indexOf(a.id);
+            const bFav = favoriteIds.indexOf(b.id);
+            
+            if (aFav !== -1 && bFav !== -1) return aFav - bFav;
+            if (aFav !== -1) return -1;
+            if (bFav !== -1) return 1;
+            return a.name.localeCompare(b.name);
         });
 
         const categorized = {};
@@ -636,54 +649,79 @@ function renderExerciseTiles() {
             </h3>
         </div>`;
 
-        Object.keys(section.categorized).sort().forEach(cat => {
-            section.categorized[cat].forEach(ex => {
-                const icon = getExerciseIcon(ex.id);
-                const name = ex.name.replace(' (Isometric)', '').replace(' (Eccentric)', '');
-                const isNotRecommended = section.type === 'not-recommended';
-                
-                html += `
-                    <div id="tile-${ex.id}" class="exercise-tile ${isNotRecommended ? 'not-recommended' : ''}" 
-                         onclick="toggleExerciseDetails('${ex.id}')">
-                        <div class="tile-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
-                            <div style="flex: 1;">
-                                <div class="tile-category" style="font-size: 9px; text-transform: uppercase; color: var(--primary); font-weight: 800; margin-bottom: 4px;">${ex.category}</div>
-                                <div class="tile-name" style="font-size: 14px; font-weight: 700;">${name}</div>
-                                <div class="tile-meta" style="font-size: 12px; color: var(--gray-600);">${ex.dosage}</div>
-                            </div>
-                            <button class="plus-log-btn" onclick="event.stopPropagation(); selectExerciseForLogging('${ex.id}')" 
-                                    style="width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--primary); color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-                                +
-                            </button>
-                        </div>
-                        
-                        <div class="tile-details" style="display: none; width: 100%; margin-top: 16px; border-top: 1px solid var(--gray-200); padding-top: 16px;">
-                            <div style="margin-bottom: 12px;">
-                                <strong style="font-size: 12px; text-transform: uppercase; color: var(--gray-600);">Setup:</strong>
-                                <ul style="margin: 4px 0 0 16px; padding: 0; font-size: 13px; line-height: 1.4;">
-                                    ${ex.setup.map(s => `<li>${s}</li>`).join('')}
-                                </ul>
-                            </div>
-                            <div style="margin-bottom: 12px;">
-                                <strong style="font-size: 12px; text-transform: uppercase; color: var(--gray-600);">Execution:</strong>
-                                <ul style="margin: 4px 0 0 16px; padding: 0; font-size: 13px; line-height: 1.4;">
-                                    ${ex.execution.map(e => `<li>${e}</li>`).join('')}
-                                </ul>
-                            </div>
-                            <div style="font-size: 13px; margin-bottom: 8px;">
-                                <strong>Target:</strong> ${ex.targetMuscles}
-                            </div>
-                            <div style="font-size: 13px; margin-bottom: 16px;">
-                                <strong>Tempo:</strong> ${ex.tempo}
-                            </div>
-                            <button class="primary-button" onclick="event.stopPropagation(); selectExerciseForLogging('${ex.id}')" style="margin-top: 0;">
-                                Log This Exercise
-                            </button>
-                        </div>
-                    </div>
-                `;
-            });
+        // Instead of sorting categories, we preserve the exercise order within the section
+        // but we still group them by category visually if we want, or just list them.
+        // The requirement says "Sort to top of each section (CALM/BUILD/PRIME)".
+        // Let's keep the category grouping but sort the exercises within each section 
+        // across categories or within categories? 
+        // "Appear first in their phase section" implies top of the whole section.
+        
+        // Let's flatten the exercises for the section to show favorites at the very top of the section
+        const sectionExercises = [];
+        Object.keys(section.categorized).forEach(cat => {
+            section.categorized[cat].forEach(ex => sectionExercises.push(ex));
         });
+        
+        sectionExercises.sort((a, b) => {
+            const aFav = favoriteIds.indexOf(a.id);
+            const bFav = favoriteIds.indexOf(b.id);
+            if (aFav !== -1 && bFav !== -1) return aFav - bFav;
+            if (aFav !== -1) return -1;
+            if (bFav !== -1) return 1;
+            return a.name.localeCompare(b.name);
+        });
+
+        sectionExercises.forEach(ex => {
+            const icon = getExerciseIcon(ex.id);
+            const name = ex.name.replace(' (Isometric)', '').replace(' (Eccentric)', '');
+            const isNotRecommended = section.type === 'not-recommended';
+            const isFavorite = favoriteIds.includes(ex.id);
+            
+            html += `
+                <div id="tile-${ex.id}" class="exercise-tile ${isNotRecommended ? 'not-recommended' : ''} ${isFavorite ? 'favorite-tile' : ''}" 
+                     onclick="toggleExerciseDetails('${ex.id}')">
+                    <div class="tile-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                                <div class="tile-category" style="font-size: 9px; text-transform: uppercase; color: var(--primary); font-weight: 800;">${ex.category}</div>
+                                ${isFavorite ? '<span style="color: #FFD700; font-size: 14px;">⭐</span>' : ''}
+                            </div>
+                            <div class="tile-name" style="font-size: 14px; font-weight: 700;">${name}</div>
+                            <div class="tile-meta" style="font-size: 12px; color: var(--gray-600);">${ex.dosage}</div>
+                        </div>
+                        <button class="plus-log-btn" onclick="event.stopPropagation(); selectExerciseForLogging('${ex.id}')" 
+                                style="width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--primary); color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                            +
+                        </button>
+                    </div>
+                    
+                    <div class="tile-details" style="display: none; width: 100%; margin-top: 16px; border-top: 1px solid var(--gray-200); padding-top: 16px;">
+                        <div style="margin-bottom: 12px;">
+                            <strong style="font-size: 12px; text-transform: uppercase; color: var(--gray-600);">Setup:</strong>
+                            <ul style="margin: 4px 0 0 16px; padding: 0; font-size: 13px; line-height: 1.4;">
+                                ${ex.setup.map(s => `<li>${s}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <strong style="font-size: 12px; text-transform: uppercase; color: var(--gray-600);">Execution:</strong>
+                            <ul style="margin: 4px 0 0 16px; padding: 0; font-size: 13px; line-height: 1.4;">
+                                ${ex.execution.map(e => `<li>${e}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div style="font-size: 13px; margin-bottom: 8px;">
+                            <strong>Target:</strong> ${ex.targetMuscles}
+                        </div>
+                        <div style="font-size: 13px; margin-bottom: 16px;">
+                            <strong>Tempo:</strong> ${ex.tempo}
+                        </div>
+                        <button class="primary-button" onclick="event.stopPropagation(); selectExerciseForLogging('${ex.id}')" style="margin-top: 0;">
+                            Log This Exercise
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+    });
     });
 
     container.innerHTML = html;

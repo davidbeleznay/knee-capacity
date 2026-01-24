@@ -315,14 +315,34 @@ const DataManager = {
             return 0;
         }
         
-        const dates = allWorkouts.map(w => w.date || w.timestamp.split('T')[0]);
+        // Extract dates, handling both old (timestamp only) and new (date field) formats
+        const dates = allWorkouts.map(w => {
+            if (w.date) return w.date;
+            if (w.timestamp) return w.timestamp.split('T')[0];
+            return null;
+        }).filter(d => d !== null);
+        
+        if (dates.length === 0) {
+            localStorage.setItem('streak', '0');
+            return 0;
+        }
+        
         const uniqueDates = [...new Set(dates)].sort().reverse();
         
         const today = new Date().toISOString().split('T')[0];
         const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
         
+        console.log('🔍 Streak Debug:', {
+            totalWorkouts: allWorkouts.length,
+            uniqueDates: uniqueDates,
+            today: today,
+            yesterday: yesterday,
+            mostRecentWorkout: uniqueDates[0]
+        });
+        
         // If no workout today or yesterday, streak is broken
         if (uniqueDates[0] !== today && uniqueDates[0] !== yesterday) {
+            console.log('❌ Streak broken: No workout today or yesterday');
             localStorage.setItem('streak', '0');
             return 0;
         }
@@ -333,12 +353,17 @@ const DataManager = {
             const d2 = new Date(uniqueDates[i+1]);
             const diff = (d1 - d2) / (1000 * 60 * 60 * 24);
             
+            console.log(`  Day ${i} -> ${i+1}: ${uniqueDates[i]} to ${uniqueDates[i+1]} = ${diff.toFixed(2)} days apart`);
+            
             if (diff <= 1.1) { // Allowing some buffer for timezones
                 streak++;
             } else {
+                console.log(`  ⛔ Streak broken at ${diff.toFixed(2)} days gap`);
                 break;
             }
         }
+        
+        console.log(`✅ Final streak: ${streak} days`);
         
         const longest = parseInt(localStorage.getItem('longestStreak') || '0');
         if (streak > longest) localStorage.setItem('longestStreak', streak.toString());
@@ -1023,6 +1048,19 @@ const DataManager = {
         } catch (e) {
             alert('Export failed: ' + e.message);
         }
+    },
+
+    getFavoriteExerciseIds(limit = 5) {
+        const logs = this.getExerciseLogs();
+        const counts = {};
+        logs.forEach(log => {
+            counts[log.exerciseId] = (counts[log.exerciseId] || 0) + 1;
+        });
+        
+        return Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, limit)
+            .map(entry => entry[0]);
     },
     
     getDerivedMetrics() {
