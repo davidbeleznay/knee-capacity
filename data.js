@@ -122,7 +122,7 @@ const DataManager = {
             const stores = [
                 'sessions', 'checkIns', 'exerciseLogs', 
                 'customWorkouts', 'bodyMeasurements', 
-                'significantEvents'
+                'significantEvents', 'likedExercises'
             ];
             
             stores.forEach(store => {
@@ -160,7 +160,7 @@ const DataManager = {
         const stores = [
             'sessions', 'checkIns', 'exerciseLogs',
             'customWorkouts', 'bodyMeasurements',
-            'significantEvents'
+            'significantEvents', 'likedExercises'
         ];
 
         stores.forEach(store => {
@@ -183,7 +183,7 @@ const DataManager = {
             const storeKeys = new Set([
                 'sessions', 'checkIns', 'exerciseLogs',
                 'customWorkouts', 'bodyMeasurements',
-                'significantEvents'
+                'significantEvents', 'likedExercises'
             ]);
 
             let restored = false;
@@ -1161,16 +1161,39 @@ const DataManager = {
     },
 
     getFavoriteExerciseIds(limit = 5) {
-        const logs = this.getExerciseLogs();
-        const counts = {};
-        logs.forEach(log => {
-            counts[log.exerciseId] = (counts[log.exerciseId] || 0) + 1;
-        });
+        const likedIds = this.getLikedExerciseIds();
+        if (!limit) return likedIds;
+        return likedIds.slice(0, limit);
+    },
+
+    getLikedExerciseIds() {
+        return this.storage.get('likedExercises', []);
+    },
+
+    isExerciseLiked(exerciseId) {
+        return this.getLikedExerciseIds().includes(exerciseId);
+    },
+
+    setExerciseLike(exerciseId, liked) {
+        const likedIds = this.getLikedExerciseIds();
+        const index = likedIds.indexOf(exerciseId);
         
-        return Object.entries(counts)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, limit)
-            .map(entry => entry[0]);
+        if (liked && index === -1) {
+            likedIds.unshift(exerciseId);
+        }
+        
+        if (!liked && index !== -1) {
+            likedIds.splice(index, 1);
+        }
+        
+        this.storage.set('likedExercises', likedIds);
+        return likedIds;
+    },
+
+    toggleExerciseLike(exerciseId) {
+        const liked = !this.isExerciseLiked(exerciseId);
+        this.setExerciseLike(exerciseId, liked);
+        return liked;
     },
     
     getDerivedMetrics() {

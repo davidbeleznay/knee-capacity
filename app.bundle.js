@@ -552,6 +552,21 @@ function setupWorkoutHandlers() {
             saveExerciseLog();
         };
     }
+
+    const likeBtn = document.getElementById('exercise-like');
+    const dislikeBtn = document.getElementById('exercise-dislike');
+    if (likeBtn && dislikeBtn) {
+        likeBtn.onclick = (e) => {
+            e.preventDefault();
+            if (!AppState.selectedExercise) return;
+            setExerciseLike(AppState.selectedExercise.id, true);
+        };
+        dislikeBtn.onclick = (e) => {
+            e.preventDefault();
+            if (!AppState.selectedExercise) return;
+            setExerciseLike(AppState.selectedExercise.id, false);
+        };
+    }
     
     const saveCust = document.getElementById('save-custom-workout');
     if (saveCust) { 
@@ -617,7 +632,7 @@ function renderExerciseTiles() {
     }
 
     // Filter exercises into groups
-    const favoriteIds = DataManager.getFavoriteExerciseIds(5);
+    const favoriteIds = DataManager.getFavoriteExerciseIds();
     
     const sections = groups.map(group => {
         const exercises = EXERCISES.filter(ex => {
@@ -682,10 +697,11 @@ function renderExerciseTiles() {
             const name = ex.name.replace(' (Isometric)', '').replace(' (Eccentric)', '');
             const isNotRecommended = section.type === 'not-recommended';
             const isFavorite = favoriteIds.includes(ex.id);
+            const likeIcon = '👍';
             
             html += `
                 <div id="tile-${ex.id}" class="exercise-tile ${isNotRecommended ? 'not-recommended' : ''} ${isFavorite ? 'favorite-tile' : ''}" 
-                     onclick="toggleExerciseDetails('${ex.id}')">
+                     onclick="selectExerciseForLogging('${ex.id}')">
                     <div class="tile-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                         <div style="flex: 1;">
                             <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
@@ -695,9 +711,8 @@ function renderExerciseTiles() {
                             <div class="tile-name" style="font-size: 14px; font-weight: 700;">${name}</div>
                             <div class="tile-meta" style="font-size: 12px; color: var(--gray-600);">${ex.dosage}</div>
                         </div>
-                        <button class="plus-log-btn" onclick="event.stopPropagation(); selectExerciseForLogging('${ex.id}')" 
-                                style="width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--primary); color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-                            +
+                        <button class="like-toggle ${isFavorite ? 'liked' : ''}" data-like-btn="true" aria-pressed="${isFavorite}" onclick="event.stopPropagation(); toggleExerciseLike('${ex.id}')">
+                            ${likeIcon}
                         </button>
                     </div>
                     
@@ -730,6 +745,49 @@ function renderExerciseTiles() {
     });
 
     container.innerHTML = html;
+}
+
+function setExerciseLike(exerciseId, liked) {
+    DataManager.setExerciseLike(exerciseId, liked);
+    updateExerciseLikeUI(exerciseId);
+
+    const logSections = document.getElementById('log-sections');
+    if (!logSections || logSections.style.display !== 'none') {
+        renderExerciseTiles();
+    }
+}
+
+function toggleExerciseLike(exerciseId) {
+    const liked = DataManager.toggleExerciseLike(exerciseId);
+    updateExerciseLikeUI(exerciseId);
+
+    const logSections = document.getElementById('log-sections');
+    if (!logSections || logSections.style.display !== 'none') {
+        renderExerciseTiles();
+    }
+
+    return liked;
+}
+
+function updateExerciseLikeUI(exerciseId) {
+    const liked = DataManager.isExerciseLiked(exerciseId);
+    const tile = document.getElementById(`tile-${exerciseId}`);
+    if (tile) {
+        tile.classList.toggle('favorite-tile', liked);
+        const likeBtn = tile.querySelector('.like-toggle');
+        if (likeBtn) {
+            likeBtn.textContent = liked ? '👍' : '👎';
+            likeBtn.classList.toggle('liked', liked);
+            likeBtn.setAttribute('aria-pressed', liked ? 'true' : 'false');
+        }
+    }
+
+    if (AppState.selectedExercise && AppState.selectedExercise.id === exerciseId) {
+        const likeBtn = document.getElementById('exercise-like');
+        const dislikeBtn = document.getElementById('exercise-dislike');
+        if (likeBtn) likeBtn.classList.toggle('active', liked);
+        if (dislikeBtn) dislikeBtn.classList.remove('active');
+    }
 }
 
 function toggleExerciseDetails(id) {
@@ -833,6 +891,7 @@ function selectExerciseForLogging(id) {
     
     renderExerciseTrends(id);
     renderExerciseHint(ex, defaultWeight);
+    updateExerciseLikeUI(id);
 }
 
 function renderExerciseHint(ex, lastWeight) {
