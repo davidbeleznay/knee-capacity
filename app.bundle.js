@@ -103,7 +103,10 @@ function switchView(viewName) {
     
     // Trigger view-specific rendering
     if (viewName === 'home') {
-        updateKneeStatusCard();
+        const checkIn = DataManager.getCheckIn(new Date().toISOString().split('T')[0]);
+        if (checkIn && checkIn.kciScore !== undefined) {
+            renderKCIResult(checkIn.kciScore);
+        }
         updateWeekSummary();
     }
     if (viewName === 'log') {
@@ -121,41 +124,39 @@ function switchView(viewName) {
 
 function setupNavigation() {
     document.querySelectorAll('.nav-btn').forEach(btn => {
-        const handler = function() { switchView(this.dataset.view); };
-        btn.ontouchstart = handler;
-        btn.onclick = handler;
+        btn.onclick = function(e) { 
+            e.preventDefault();
+            switchView(this.dataset.view); 
+        };
     });
 }
 // Check-In UI Module
 function setupCheckInHandlers() {
     document.querySelectorAll('.swelling-btn').forEach(btn => {
-        const handler = function() {
+        btn.onclick = function(e) {
+            e.preventDefault();
             document.querySelectorAll('.swelling-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             AppState.swelling = this.dataset.level;
         };
-        btn.ontouchstart = handler;
-        btn.onclick = handler;
     });
     
     document.querySelectorAll('.activity-level-btn').forEach(btn => {
-        const handler = function() {
+        btn.onclick = function(e) {
+            e.preventDefault();
             document.querySelectorAll('.activity-level-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             AppState.activityLevel = this.dataset.level;
         };
-        btn.ontouchstart = handler;
-        btn.onclick = handler;
     });
     
     document.querySelectorAll('.time-btn').forEach(btn => {
-        const handler = function() {
+        btn.onclick = function(e) {
+            e.preventDefault();
             document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             AppState.timeOfDay = this.dataset.time;
         };
-        btn.ontouchstart = handler;
-        btn.onclick = handler;
     });
     
     document.getElementById('pain-slider').oninput = (e) => {
@@ -163,10 +164,14 @@ function setupCheckInHandlers() {
         AppState.pain = parseInt(e.target.value);
     };
     
-    document.getElementById('save-checkin').onclick = saveCheckIn;
+    document.getElementById('save-checkin').onclick = (e) => {
+        e.preventDefault();
+        saveCheckIn();
+    };
 }
 
-function saveCheckIn() {
+function saveCheckIn(e) {
+    if (e) e.preventDefault();
     if (!AppState.swelling) {
         alert('! Select swelling');
         return;
@@ -512,35 +517,32 @@ function setupWorkoutHandlers() {
     const toggleCu = document.getElementById('toggle-custom');
     
     if (toggleEx) {
-        const h = () => {
+        toggleEx.onclick = (e) => {
+            e.preventDefault();
             toggleEx.classList.add('active');
             toggleCu.classList.remove('active');
             document.getElementById('exercise-tiles').style.display = 'grid';
             document.getElementById('custom-workout-tiles').style.display = 'none';
         };
-        toggleEx.ontouchstart = h;
-        toggleEx.onclick = h;
     }
     
     if (toggleCu) {
-        const h = () => {
+        toggleCu.onclick = (e) => {
+            e.preventDefault();
             toggleCu.classList.add('active');
             toggleEx.classList.remove('active');
             document.getElementById('exercise-tiles').style.display = 'none';
             document.getElementById('custom-workout-tiles').style.display = 'grid';
         };
-        toggleCu.ontouchstart = h;
-        toggleCu.onclick = h;
     }
     
     document.querySelectorAll('.impact-btn').forEach(btn => {
-        const h = function() {
+        btn.onclick = function(e) {
+            e.preventDefault();
             document.querySelectorAll('.impact-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             AppState.kneeImpact = this.dataset.impact;
         };
-        btn.ontouchstart = h;
-        btn.onclick = h;
     });
     
     const rpeSlider = document.getElementById('rpe-slider');
@@ -550,10 +552,20 @@ function setupWorkoutHandlers() {
     if (customIntensity) customIntensity.oninput = (e) => document.getElementById('custom-intensity-value').textContent = e.target.value;
     
     const saveEx = document.getElementById('save-exercise');
-    if (saveEx) { saveEx.ontouchstart = saveExerciseLog; saveEx.onclick = saveExerciseLog; }
+    if (saveEx) { 
+        saveEx.onclick = (e) => {
+            e.preventDefault();
+            saveExerciseLog();
+        };
+    }
     
     const saveCust = document.getElementById('save-custom-workout');
-    if (saveCust) { saveCust.ontouchstart = saveCustomWorkout; saveCust.onclick = saveCustomWorkout; }
+    if (saveCust) { 
+        saveCust.onclick = (e) => {
+            e.preventDefault();
+            saveCustomWorkout();
+        };
+    }
     
     const closeForm = document.getElementById('close-form');
     if (closeForm) { closeForm.ontouchstart = closeExerciseForm; closeForm.onclick = closeExerciseForm; }
@@ -1019,26 +1031,29 @@ function renderExerciseLibrary() {
 
 function setupAnalyticsHandlers() {
     document.querySelectorAll('.filter-btn').forEach(btn => {
-        const h = function() {
+        btn.onclick = function(e) {
+            e.preventDefault();
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             AppState.analyticsDays = parseInt(this.dataset.days);
             renderAnalytics(AppState.analyticsDays);
         };
-        btn.ontouchstart = h;
-        btn.onclick = h;
     });
     
     const exportJsonBtn = document.getElementById('export-json');
     if (exportJsonBtn) { 
-        exportJsonBtn.ontouchstart = () => DataManager.exportData(); 
-        exportJsonBtn.onclick = () => DataManager.exportData(); 
+        exportJsonBtn.onclick = (e) => {
+            e.preventDefault();
+            DataManager.exportData();
+        };
     }
     
     const exportPdfBtn = document.getElementById('export-pdf');
     if (exportPdfBtn) { 
-        exportPdfBtn.ontouchstart = () => DataManager.exportPDF(); 
-        exportPdfBtn.onclick = () => DataManager.exportPDF(); 
+        exportPdfBtn.onclick = (e) => {
+            e.preventDefault();
+            DataManager.exportPDF();
+        };
     }
     
     const exerciseSelect = document.getElementById('analytics-exercise-select');
@@ -1344,7 +1359,12 @@ function setupMeasurementHandlers() {
     });
     
     const saveBtn = document.getElementById('save-measurement');
-    if (saveBtn) { saveBtn.ontouchstart = saveMeasurement; saveBtn.onclick = saveMeasurement; }
+    if (saveBtn) { 
+        saveBtn.onclick = (e) => {
+            e.preventDefault();
+            saveMeasurement();
+        };
+    }
 }
 
 function openMeasurementModal() {
@@ -1462,8 +1482,10 @@ const DURATION_OPTIONS = [
 function setupEventHandlers() {
     const saveBtn = document.getElementById('save-event');
     if (saveBtn) {
-        saveBtn.ontouchstart = saveEvent;
-        saveBtn.onclick = saveEvent;
+        saveBtn.onclick = (e) => {
+            e.preventDefault();
+            saveEvent();
+        };
     }
     
     const painSlider = document.getElementById('event-pain-slider');
@@ -1740,4 +1762,9 @@ document.addEventListener('DOMContentLoaded', () => {
     renderEventsTimeline();
     loadTodayCheckIn();
     
+    // Ensure KCI result is shown if check-in exists for today
+    const checkIn = DataManager.getCheckIn(new Date().toISOString().split('T')[0]);
+    if (checkIn && checkIn.kciScore !== undefined) {
+        renderKCIResult(checkIn.kciScore);
+    }
 });
