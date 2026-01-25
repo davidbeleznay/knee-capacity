@@ -138,6 +138,7 @@ const DataManager = {
             
             // Add baseline measurement if none exist
             this.initializeBaselineMeasurement();
+            this.normalizeCheckIns();
             console.log('✅ DataManager initialized');
         } catch (e) {
             console.error('Initialization error:', e);
@@ -212,6 +213,7 @@ const DataManager = {
 
             if (restored) {
                 console.log('✅ Restored data from IndexedDB backup');
+                this.normalizeCheckIns();
             }
 
             return restored;
@@ -234,6 +236,55 @@ const DataManager = {
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
+    },
+
+    parseLocalDate(dateString) {
+        if (!dateString) return null;
+        const parts = dateString.split('-').map(Number);
+        if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+    },
+
+    getInferredCheckInDate(checkIn) {
+        const baseDate = this.parseLocalDate(checkIn.date) || new Date();
+        const timeOfDay = checkIn.timeOfDay || 'morning';
+        const hourMap = { morning: 9, afternoon: 14, evening: 19 };
+        const hour = hourMap[timeOfDay] ?? 9;
+        const inferred = new Date(baseDate);
+        inferred.setHours(hour, 0, 0, 0);
+        return inferred;
+    },
+
+    normalizeCheckIns() {
+        const checkIns = this.getCheckIns();
+        if (!Array.isArray(checkIns) || checkIns.length === 0) return;
+
+        const now = new Date();
+        const futureThreshold = new Date(now.getTime() + 60 * 60 * 1000);
+        let changed = false;
+
+        checkIns.forEach(checkIn => {
+            if (!checkIn.createdAt) {
+                let inferredAt = this.getInferredCheckInDate(checkIn);
+                while (inferredAt > futureThreshold) {
+                    inferredAt.setDate(inferredAt.getDate() - 1);
+                    changed = true;
+                }
+
+                checkIn.createdAt = inferredAt.getTime();
+                const normalizedDate = this.getLocalDateKey(inferredAt);
+                if (checkIn.date !== normalizedDate) {
+                    checkIn.date = normalizedDate;
+                    changed = true;
+                } else {
+                    changed = true;
+                }
+            }
+        });
+
+        if (changed) {
+            this.storage.set('checkIns', checkIns);
+        }
     },
     
     // Body Measurements
@@ -420,7 +471,12 @@ const DataManager = {
         const existingIndex = checkIns.findIndex(c => c.date === today);
         
         const kciScore = this.calculateKCI(checkInData);
-        const enrichedData = { ...checkInData, date: today, kciScore };
+        const enrichedData = { 
+            ...checkInData, 
+            date: today, 
+            kciScore,
+            createdAt: Date.now()
+        };
         
         if (existingIndex >= 0) {
             checkIns[existingIndex] = enrichedData;
