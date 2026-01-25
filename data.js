@@ -5,17 +5,24 @@ const DataManager = {
     // Robust Storage Wrapper
     storage: {
         set(key, value) {
+            let localSuccess = false;
             try {
                 const serializedValue = JSON.stringify(value);
                 localStorage.setItem(key, serializedValue);
                 // Mobile browsers sometimes delay writing to disk. 
                 // Accessing the item immediately can help force a sync in some environments.
                 localStorage.getItem(key); 
-                return true;
+                localSuccess = true;
             } catch (e) {
                 console.error(`Storage Error (set ${key}):`, e);
-                return false;
             }
+            
+            // Always attempt a backup write (even if localStorage fails).
+            if (typeof DataManager !== 'undefined' && DataManager.backup) {
+                DataManager.backup.set(key, value);
+            }
+
+            return localSuccess;
         },
         get(key, defaultValue = []) {
             try {
@@ -25,6 +32,80 @@ const DataManager = {
                 console.error(`Storage Error (get ${key}):`, e);
                 return defaultValue;
             }
+        }
+    },
+
+    // IndexedDB Backup (for mobile persistence fallback)
+    backup: {
+        dbName: 'knee-capacity-backup',
+        storeName: 'kv',
+        dbPromise: null,
+
+        isAvailable() {
+            return typeof indexedDB !== 'undefined';
+        },
+
+        open() {
+            if (!this.isAvailable()) return Promise.reject(new Error('IndexedDB not available'));
+            if (this.dbPromise) return this.dbPromise;
+
+            this.dbPromise = new Promise((resolve, reject) => {
+                const request = indexedDB.open(this.dbName, 1);
+
+                request.onupgradeneeded = () => {
+                    const db = request.result;
+                    if (!db.objectStoreNames.contains(this.storeName)) {
+                        db.createObjectStore(this.storeName, { keyPath: 'key' });
+                    }
+                };
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+
+            return this.dbPromise;
+        },
+
+        set(key, value) {
+            if (!this.isAvailable()) return Promise.resolve(false);
+
+            return this.open()
+                .then(db => new Promise(resolve => {
+                    const tx = db.transaction(this.storeName, 'readwrite');
+                    const store = tx.objectStore(this.storeName);
+                    store.put({ key, value });
+                    tx.oncomplete = () => resolve(true);
+                    tx.onerror = () => resolve(false);
+                }))
+                .catch(() => false);
+        },
+
+        get(key) {
+            if (!this.isAvailable()) return Promise.resolve(null);
+
+            return this.open()
+                .then(db => new Promise(resolve => {
+                    const tx = db.transaction(this.storeName, 'readonly');
+                    const store = tx.objectStore(this.storeName);
+                    const request = store.get(key);
+                    request.onsuccess = () => resolve(request.result ? request.result.value : null);
+                    request.onerror = () => resolve(null);
+                }))
+                .catch(() => null);
+        },
+
+        getAll() {
+            if (!this.isAvailable()) return Promise.resolve([]);
+
+            return this.open()
+                .then(db => new Promise(resolve => {
+                    const tx = db.transaction(this.storeName, 'readonly');
+                    const store = tx.objectStore(this.storeName);
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result || []);
+                    request.onerror = () => resolve([]);
+                }))
+                .catch(() => []);
         }
     },
 
@@ -52,6 +133,8 @@ const DataManager = {
 
             if (localStorage.getItem('streak') === null) localStorage.setItem('streak', '0');
             if (localStorage.getItem('longestStreak') === null) localStorage.setItem('longestStreak', '0');
+
+            this.requestPersistentStorage();
             
             // Add baseline measurement if none exist
             this.initializeBaselineMeasurement();
@@ -59,6 +142,80 @@ const DataManager = {
         } catch (e) {
             console.error('Initialization error:', e);
         }
+    },
+
+    requestPersistentStorage() {
+        if (navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist()
+                .then(granted => {
+                    console.log(granted ? '📌 Persistent storage granted' : '⚠️ Persistent storage not granted');
+                })
+                .catch(() => {
+                    console.log('⚠️ Persistent storage request failed');
+                });
+        }
+    },
+
+    seedBackupFromStorage() {
+        const stores = [
+            'sessions', 'checkIns', 'exerciseLogs',
+            'customWorkouts', 'bodyMeasurements',
+            'significantEvents'
+        ];
+
+        stores.forEach(store => {
+            const value = this.storage.get(store, null);
+            if (Array.isArray(value) && value.length > 0) {
+                this.backup.set(store, value);
+            }
+        });
+
+        const streak = localStorage.getItem('streak');
+        const longestStreak = localStorage.getItem('longestStreak');
+        if (streak !== null) this.backup.set('streak', streak);
+        if (longestStreak !== null) this.backup.set('longestStreak', longestStreak);
+    },
+
+    restoreFromBackup() {
+        return this.backup.getAll().then(records => {
+            if (!records || records.length === 0) return false;
+
+            const storeKeys = new Set([
+                'sessions', 'checkIns', 'exerciseLogs',
+                'customWorkouts', 'bodyMeasurements',
+                'significantEvents'
+            ]);
+
+            let restored = false;
+
+            records.forEach(({ key, value }) => {
+                if (storeKeys.has(key)) {
+                    const localValue = this.storage.get(key, null);
+                    const hasLocalData = Array.isArray(localValue) ? localValue.length > 0 : localValue !== null;
+                    const hasBackupData = Array.isArray(value) && value.length > 0;
+                    if (!hasLocalData && hasBackupData) {
+                        this.storage.set(key, value);
+                        restored = true;
+                    }
+                }
+
+                if (key === 'streak' && localStorage.getItem('streak') === null && value !== null) {
+                    localStorage.setItem('streak', value);
+                    restored = true;
+                }
+
+                if (key === 'longestStreak' && localStorage.getItem('longestStreak') === null && value !== null) {
+                    localStorage.setItem('longestStreak', value);
+                    restored = true;
+                }
+            });
+
+            if (restored) {
+                console.log('✅ Restored data from IndexedDB backup');
+            }
+
+            return restored;
+        }).catch(() => false);
     },
     
     isLocalStorageAvailable() {
@@ -296,6 +453,7 @@ const DataManager = {
         const allWorkouts = [...exerciseLogs, ...customWorkouts];
         if (allWorkouts.length === 0) {
             localStorage.setItem('streak', '0');
+            this.backup.set('streak', '0');
             return 0;
         }
         
@@ -308,6 +466,7 @@ const DataManager = {
         
         if (dates.length === 0) {
             localStorage.setItem('streak', '0');
+            this.backup.set('streak', '0');
             return 0;
         }
         
@@ -319,6 +478,7 @@ const DataManager = {
         // If no workout today or yesterday, streak is broken
         if (uniqueDates[0] !== today && uniqueDates[0] !== yesterday) {
             localStorage.setItem('streak', '0');
+            this.backup.set('streak', '0');
             return 0;
         }
         
@@ -336,9 +496,13 @@ const DataManager = {
         }
         
         const longest = parseInt(localStorage.getItem('longestStreak') || '0');
-        if (streak > longest) localStorage.setItem('longestStreak', streak.toString());
+        if (streak > longest) {
+            localStorage.setItem('longestStreak', streak.toString());
+            this.backup.set('longestStreak', streak.toString());
+        }
         
         localStorage.setItem('streak', streak.toString());
+        this.backup.set('streak', streak.toString());
         return streak;
     },
     

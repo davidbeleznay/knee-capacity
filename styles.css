@@ -450,6 +450,16 @@ textarea:focus {
     margin-bottom: 20px;
 }
 
+#log-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+#log-sections .card {
+    margin-bottom: 0;
+}
+
 .exercise-tile {
     background: white;
     border: 2px solid var(--gray-300);

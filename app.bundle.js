@@ -513,29 +513,6 @@ const Stopwatch = {
 // Workouts Module - Exercise & Custom Workout Logging
 
 function setupWorkoutHandlers() {
-    const toggleEx = document.getElementById('toggle-exercises');
-    const toggleCu = document.getElementById('toggle-custom');
-    
-    if (toggleEx) {
-        toggleEx.onclick = (e) => {
-            e.preventDefault();
-            toggleEx.classList.add('active');
-            toggleCu.classList.remove('active');
-            document.getElementById('exercise-tiles').style.display = 'grid';
-            document.getElementById('custom-workout-tiles').style.display = 'none';
-        };
-    }
-    
-    if (toggleCu) {
-        toggleCu.onclick = (e) => {
-            e.preventDefault();
-            toggleCu.classList.add('active');
-            toggleEx.classList.remove('active');
-            document.getElementById('exercise-tiles').style.display = 'none';
-            document.getElementById('custom-workout-tiles').style.display = 'grid';
-        };
-    }
-    
     document.querySelectorAll('.impact-btn').forEach(btn => {
         btn.onclick = function(e) {
             e.preventDefault();
@@ -761,10 +738,13 @@ function toggleExerciseDetails(id) {
 function selectExerciseForLogging(id) {
     AppState.selectedExercise = window.getExerciseById(id);
     if (!AppState.selectedExercise) return;
-    
+
+    const logSections = document.getElementById('log-sections');
+    if (logSections) logSections.style.display = 'none';
+
     document.getElementById('exercise-log-form').style.display = 'block';
-    document.getElementById('exercise-tiles').style.display = 'none';
-    document.getElementById('custom-workout-tiles').style.display = 'none';
+    document.getElementById('custom-workout-form').style.display = 'none';
+    document.getElementById('exercise-log-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
     
     const ex = AppState.selectedExercise;
     document.getElementById('selected-exercise-name').textContent = ex.name;
@@ -857,7 +837,8 @@ function renderExerciseHint(ex, lastWeight) {
 
 function closeExerciseForm() {
     document.getElementById('exercise-log-form').style.display = 'none';
-    document.getElementById('exercise-tiles').style.display = 'grid';
+    const logSections = document.getElementById('log-sections');
+    if (logSections) logSections.style.display = 'block';
     AppState.selectedExercise = null;
     
     // Reset timer UI if open
@@ -893,9 +874,12 @@ function saveExerciseLog() {
 function selectCustomWorkout(type) {
     const names = { peloton: '🚴 Peloton', rowing: '🚣 Rowing', core: '🎯 Core', stretch: '🧘 Stretch', upper: '💪 Upper', bike: '🚴 Bike' };
     AppState.selectedCustomWorkout = type;
-    document.getElementById('custom-workout-tiles').style.display = 'none';
+    const logSections = document.getElementById('log-sections');
+    if (logSections) logSections.style.display = 'none';
+    document.getElementById('exercise-log-form').style.display = 'none';
     document.getElementById('custom-workout-form').style.display = 'block';
     document.getElementById('custom-workout-title').textContent = names[type] || 'Custom';
+    document.getElementById('custom-workout-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
     
     const defaults = { 
         peloton: { duration: 30, intensity: 6, impact: 'none' }, 
@@ -919,7 +903,8 @@ function selectCustomWorkout(type) {
 
 function closeCustomForm() {
     document.getElementById('custom-workout-form').style.display = 'none';
-    document.getElementById('custom-workout-tiles').style.display = 'grid';
+    const logSections = document.getElementById('log-sections');
+    if (logSections) logSections.style.display = 'block';
     AppState.selectedCustomWorkout = null;
 }
 
@@ -1766,6 +1751,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkIn = DataManager.getCheckIn(new Date().toISOString().split('T')[0]);
     if (checkIn && checkIn.kciScore !== undefined) {
         renderKCIResult(checkIn.kciScore);
+    }
+
+    // Restore from IndexedDB backup if localStorage was wiped (mobile fallback)
+    if (typeof DataManager.restoreFromBackup === 'function') {
+        DataManager.restoreFromBackup()
+            .then(restored => {
+                if (restored) {
+                    // Re-render UI after recovery
+                    updateStreakDisplay();
+                    updateWeekSummary();
+                    updateMeasurementDisplay();
+                    renderRecentEventsPreview();
+                    renderEventsTimeline();
+                    loadTodayCheckIn();
+
+                    if (AppState.currentView === 'log') {
+                        renderTodaysSummary();
+                    }
+                    if (AppState.currentView === 'history') {
+                        renderAnalytics(AppState.analyticsDays);
+                        renderMeasurementSummary();
+                    }
+                }
+            })
+            .finally(() => {
+                if (typeof DataManager.seedBackupFromStorage === 'function') {
+                    DataManager.seedBackupFromStorage();
+                }
+            });
+    } else if (typeof DataManager.seedBackupFromStorage === 'function') {
+        DataManager.seedBackupFromStorage();
     }
 
     // Mobile Persistence Hooks

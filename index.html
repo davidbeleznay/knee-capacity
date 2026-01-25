@@ -117,23 +117,6 @@
             <div id="log-view" class="view">
                 <h2>Log Workout</h2>
 
-                <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-                    <button id="toggle-exercises" class="secondary-button active">Exercises</button>
-                    <button id="toggle-custom" class="secondary-button">Custom</button>
-                </div>
-
-                <h3>Quick Log</h3>
-                <div class="exercise-tiles" id="exercise-tiles"></div>
-                <div id="custom-workout-tiles" class="exercise-tiles" style="display:none; margin-top:12px;">
-                    <div class="exercise-tile" onclick="selectCustomWorkout('peloton')">🚴 Peloton</div>
-                    <div class="exercise-tile" onclick="selectCustomWorkout('rowing')">🚣 Rowing</div>
-                    <div class="exercise-tile" onclick="selectCustomWorkout('core')">🎯 Core</div>
-                    <div class="exercise-tile" onclick="selectCustomWorkout('stretch')">🧘 Stretch</div>
-                    <div class="exercise-tile" onclick="selectCustomWorkout('upper')">💪 Upper</div>
-                    <div class="exercise-tile" onclick="selectCustomWorkout('bike')">🚴 Bike</div>
-                </div>
-            </section>
-
             <section class="card" id="exercise-log-form" style="display:none;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
                     <h3 id="selected-exercise-name" style="margin: 0;">Exercise</h3>
@@ -240,7 +223,7 @@
                 <div id="trend-chart" style="margin-top:20px;"></div>
                 <button id="save-exercise" class="primary-button" type="button" style="margin-top: 24px;">✅ Log Workout</button>
             </section>
-
+                
             <section class="card" id="custom-workout-form" style="display:none;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h3 id="custom-workout-title">Custom</h3>
@@ -278,6 +261,25 @@
                 <div id="custom-history-list" style="margin:8px 0;"></div>
                 <button id="save-custom-workout" class="primary-button" type="button">✅ Log</button>
             </section>
+
+            <div id="log-sections">
+                <section class="card" id="custom-workout-section">
+                    <h3>Custom Workouts</h3>
+                    <div id="custom-workout-tiles" class="exercise-tiles">
+                        <div class="exercise-tile" onclick="selectCustomWorkout('peloton')">🚴 Peloton</div>
+                        <div class="exercise-tile" onclick="selectCustomWorkout('rowing')">🚣 Rowing</div>
+                        <div class="exercise-tile" onclick="selectCustomWorkout('core')">🎯 Core</div>
+                        <div class="exercise-tile" onclick="selectCustomWorkout('stretch')">🧘 Stretch</div>
+                        <div class="exercise-tile" onclick="selectCustomWorkout('upper')">💪 Upper</div>
+                        <div class="exercise-tile" onclick="selectCustomWorkout('bike')">🚴 Bike</div>
+                    </div>
+                </section>
+
+                <section class="card" id="exercise-log-section">
+                    <h3>Exercises</h3>
+                    <div class="exercise-tiles" id="exercise-tiles"></div>
+                </section>
+            </div>
 
             <section class="card">
                 <h3>Today</h3>

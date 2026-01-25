@@ -1,21 +1,21 @@
-# Mobile Persistence Plan
+# Feature Implementation Plan
 **Overall Progress:** 100%
 
 ## TLDR
-Fix the issue where data is lost on mobile devices when the browser is closed or the app is fully shut down. This involves implementing more robust storage synchronization and handling mobile-specific browser behaviors.
+Make exercise logs and streaks persist on mobile so trends and history remain after closing the browser.
 
 ## Critical Decisions
-- **Storage Strategy**: Continue using `localStorage` but implement a more robust wrapper with error handling and immediate synchronization.
-- **Persistence Hooks**: Use `pagehide` and `visibilitychange` events instead of `unload` for better reliability on mobile.
-- **Data Integrity**: Implement a "heartbeat" or immediate write-through to ensure data is committed to persistent storage as soon as it's modified.
+- Keep `localStorage` as the primary store and add a safer write-through wrapper.
+- Use `pagehide` and `visibilitychange` for mobile lifecycle persistence.
+- Add lightweight logging to validate save/load success on mobile.
 
 ## Tasks
-- [x] 🟩 Step 1: Robust Storage Wrapper
-  - [x] 🟩 Create a `PersistentStorage` utility to handle `localStorage` with error recovery.
-  - [x] 🟩 Implement immediate synchronization for all `DataManager` save operations.
-- [x] 🟩 Step 2: Mobile Lifecycle Management
-  - [x] 🟩 Add listeners for `visibilitychange` and `pagehide` to trigger final data sync.
-  - [x] 🟩 Ensure `DataManager.init()` handles potential storage corruption or partial writes.
-- [x] 🟩 Step 3: Verification & Testing
-  - [x] 🟩 Add logging to track storage initialization and save success/failure.
-  - [x] 🟩 Verify persistence across full browser restarts on mobile.
+- [x] 🟩 Step 1: Harden storage writes
+  - [x] 🟩 Add a storage wrapper with JSON safety and read-after-write
+  - [x] 🟩 Route all exercise, streak, and check-in saves through it
+- [x] 🟩 Step 2: Mobile lifecycle sync
+  - [x] 🟩 Add `pagehide`/`visibilitychange` listeners to flush state
+  - [x] 🟩 Ensure init handles missing or corrupted storage safely
+- [x] 🟩 Step 3: Verify persistence
+  - [x] 🟩 Add logs to confirm successful saves/loads
+  - [x] 🟩 Test full close/reopen flow on mobile
