@@ -264,14 +264,17 @@
 
             <div id="log-sections">
                 <section class="card" id="custom-workout-section">
-                    <h3>Custom Workouts</h3>
-                    <div id="custom-workout-tiles" class="exercise-tiles">
-                        <div class="exercise-tile" onclick="selectCustomWorkout('peloton')">🚴 Peloton</div>
+                    <button id="toggle-custom-list" class="secondary-button custom-toggle-button" type="button">
+                        Custom
+                        <span id="custom-toggle-icon">▼</span>
+                    </button>
+                    <div id="custom-workout-tiles" class="exercise-tiles" style="display:none; margin-top:12px;">
+                        <div class="exercise-tile" onclick="selectCustomWorkout('sports')">🏀 Sports</div>
+                        <div class="exercise-tile" onclick="selectCustomWorkout('bike')">🚴 Bike</div>
                         <div class="exercise-tile" onclick="selectCustomWorkout('rowing')">🚣 Rowing</div>
                         <div class="exercise-tile" onclick="selectCustomWorkout('core')">🎯 Core</div>
                         <div class="exercise-tile" onclick="selectCustomWorkout('stretch')">🧘 Stretch</div>
                         <div class="exercise-tile" onclick="selectCustomWorkout('upper')">💪 Upper</div>
-                        <div class="exercise-tile" onclick="selectCustomWorkout('bike')">🚴 Bike</div>
                     </div>
                 </section>
 

@@ -513,6 +513,23 @@ const Stopwatch = {
 // Workouts Module - Exercise & Custom Workout Logging
 
 function setupWorkoutHandlers() {
+    const toggleCustomList = document.getElementById('toggle-custom-list');
+    const customTiles = document.getElementById('custom-workout-tiles');
+    const customToggleIcon = document.getElementById('custom-toggle-icon');
+    
+    if (toggleCustomList && customTiles) {
+        toggleCustomList.setAttribute('aria-expanded', 'false');
+        customTiles.style.display = 'none';
+        
+        toggleCustomList.onclick = (e) => {
+            e.preventDefault();
+            const isHidden = customTiles.style.display === 'none';
+            customTiles.style.display = isHidden ? 'grid' : 'none';
+            if (customToggleIcon) customToggleIcon.textContent = isHidden ? '▲' : '▼';
+            toggleCustomList.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+        };
+    }
+    
     document.querySelectorAll('.impact-btn').forEach(btn => {
         btn.onclick = function(e) {
             e.preventDefault();
@@ -872,7 +889,7 @@ function saveExerciseLog() {
 }
 
 function selectCustomWorkout(type) {
-    const names = { peloton: '🚴 Peloton', rowing: '🚣 Rowing', core: '🎯 Core', stretch: '🧘 Stretch', upper: '💪 Upper', bike: '🚴 Bike' };
+    const names = { sports: '🏀 Sports', bike: '🚴 Bike', rowing: '🚣 Rowing', core: '🎯 Core', stretch: '🧘 Stretch', upper: '💪 Upper' };
     AppState.selectedCustomWorkout = type;
     const logSections = document.getElementById('log-sections');
     if (logSections) logSections.style.display = 'none';
@@ -881,13 +898,20 @@ function selectCustomWorkout(type) {
     document.getElementById('custom-workout-title').textContent = names[type] || 'Custom';
     document.getElementById('custom-workout-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
     
+    const customTiles = document.getElementById('custom-workout-tiles');
+    if (customTiles) customTiles.style.display = 'none';
+    const customToggleIcon = document.getElementById('custom-toggle-icon');
+    if (customToggleIcon) customToggleIcon.textContent = '▼';
+    const toggleCustomList = document.getElementById('toggle-custom-list');
+    if (toggleCustomList) toggleCustomList.setAttribute('aria-expanded', 'false');
+    
     const defaults = { 
-        peloton: { duration: 30, intensity: 6, impact: 'none' }, 
+        sports: { duration: 60, intensity: 7, impact: 'high' },
+        bike: { duration: 45, intensity: 5, impact: 'none' },
         rowing: { duration: 20, intensity: 5, impact: 'none' }, 
         core: { duration: 15, intensity: 6, impact: 'none' }, 
         stretch: { duration: 10, intensity: 3, impact: 'none' },
-        upper: { duration: 30, intensity: 6, impact: 'none' },
-        bike: { duration: 45, intensity: 5, impact: 'none' }
+        upper: { duration: 30, intensity: 6, impact: 'none' }
     };
     const preset = defaults[type] || { duration: 20, intensity: 5, impact: 'none' };
     document.getElementById('custom-duration').value = preset.duration;
@@ -905,6 +929,13 @@ function closeCustomForm() {
     document.getElementById('custom-workout-form').style.display = 'none';
     const logSections = document.getElementById('log-sections');
     if (logSections) logSections.style.display = 'block';
+    
+    const customTiles = document.getElementById('custom-workout-tiles');
+    if (customTiles) customTiles.style.display = 'none';
+    const customToggleIcon = document.getElementById('custom-toggle-icon');
+    if (customToggleIcon) customToggleIcon.textContent = '▼';
+    const toggleCustomList = document.getElementById('toggle-custom-list');
+    if (toggleCustomList) toggleCustomList.setAttribute('aria-expanded', 'false');
     AppState.selectedCustomWorkout = null;
 }
 
@@ -937,7 +968,7 @@ function renderTodaysSummary() {
     
     let html = '';
     custom.forEach(w => {
-        const icons = { peloton: '🚴', rowing: '🚣', core: '🎯', stretch: '🧘', upper: '💪', bike: '🚴' };
+        const icons = { sports: '🏀', bike: '🚴', rowing: '🚣', core: '🎯', stretch: '🧘', upper: '💪', peloton: '🚴' };
         html += `<div style="padding: 12px; background: #f5f5f5; border-radius: 10px; margin-bottom: 8px;">
             <div style="font-weight: 700;">${icons[w.workoutCategory] || '🏋️'} ${w.workoutType || w.workoutCategory}</div>
             <div style="font-size: 13px; color: #666; margin-top: 4px;">${w.durationMinutes}min • ${w.intensity}/10</div>
