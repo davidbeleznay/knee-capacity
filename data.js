@@ -2,29 +2,62 @@
 
 const DataManager = {
     
+    // Robust Storage Wrapper
+    storage: {
+        set(key, value) {
+            try {
+                const serializedValue = JSON.stringify(value);
+                localStorage.setItem(key, serializedValue);
+                // Mobile browsers sometimes delay writing to disk. 
+                // Accessing the item immediately can help force a sync in some environments.
+                localStorage.getItem(key); 
+                return true;
+            } catch (e) {
+                console.error(`Storage Error (set ${key}):`, e);
+                return false;
+            }
+        },
+        get(key, defaultValue = []) {
+            try {
+                const item = localStorage.getItem(key);
+                return item ? JSON.parse(item) : defaultValue;
+            } catch (e) {
+                console.error(`Storage Error (get ${key}):`, e);
+                return defaultValue;
+            }
+        }
+    },
+
     init() {
         try {
+            console.log('📦 Initializing DataManager...');
             // Verify localStorage is available
             if (!this.isLocalStorageAvailable()) {
                 alert('! Storage not available. Data may not persist.');
                 return;
             }
             
-            // Initialize all data stores
-            if (!localStorage.getItem('sessions')) localStorage.setItem('sessions', JSON.stringify([]));
-            if (!localStorage.getItem('checkIns')) localStorage.setItem('checkIns', JSON.stringify([]));
-            if (!localStorage.getItem('exerciseLogs')) localStorage.setItem('exerciseLogs', JSON.stringify([]));
-            if (!localStorage.getItem('customWorkouts')) localStorage.setItem('customWorkouts', JSON.stringify([]));
-            if (!localStorage.getItem('bodyMeasurements')) localStorage.setItem('bodyMeasurements', JSON.stringify([]));
-            if (!localStorage.getItem('significantEvents')) localStorage.setItem('significantEvents', JSON.stringify([]));
-            if (!localStorage.getItem('streak')) localStorage.setItem('streak', '0');
-            if (!localStorage.getItem('longestStreak')) localStorage.setItem('longestStreak', '0');
+            // Initialize all data stores with robust wrapper
+            const stores = [
+                'sessions', 'checkIns', 'exerciseLogs', 
+                'customWorkouts', 'bodyMeasurements', 
+                'significantEvents'
+            ];
+            
+            stores.forEach(store => {
+                if (localStorage.getItem(store) === null) {
+                    this.storage.set(store, []);
+                }
+            });
+
+            if (localStorage.getItem('streak') === null) localStorage.setItem('streak', '0');
+            if (localStorage.getItem('longestStreak') === null) localStorage.setItem('longestStreak', '0');
             
             // Add baseline measurement if none exist
             this.initializeBaselineMeasurement();
-            
+            console.log('✅ DataManager initialized');
         } catch (e) {
-            alert('Storage error: ' + e.message);
+            console.error('Initialization error:', e);
         }
     },
     
@@ -60,34 +93,23 @@ const DataManager = {
                 type: 'weekly'
             };
             
-            const measurements_array = [baseline];
-            localStorage.setItem('bodyMeasurements', JSON.stringify(measurements_array));
+            this.storage.set('bodyMeasurements', [baseline]);
         }
     },
     
     saveBodyMeasurement(data) {
-        try {
-            const measurements = this.getBodyMeasurements();
-            measurements.push({
-                ...data,
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString(),
-                date: new Date().toISOString().split('T')[0]
-            });
-            localStorage.setItem('bodyMeasurements', JSON.stringify(measurements));
-            return true;
-        } catch (e) {
-            return false;
-        }
+        const measurements = this.getBodyMeasurements();
+        measurements.push({
+            ...data,
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString(),
+            date: new Date().toISOString().split('T')[0]
+        });
+        return this.storage.set('bodyMeasurements', measurements);
     },
     
     getBodyMeasurements() {
-        try {
-            return JSON.parse(localStorage.getItem('bodyMeasurements') || '[]');
-        } catch (e) {
-            console.error('Get measurements error:', e);
-            return [];
-        }
+        return this.storage.get('bodyMeasurements');
     },
     
     getLatestBodyMeasurement() {
@@ -141,60 +163,38 @@ const DataManager = {
     
     // Sessions
     saveSession(sessionData) {
-        try {
-            const sessions = this.getSessions();
-            sessions.push({
-                ...sessionData,
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString()
-            });
-            localStorage.setItem('sessions', JSON.stringify(sessions));
-            this.updateStreak();
-            return true;
-        } catch (e) {
-            alert('! Failed to save session: ' + e.message);
-            return false;
-        }
+        const sessions = this.getSessions();
+        sessions.push({
+            ...sessionData,
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString()
+        });
+        const success = this.storage.set('sessions', sessions);
+        if (success) this.updateStreak();
+        return success;
     },
     
     getSessions() {
-        try {
-            return JSON.parse(localStorage.getItem('sessions') || '[]');
-        } catch (e) {
-            console.error('Get sessions error:', e);
-            return [];
-        }
+        return this.storage.get('sessions');
     },
     
     // Exercise Logs
     saveExerciseLog(exerciseData) {
-        try {
-            const logs = this.getExerciseLogs();
-            const newLog = {
-                ...exerciseData,
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString(),
-                date: new Date().toISOString().split('T')[0]
-            };
-            logs.push(newLog);
-            localStorage.setItem('exerciseLogs', JSON.stringify(logs));
-            this.updateStreak();
-            return true;
-        } catch (e) {
-            console.error('Save exercise error:', e);
-            alert('! Failed to save: ' + e.message);
-            return false;
-        }
+        const logs = this.getExerciseLogs();
+        const newLog = {
+            ...exerciseData,
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString(),
+            date: new Date().toISOString().split('T')[0]
+        };
+        logs.push(newLog);
+        const success = this.storage.set('exerciseLogs', logs);
+        if (success) this.updateStreak();
+        return success;
     },
     
     getExerciseLogs() {
-        try {
-            const data = localStorage.getItem('exerciseLogs');
-            return JSON.parse(data || '[]');
-        } catch (e) {
-            console.error('Get exercises error:', e);
-            return [];
-        }
+        return this.storage.get('exerciseLogs');
     },
     
     getExerciseLogsByDate(date) {
@@ -217,29 +217,20 @@ const DataManager = {
     
     // Custom Workouts
     saveCustomWorkout(workoutData) {
-        try {
-            const workouts = this.getCustomWorkouts();
-            workouts.push({
-                ...workoutData,
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString(),
-                date: new Date().toISOString().split('T')[0]
-            });
-            localStorage.setItem('customWorkouts', JSON.stringify(workouts));
-            this.updateStreak();
-            return true;
-        } catch (e) {
-            return false;
-        }
+        const workouts = this.getCustomWorkouts();
+        workouts.push({
+            ...workoutData,
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString(),
+            date: new Date().toISOString().split('T')[0]
+        });
+        const success = this.storage.set('customWorkouts', workouts);
+        if (success) this.updateStreak();
+        return success;
     },
     
     getCustomWorkouts() {
-        try {
-            return JSON.parse(localStorage.getItem('customWorkouts') || '[]');
-        } catch (e) {
-            console.error('Get custom workouts error:', e);
-            return [];
-        }
+        return this.storage.get('customWorkouts');
     },
     
     getCustomWorkoutsByDate(date) {
@@ -260,36 +251,29 @@ const DataManager = {
     
     // Check-ins
     saveCheckIn(checkInData) {
-        try {
-            const checkIns = this.getCheckIns();
-            const today = new Date().toISOString().split('T')[0];
-            const existingIndex = checkIns.findIndex(c => c.date === today);
-            
-            const kciScore = this.calculateKCI(checkInData);
-            const enrichedData = { ...checkInData, date: today, kciScore };
-            
-            if (existingIndex >= 0) {
-                checkIns[existingIndex] = enrichedData;
-            } else {
-                checkIns.push(enrichedData);
-            }
-            localStorage.setItem('checkIns', JSON.stringify(checkIns));
+        const checkIns = this.getCheckIns();
+        const today = new Date().toISOString().split('T')[0];
+        const existingIndex = checkIns.findIndex(c => c.date === today);
+        
+        const kciScore = this.calculateKCI(checkInData);
+        const enrichedData = { ...checkInData, date: today, kciScore };
+        
+        if (existingIndex >= 0) {
+            checkIns[existingIndex] = enrichedData;
+        } else {
+            checkIns.push(enrichedData);
+        }
+        
+        const success = this.storage.set('checkIns', checkIns);
+        if (success) {
             console.log('✅ Check-in saved for', today, 'KCI:', kciScore);
             return enrichedData;
-        } catch (e) {
-            console.error('Save check-in error:', e);
-            alert('! Failed to save check-in: ' + e.message);
-            return null;
         }
+        return null;
     },
     
     getCheckIns() {
-        try {
-            return JSON.parse(localStorage.getItem('checkIns') || '[]');
-        } catch (e) {
-            console.error('Get check-ins error:', e);
-            return [];
-        }
+        return this.storage.get('checkIns');
     },
     
     getCheckIn(date) {
@@ -332,17 +316,8 @@ const DataManager = {
         const today = new Date().toISOString().split('T')[0];
         const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
         
-        console.log('🔍 Streak Debug:', {
-            totalWorkouts: allWorkouts.length,
-            uniqueDates: uniqueDates,
-            today: today,
-            yesterday: yesterday,
-            mostRecentWorkout: uniqueDates[0]
-        });
-        
         // If no workout today or yesterday, streak is broken
         if (uniqueDates[0] !== today && uniqueDates[0] !== yesterday) {
-            console.log('❌ Streak broken: No workout today or yesterday');
             localStorage.setItem('streak', '0');
             return 0;
         }
@@ -353,17 +328,12 @@ const DataManager = {
             const d2 = new Date(uniqueDates[i+1]);
             const diff = (d1 - d2) / (1000 * 60 * 60 * 24);
             
-            console.log(`  Day ${i} -> ${i+1}: ${uniqueDates[i]} to ${uniqueDates[i+1]} = ${diff.toFixed(2)} days apart`);
-            
             if (diff <= 1.1) { // Allowing some buffer for timezones
                 streak++;
             } else {
-                console.log(`  ⛔ Streak broken at ${diff.toFixed(2)} days gap`);
                 break;
             }
         }
-        
-        console.log(`✅ Final streak: ${streak} days`);
         
         const longest = parseInt(localStorage.getItem('longestStreak') || '0');
         if (streak > longest) localStorage.setItem('longestStreak', streak.toString());
@@ -589,70 +559,46 @@ const DataManager = {
     
     // Significant Events
     saveSignificantEvent(eventData) {
-        try {
-            const events = this.getSignificantEvents();
-            const event = {
-                ...eventData,
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString(),
-                date: eventData.date || new Date().toISOString().split('T')[0]
-            };
-            events.push(event);
-            localStorage.setItem('significantEvents', JSON.stringify(events));
-            return true;
-        } catch (e) {
-            return false;
-        }
+        const events = this.getSignificantEvents(null);
+        const event = {
+            ...eventData,
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString(),
+            date: eventData.date || new Date().toISOString().split('T')[0]
+        };
+        events.push(event);
+        return this.storage.set('significantEvents', events);
     },
     
     getSignificantEvents(days = 90) {
-        try {
-            const events = JSON.parse(localStorage.getItem('significantEvents') || '[]');
-            if (!days) return events;
-            
-            const cutoff = new Date();
-            cutoff.setDate(cutoff.getDate() - days);
-            
-            return events
-                .filter(e => new Date(e.date) >= cutoff)
-                .sort((a, b) => new Date(b.date) - new Date(a.date));
-        } catch (e) {
-            return [];
-        }
+        const events = this.storage.get('significantEvents');
+        if (!days) return events;
+        
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        
+        return events
+            .filter(e => new Date(e.date) >= cutoff)
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
     },
     
     getEventById(id) {
-        try {
-            const events = JSON.parse(localStorage.getItem('significantEvents') || '[]');
-            return events.find(e => e.id === id);
-        } catch (e) {
-            return null;
-        }
+        return this.getSignificantEvents(null).find(e => e.id === id);
     },
     
     updateEvent(id, updates) {
-        try {
-            const events = JSON.parse(localStorage.getItem('significantEvents') || '[]');
-            const index = events.findIndex(e => e.id === id);
-            if (index === -1) return false;
-            
-            events[index] = { ...events[index], ...updates };
-            localStorage.setItem('significantEvents', JSON.stringify(events));
-            return true;
-        } catch (e) {
-            return false;
-        }
+        const events = this.getSignificantEvents(null);
+        const index = events.findIndex(e => e.id === id);
+        if (index === -1) return false;
+        
+        events[index] = { ...events[index], ...updates };
+        return this.storage.set('significantEvents', events);
     },
     
     deleteEvent(id) {
-        try {
-            const events = JSON.parse(localStorage.getItem('significantEvents') || '[]');
-            const filtered = events.filter(e => e.id !== id);
-            localStorage.setItem('significantEvents', JSON.stringify(filtered));
-            return true;
-        } catch (e) {
-            return false;
-        }
+        const events = this.getSignificantEvents(null);
+        const filtered = events.filter(e => e.id !== id);
+        return this.storage.set('significantEvents', filtered);
     },
     
     generateSpecialistSummary() {

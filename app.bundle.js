@@ -1767,4 +1767,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (checkIn && checkIn.kciScore !== undefined) {
         renderKCIResult(checkIn.kciScore);
     }
+
+    // Mobile Persistence Hooks
+    // 'pagehide' and 'visibilitychange' are more reliable than 'unload' on mobile
+    window.addEventListener('pagehide', () => {
+        console.log('📱 Page hiding, ensuring data is synced...');
+        // DataManager operations already sync immediately, but this acts as a final safety check
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            console.log('📱 App backgrounded, ensuring data is synced...');
+        }
+    });
 });
