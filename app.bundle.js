@@ -103,9 +103,12 @@ function switchView(viewName) {
     
     // Trigger view-specific rendering
     if (viewName === 'home') {
-        const checkIn = DataManager.getCheckIn(new Date().toISOString().split('T')[0]);
+        const todayKey = DataManager.getLocalDateKey();
+        const checkIn = DataManager.getCheckIn(todayKey);
         if (checkIn && checkIn.kciScore !== undefined) {
             renderKCIResult(checkIn.kciScore);
+        } else {
+            clearKCIResult();
         }
         updateWeekSummary();
     }
@@ -286,8 +289,12 @@ function renderKCIResult(score) {
 }
 
 function loadTodayCheckIn() {
-    const checkIn = DataManager.getCheckIn(new Date().toISOString().split('T')[0]);
-    if (!checkIn) return;
+    const todayKey = DataManager.getLocalDateKey();
+    const checkIn = DataManager.getCheckIn(todayKey);
+    if (!checkIn) {
+        clearKCIResult();
+        return;
+    }
     
     if (checkIn.swelling) {
         const btn = document.querySelector(`.swelling-btn[data-level="${checkIn.swelling}"]`);
@@ -327,7 +334,53 @@ function loadTodayCheckIn() {
 
     if (checkIn.kciScore !== undefined) {
         renderKCIResult(checkIn.kciScore);
+    } else {
+        clearKCIResult();
     }
+}
+
+function clearKCIResult() {
+    const container = document.getElementById('kci-result-container');
+    if (container) container.style.display = 'none';
+}
+
+function resetDailyCheckInUI() {
+    AppState.swelling = null;
+    AppState.pain = 0;
+    AppState.activityLevel = 'light';
+    AppState.timeOfDay = 'morning';
+    AppState.selectedLane = null;
+
+    document.querySelectorAll('.swelling-btn').forEach(b => b.classList.remove('active'));
+
+    document.querySelectorAll('.activity-level-btn').forEach(b => b.classList.remove('active'));
+    const lightBtn = document.querySelector('.activity-level-btn[data-level="light"]');
+    if (lightBtn) lightBtn.classList.add('active');
+
+    document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+    const morningBtn = document.querySelector('.time-btn[data-time="morning"]');
+    if (morningBtn) morningBtn.classList.add('active');
+
+    const painSlider = document.getElementById('pain-slider');
+    const painValue = document.getElementById('pain-value');
+    if (painSlider) painSlider.value = 0;
+    if (painValue) painValue.textContent = '0';
+
+    const notes = document.getElementById('checkin-notes');
+    if (notes) notes.value = '';
+}
+
+function scheduleMidnightReset() {
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 2);
+    const delayMs = nextMidnight.getTime() - now.getTime();
+
+    setTimeout(() => {
+        clearKCIResult();
+        resetDailyCheckInUI();
+        updateWeekSummary();
+        scheduleMidnightReset();
+    }, Math.max(delayMs, 1000));
 }
 
 function updateWeekSummary() {
@@ -1194,7 +1247,7 @@ function renderWorkoutFrequency(days) {
     for (let i = days - 1; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
+        const dateStr = DataManager.getLocalDateKey(d);
         daysArray.push({ date: dateStr, count: dateMap[dateStr] || 0 });
     }
     
@@ -1608,7 +1661,7 @@ function openEventModal(eventId = null) {
         document.getElementById('event-type').value = 'pain_spike';
         
         const now = new Date();
-        document.getElementById('event-date').value = now.toISOString().split('T')[0];
+        document.getElementById('event-date').value = DataManager.getLocalDateKey(now);
         document.getElementById('event-time').value = now.toTimeString().substring(0, 5);
         
         document.getElementById('event-pain-slider').value = 5;
@@ -1836,11 +1889,15 @@ document.addEventListener('DOMContentLoaded', () => {
     renderRecentEventsPreview();
     renderEventsTimeline();
     loadTodayCheckIn();
+    scheduleMidnightReset();
     
     // Ensure KCI result is shown if check-in exists for today
-    const checkIn = DataManager.getCheckIn(new Date().toISOString().split('T')[0]);
+    const todayKey = DataManager.getLocalDateKey();
+    const checkIn = DataManager.getCheckIn(todayKey);
     if (checkIn && checkIn.kciScore !== undefined) {
         renderKCIResult(checkIn.kciScore);
+    } else {
+        clearKCIResult();
     }
 
     // Restore from IndexedDB backup if localStorage was wiped (mobile fallback)

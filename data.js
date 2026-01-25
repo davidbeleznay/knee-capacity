@@ -228,6 +228,13 @@ const DataManager = {
             return false;
         }
     },
+
+    getLocalDateKey(date = new Date()) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    },
     
     // Body Measurements
     initializeBaselineMeasurement() {
@@ -236,7 +243,7 @@ const DataManager = {
             const baseline = {
                 id: Date.now().toString(),
                 timestamp: new Date().toISOString(),
-                date: new Date().toISOString().split('T')[0],
+                date: this.getLocalDateKey(),
                 measurements: {
                     knee_top_cm: { right: 38.5, left: 37.5, method: '2cm above patella' },
                     thigh_cm: { right: 50, left: 49, method: 'mid-thigh' },
@@ -260,7 +267,7 @@ const DataManager = {
             ...data,
             id: Date.now().toString(),
             timestamp: new Date().toISOString(),
-            date: new Date().toISOString().split('T')[0]
+            date: this.getLocalDateKey()
         });
         return this.storage.set('bodyMeasurements', measurements);
     },
@@ -342,7 +349,7 @@ const DataManager = {
             ...exerciseData,
             id: Date.now().toString(),
             timestamp: new Date().toISOString(),
-            date: new Date().toISOString().split('T')[0]
+            date: this.getLocalDateKey()
         };
         logs.push(newLog);
         const success = this.storage.set('exerciseLogs', logs);
@@ -359,7 +366,7 @@ const DataManager = {
     },
     
     getTodaysExerciseLogs() {
-        const today = new Date().toISOString().split('T')[0];
+        const today = this.getLocalDateKey();
         return this.getExerciseLogsByDate(today);
     },
     
@@ -379,7 +386,7 @@ const DataManager = {
             ...workoutData,
             id: Date.now().toString(),
             timestamp: new Date().toISOString(),
-            date: new Date().toISOString().split('T')[0]
+            date: this.getLocalDateKey()
         });
         const success = this.storage.set('customWorkouts', workouts);
         if (success) this.updateStreak();
@@ -395,7 +402,7 @@ const DataManager = {
     },
     
     getTodaysCustomWorkouts() {
-        const today = new Date().toISOString().split('T')[0];
+        const today = this.getLocalDateKey();
         return this.getCustomWorkoutsByDate(today);
     },
     
@@ -409,7 +416,7 @@ const DataManager = {
     // Check-ins
     saveCheckIn(checkInData) {
         const checkIns = this.getCheckIns();
-        const today = new Date().toISOString().split('T')[0];
+        const today = this.getLocalDateKey();
         const existingIndex = checkIns.findIndex(c => c.date === today);
         
         const kciScore = this.calculateKCI(checkInData);
@@ -472,8 +479,10 @@ const DataManager = {
         
         const uniqueDates = [...new Set(dates)].sort().reverse();
         
-        const today = new Date().toISOString().split('T')[0];
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        const today = this.getLocalDateKey();
+        const yesterdayDate = new Date();
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterday = this.getLocalDateKey(yesterdayDate);
         
         // If no workout today or yesterday, streak is broken
         if (uniqueDates[0] !== today && uniqueDates[0] !== yesterday) {
@@ -529,7 +538,7 @@ const DataManager = {
     
     // Traffic light status
     getKneeStatus() {
-        const today = new Date().toISOString().split('T')[0];
+        const today = this.getLocalDateKey();
         const checkIn = this.getCheckIn(today);
         
         if (!checkIn) return 'unknown';
@@ -613,7 +622,9 @@ const DataManager = {
 
         // 3. Activity Spike Logic (High followed by High)
         const checkIns = this.getCheckIns();
-        const yesterday = this.getCheckIn(new Date(Date.now() - 86400000).toISOString().split('T')[0]);
+        const yesterdayDate = new Date();
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterday = this.getCheckIn(this.getLocalDateKey(yesterdayDate));
         if (yesterday && yesterday.activityLevel === 'Active' && activityLevel === 'Active') {
             score -= 10;
         }
@@ -728,7 +739,7 @@ const DataManager = {
             ...eventData,
             id: Date.now().toString(),
             timestamp: new Date().toISOString(),
-            date: eventData.date || new Date().toISOString().split('T')[0]
+            date: eventData.date || this.getLocalDateKey()
         };
         events.push(event);
         return this.storage.set('significantEvents', events);
