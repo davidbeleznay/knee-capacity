@@ -260,12 +260,16 @@ const DataManager = {
         if (!Array.isArray(checkIns) || checkIns.length === 0) return;
 
         const now = new Date();
+        const todayKey = this.getLocalDateKey();
         const futureThreshold = new Date(now.getTime() + 60 * 60 * 1000);
         let changed = false;
+        let fixedCount = 0;
 
         checkIns.forEach(checkIn => {
             if (!checkIn.createdAt) {
                 let inferredAt = this.getInferredCheckInDate(checkIn);
+                const originalDate = checkIn.date;
+                
                 while (inferredAt > futureThreshold) {
                     inferredAt.setDate(inferredAt.getDate() - 1);
                     changed = true;
@@ -274,15 +278,34 @@ const DataManager = {
                 checkIn.createdAt = inferredAt.getTime();
                 const normalizedDate = this.getLocalDateKey(inferredAt);
                 if (checkIn.date !== normalizedDate) {
+                    console.log(`🔧 Normalizing check-in date: ${checkIn.date} → ${normalizedDate}`);
                     checkIn.date = normalizedDate;
                     changed = true;
+                    fixedCount++;
                 } else {
+                    checkIn.createdAt = inferredAt.getTime();
                     changed = true;
+                }
+            }
+            
+            // Also fix any check-ins that have today's date but were created before today
+            if (checkIn.date === todayKey && checkIn.createdAt) {
+                const createdAt = new Date(checkIn.createdAt);
+                const createdAtDate = this.getLocalDateKey(createdAt);
+                if (createdAtDate !== todayKey) {
+                    console.log(`🔧 Fixing check-in dated today but created on: ${createdAtDate}`);
+                    // This check-in was created on a different day, so it shouldn't be for today
+                    const yesterdayDate = new Date();
+                    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+                    checkIn.date = this.getLocalDateKey(yesterdayDate);
+                    changed = true;
+                    fixedCount++;
                 }
             }
         });
 
         if (changed) {
+            console.log(`✅ Normalized ${fixedCount} check-in(s)`);
             this.storage.set('checkIns', checkIns);
         }
     },

@@ -290,12 +290,44 @@ function renderKCIResult(score) {
 
 function loadTodayCheckIn() {
     const todayKey = DataManager.getLocalDateKey();
-    const checkIn = DataManager.getCheckIn(todayKey);
-    if (!checkIn) {
+    console.log('📅 Loading check-in for today:', todayKey);
+    
+    // Get all check-ins and find the one that matches today exactly
+    const allCheckIns = DataManager.getCheckIns();
+    const checkIn = allCheckIns.find(c => c.date === todayKey);
+    
+    console.log('📋 Found check-in:', checkIn ? `Date: ${checkIn.date}, KCI: ${checkIn.kciScore}` : 'None');
+    if (checkIn && checkIn.date !== todayKey) {
+        console.warn('⚠️ Date mismatch! Expected:', todayKey, 'Got:', checkIn.date);
+    }
+    
+    // Always clear form first to ensure clean state
+    document.querySelectorAll('.swelling-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('pain-slider').value = 0;
+    document.getElementById('pain-value').textContent = '0';
+    document.querySelectorAll('.activity-level-btn').forEach(b => b.classList.remove('active'));
+    const lightBtn = document.querySelector('.activity-level-btn[data-level="light"]');
+    if (lightBtn) lightBtn.classList.add('active');
+    document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+    const morningBtn = document.querySelector('.time-btn[data-time="morning"]');
+    if (morningBtn) morningBtn.classList.add('active');
+    document.getElementById('checkin-notes').value = '';
+    
+    AppState.swelling = null;
+    AppState.pain = 0;
+    AppState.activityLevel = 'light';
+    AppState.timeOfDay = 'morning';
+    
+    if (!checkIn || checkIn.date !== todayKey) {
+        // Double-check: if date doesn't match today exactly, don't load it
+        if (checkIn && checkIn.date !== todayKey) {
+            console.warn('⚠️ Rejecting check-in with wrong date:', checkIn.date, 'Expected:', todayKey);
+        }
         clearKCIResult();
         return;
     }
     
+    // Only populate if we have today's check-in (date matches exactly)
     if (checkIn.swelling) {
         const btn = document.querySelector(`.swelling-btn[data-level="${checkIn.swelling}"]`);
         if (btn) {
