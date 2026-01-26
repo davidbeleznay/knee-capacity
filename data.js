@@ -491,25 +491,54 @@ const DataManager = {
     saveCheckIn(checkInData) {
         const checkIns = this.getCheckIns();
         const today = this.getLocalDateKey();
+        const now = Date.now();
+        
+        console.log('💾 saveCheckIn called for date:', today);
+        console.log('📅 Current time:', new Date().toISOString());
+        console.log('📋 Existing check-ins:', checkIns.map(c => ({ date: c.date, createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : 'missing' })));
+        
+        // Find existing check-in for today
         const existingIndex = checkIns.findIndex(c => c.date === today);
+        
+        // If we found an existing check-in, verify it was actually created today
+        if (existingIndex >= 0) {
+            const existing = checkIns[existingIndex];
+            if (existing.createdAt) {
+                const createdDate = this.getLocalDateKey(new Date(existing.createdAt));
+                if (createdDate !== today) {
+                    console.warn('⚠️ Found check-in with today\'s date but created on:', createdDate);
+                    console.warn('⚠️ Moving it to correct date:', createdDate);
+                    // Move it to the correct date
+                    checkIns[existingIndex].date = createdDate;
+                    // Continue to create a new one for today
+                } else {
+                    console.log('✅ Updating existing check-in for today');
+                }
+            }
+        }
         
         const kciScore = this.calculateKCI(checkInData);
         const enrichedData = { 
             ...checkInData, 
             date: today, 
             kciScore,
-            createdAt: Date.now()
+            createdAt: now
         };
         
-        if (existingIndex >= 0) {
-            checkIns[existingIndex] = enrichedData;
+        // Find the index again (in case we moved the old one)
+        const finalIndex = checkIns.findIndex(c => c.date === today && c.createdAt && this.getLocalDateKey(new Date(c.createdAt)) === today);
+        
+        if (finalIndex >= 0) {
+            console.log('🔄 Updating check-in at index:', finalIndex);
+            checkIns[finalIndex] = enrichedData;
         } else {
+            console.log('➕ Creating new check-in for today');
             checkIns.push(enrichedData);
         }
         
         const success = this.storage.set('checkIns', checkIns);
         if (success) {
-            console.log('✅ Check-in saved for', today, 'KCI:', kciScore);
+            console.log('✅ Check-in saved for', today, 'KCI:', kciScore, 'createdAt:', new Date(now).toISOString());
             return enrichedData;
         }
         return null;

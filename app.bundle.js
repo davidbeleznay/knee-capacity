@@ -103,10 +103,18 @@ function switchView(viewName) {
     
     // Trigger view-specific rendering
     if (viewName === 'home') {
+        // Always reload today's check-in to ensure form is fresh
+        loadTodayCheckIn();
         const todayKey = DataManager.getLocalDateKey();
         const checkIn = DataManager.getCheckIn(todayKey);
-        if (checkIn && checkIn.kciScore !== undefined) {
-            renderKCIResult(checkIn.kciScore);
+        // Verify check-in is actually for today
+        if (checkIn && checkIn.createdAt) {
+            const createdDate = DataManager.getLocalDateKey(new Date(checkIn.createdAt));
+            if (createdDate === todayKey && checkIn.kciScore !== undefined) {
+                renderKCIResult(checkIn.kciScore);
+            } else {
+                clearKCIResult();
+            }
         } else {
             clearKCIResult();
         }
@@ -180,6 +188,9 @@ function saveCheckIn(e) {
         return;
     }
     
+    const todayKey = DataManager.getLocalDateKey();
+    console.log('💾 Saving check-in for date:', todayKey);
+    console.log('🕐 Current time:', new Date().toISOString());
     console.log('💾 Saving check-in and calculating KCI...');
     
     const checkInData = { 
@@ -290,16 +301,33 @@ function renderKCIResult(score) {
 
 function loadTodayCheckIn() {
     const todayKey = DataManager.getLocalDateKey();
+    const now = new Date();
     console.log('📅 Loading check-in for today:', todayKey);
+    console.log('🕐 Current time:', now.toISOString());
     
     // Get all check-ins and find the one that matches today exactly
     const allCheckIns = DataManager.getCheckIns();
-    const checkIn = allCheckIns.find(c => c.date === todayKey);
+    let checkIn = allCheckIns.find(c => c.date === todayKey);
     
-    console.log('📋 Found check-in:', checkIn ? `Date: ${checkIn.date}, KCI: ${checkIn.kciScore}` : 'None');
-    if (checkIn && checkIn.date !== todayKey) {
-        console.warn('⚠️ Date mismatch! Expected:', todayKey, 'Got:', checkIn.date);
+    // Verify the check-in was actually created today
+    if (checkIn && checkIn.createdAt) {
+        const createdDate = DataManager.getLocalDateKey(new Date(checkIn.createdAt));
+        if (createdDate !== todayKey) {
+            console.warn('⚠️ Found check-in with today\'s date but created on:', createdDate);
+            console.warn('⚠️ Ignoring this check-in - it belongs to a different day');
+            checkIn = null; // Ignore it - it's not really for today
+        } else {
+            console.log('✅ Verified check-in was created today');
+        }
+    } else if (checkIn && !checkIn.createdAt) {
+        // Old check-in without createdAt - we can't verify, so be cautious
+        console.warn('⚠️ Found check-in without createdAt timestamp - treating as potentially stale');
+        // Only use it if it was created very recently (within last 24 hours)
+        // Since we can't know, let's be safe and ignore it
+        checkIn = null;
     }
+    
+    console.log('📋 Final check-in to load:', checkIn ? `Date: ${checkIn.date}, KCI: ${checkIn.kciScore}` : 'None');
     
     // Always clear form first to ensure clean state
     document.querySelectorAll('.swelling-btn').forEach(b => b.classList.remove('active'));
