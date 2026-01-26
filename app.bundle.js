@@ -713,10 +713,20 @@ function setupWorkoutHandlers() {
     }
     
     const closeForm = document.getElementById('close-form');
-    if (closeForm) { closeForm.ontouchstart = closeExerciseForm; closeForm.onclick = closeExerciseForm; }
+    if (closeForm) { 
+        closeForm.onclick = (e) => {
+            e.preventDefault();
+            closeExerciseForm();
+        };
+    }
     
     const closeCust = document.getElementById('close-custom-form');
-    if (closeCust) { closeCust.ontouchstart = closeCustomForm; closeCust.onclick = closeCustomForm; }
+    if (closeCust) { 
+        closeCust.onclick = (e) => {
+            e.preventDefault();
+            closeCustomForm();
+        };
+    }
 
     const toggleTimerBtn = document.getElementById('toggle-form-timer');
     if (toggleTimerBtn) {
@@ -1062,9 +1072,12 @@ function closeExerciseForm() {
 }
 
 function saveExerciseLog() {
-    if (!AppState.selectedExercise) return;
+    if (!AppState.selectedExercise) {
+        console.warn('⚠️ Cannot save: No exercise selected');
+        return;
+    }
     
-    DataManager.saveExerciseLog({
+    const exerciseData = {
         exerciseId: AppState.selectedExercise.id,
         exerciseName: AppState.selectedExercise.name,
         setsCompleted: parseInt(document.getElementById('sets-completed').value),
@@ -1075,12 +1088,28 @@ function saveExerciseLog() {
         pain: parseInt(document.getElementById('exercise-pain-slider').value),
         lane: AppState.selectedLane,
         notes: document.getElementById('exercise-notes').value
-    });
+    };
     
-    const btn = document.getElementById('save-exercise');
-    btn.textContent = 'Logged!';
-    btn.style.background = '#4CAF50';
-    setTimeout(() => { btn.textContent = 'Log'; btn.style.background = ''; closeExerciseForm(); renderTodaysSummary(); updateWeekSummary(); updateStreakDisplay(); }, 1000);
+    console.log('💾 Saving exercise log:', exerciseData);
+    const success = DataManager.saveExerciseLog(exerciseData);
+    
+    if (success) {
+        console.log('✅ Exercise log saved successfully');
+        const btn = document.getElementById('save-exercise');
+        btn.textContent = 'Logged!';
+        btn.style.background = '#4CAF50';
+        setTimeout(() => { 
+            btn.textContent = 'Log'; 
+            btn.style.background = ''; 
+            closeExerciseForm(); 
+            renderTodaysSummary(); 
+            updateWeekSummary(); 
+            updateStreakDisplay(); 
+        }, 1000);
+    } else {
+        console.error('❌ Failed to save exercise log');
+        alert('Failed to save exercise. Please try again.');
+    }
 }
 
 function selectCustomWorkout(type) {
@@ -1135,8 +1164,12 @@ function closeCustomForm() {
 }
 
 function saveCustomWorkout() {
-    if (!AppState.selectedCustomWorkout) return;
-    DataManager.saveCustomWorkout({
+    if (!AppState.selectedCustomWorkout) {
+        console.warn('⚠️ Cannot save: No custom workout selected');
+        return;
+    }
+    
+    const workoutData = {
         workoutCategory: AppState.selectedCustomWorkout,
         workoutType: document.getElementById('custom-workout-type').value || AppState.selectedCustomWorkout,
         durationMinutes: parseInt(document.getElementById('custom-duration').value),
@@ -1144,11 +1177,27 @@ function saveCustomWorkout() {
         kneeImpact: AppState.kneeImpact,
         lane: AppState.selectedLane,
         notes: document.getElementById('custom-notes').value
-    });
-    const btn = document.getElementById('save-custom-workout');
-    btn.textContent = 'Logged!';
-    btn.style.background = '#4CAF50';
-    setTimeout(() => { btn.textContent = 'Log'; btn.style.background = ''; closeCustomForm(); renderTodaysSummary(); updateStreakDisplay(); }, 1000);
+    };
+    
+    console.log('💾 Saving custom workout:', workoutData);
+    const success = DataManager.saveCustomWorkout(workoutData);
+    
+    if (success) {
+        console.log('✅ Custom workout saved successfully');
+        const btn = document.getElementById('save-custom-workout');
+        btn.textContent = 'Logged!';
+        btn.style.background = '#4CAF50';
+        setTimeout(() => { 
+            btn.textContent = 'Log'; 
+            btn.style.background = ''; 
+            closeCustomForm(); 
+            renderTodaysSummary(); 
+            updateStreakDisplay(); 
+        }, 1000);
+    } else {
+        console.error('❌ Failed to save custom workout');
+        alert('Failed to save workout. Please try again.');
+    }
 }
 
 function renderTodaysSummary() {
@@ -1590,8 +1639,10 @@ function setupMeasurementHandlers() {
             this.classList.add('active');
             AppState.posture = this.dataset.posture;
         };
-        btn.ontouchstart = h;
-        btn.onclick = h;
+        btn.onclick = (e) => {
+            e.preventDefault();
+            h.call(btn);
+        };
     });
     
     const saveBtn = document.getElementById('save-measurement');
@@ -1995,6 +2046,16 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 App initialized. Today\'s date key:', todayKey);
     console.log('📅 Current date:', new Date().toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'}));
     
+    // Verify data is loaded
+    const exerciseLogs = DataManager.getExerciseLogs();
+    const customWorkouts = DataManager.getCustomWorkouts();
+    const totalWorkouts = exerciseLogs.length + customWorkouts.length;
+    console.log('📊 Data loaded:', {
+        exerciseLogs: exerciseLogs.length,
+        customWorkouts: customWorkouts.length,
+        totalWorkouts: totalWorkouts
+    });
+    
     updateStreakDisplay();
     updateWeekSummary();
     updateMeasurementDisplay();
@@ -2004,7 +2065,6 @@ document.addEventListener('DOMContentLoaded', () => {
     scheduleMidnightReset();
     
     // Ensure KCI result is shown if check-in exists for today
-    const todayKey = DataManager.getLocalDateKey();
     const checkIn = DataManager.getCheckIn(todayKey);
     if (checkIn && checkIn.kciScore !== undefined) {
         renderKCIResult(checkIn.kciScore);
