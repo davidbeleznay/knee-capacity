@@ -27,6 +27,23 @@ function getExerciseIcon(id) {
     return '';
 }
 
+// Parse YYYY-MM-DD date string as LOCAL date (not UTC)
+// This prevents timezone issues where "2024-09-24" becomes Sept 23 in some timezones
+function parseLocalDateString(dateString) {
+    if (!dateString || typeof dateString !== 'string') return null;
+    const parts = dateString.split('-').map(Number);
+    if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+    // Create date in local timezone: new Date(year, month-1, day)
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+// Format date string (YYYY-MM-DD) to locale date string
+function formatDateString(dateString, options = {weekday: 'short', month: 'short', day: 'numeric'}) {
+    const date = parseLocalDateString(dateString);
+    if (!date) return dateString; // Fallback to original string if parsing fails
+    return date.toLocaleDateString('en-US', options);
+}
+
 function adjustValue(inputId, delta) {
     const input = document.getElementById(inputId);
     let value = parseFloat(input.value) || 0;
@@ -448,8 +465,14 @@ function updateWeekSummary() {
     weekStart.setDate(weekStart.getDate() - weekStart.getDay());
     
     const weekData = DataManager.getRecentCheckIns(7);
-    const weekExercises = DataManager.getExerciseLogs().filter(e => new Date(e.date) >= weekStart);
-    const weekCustom = DataManager.getCustomWorkouts().filter(w => new Date(w.date) >= weekStart);
+    const weekExercises = DataManager.getExerciseLogs().filter(e => {
+        const logDate = parseLocalDateString(e.date);
+        return logDate && logDate >= weekStart;
+    });
+    const weekCustom = DataManager.getCustomWorkouts().filter(w => {
+        const workoutDate = parseLocalDateString(w.date);
+        return workoutDate && workoutDate >= weekStart;
+    });
     
     const greenDays = weekData.filter(c => DataManager.getKneeStatusForCheckIn(c) === 'GREEN').length;
     const avgPain = weekData.length > 0 ? 
@@ -1175,7 +1198,7 @@ function renderExerciseTrends(id) {
             const height = max > 0 ? (val / max) * 100 : 0;
             const improved = i > 0 && val > getValue(recent[i-1]);
             return `<div class="chart-bar" style="height: ${height}%; background: ${improved ? '#4CAF50' : '#2E7D32'};">
-                <span class="chart-value">${val}</span><span class="chart-label">${new Date(l.date).getDate()}</span></div>`;
+                <span class="chart-value">${val}</span><span class="chart-label">${parseLocalDateString(l.date)?.getDate() || ''}</span></div>`;
         }).join('')}</div>`;
 }
 
@@ -1262,8 +1285,18 @@ function renderAnalytics(days) {
 }
 
 function renderSummaryStats(days) {
-    const exercises = DataManager.getExerciseLogs().filter(e => (new Date() - new Date(e.date)) / (1000*60*60*24) <= days);
-    const custom = DataManager.getCustomWorkouts().filter(w => (new Date() - new Date(w.date)) / (1000*60*60*24) <= days);
+    const exercises = DataManager.getExerciseLogs().filter(e => {
+        const logDate = parseLocalDateString(e.date);
+        if (!logDate) return false;
+        const daysDiff = (new Date() - logDate) / (1000*60*60*24);
+        return daysDiff <= days;
+    });
+    const custom = DataManager.getCustomWorkouts().filter(w => {
+        const workoutDate = parseLocalDateString(w.date);
+        if (!workoutDate) return false;
+        const daysDiff = (new Date() - workoutDate) / (1000*60*60*24);
+        return daysDiff <= days;
+    });
     const checkIns = DataManager.getRecentCheckIns(days);
     
     const avgPain = checkIns.length > 0 ? (checkIns.reduce((s, c) => s + (c.pain || 0), 0) / checkIns.length).toFixed(1) : 0;
@@ -1322,7 +1355,7 @@ function renderWorkoutFrequency(days) {
                 return `
                     <div class="chart-bar" style="height: ${height}%; background: ${color}; min-height: 8px;">
                         ${d.count > 0 ? `<span class="chart-value">${d.count}</span>` : ''}
-                        <span class="chart-label">${new Date(d.date).getDate()}</span>
+                        <span class="chart-label">${parseLocalDateString(d.date)?.getDate() || ''}</span>
                     </div>
                 `;
             }).join('')}
@@ -1334,7 +1367,12 @@ function renderExerciseBreakdown(days) {
     const container = document.getElementById('exercise-breakdown');
     if (!container) return;
     
-    const exercises = DataManager.getExerciseLogs().filter(e => (new Date() - new Date(e.date)) / (1000*60*60*24) <= days);
+    const exercises = DataManager.getExerciseLogs().filter(e => {
+        const logDate = parseLocalDateString(e.date);
+        if (!logDate) return false;
+        const daysDiff = (new Date() - logDate) / (1000*60*60*24);
+        return daysDiff <= days;
+    });
     
     if (exercises.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: var(--gray-600); padding: 20px;">None yet</p>';
@@ -1430,7 +1468,7 @@ function renderMetricTrend(sessions, metric, label) {
                     return `
                         <div class="chart-bar" style="height: ${height}%; background: ${color};">
                             <span class="chart-value">${val}</span>
-                            <span class="chart-label">${new Date(l.date).getDate()}</span>
+                            <span class="chart-label">${parseLocalDateString(l.date)?.getDate() || ''}</span>
                         </div>
                     `;
                 }).join('')}
@@ -1452,7 +1490,7 @@ function renderSwellingTrend(days) {
         const height = (val / 3) * 100 || 5;
         const colors = ['#4CAF50', '#FFC107', '#FF9800', '#F44336'];
         return `<div class="chart-bar" style="height: ${height}%; background: ${colors[val]}; min-height: 10px;">
-            <span class="chart-label">${new Date(c.date).getDate()}</span></div>`;
+            <span class="chart-label">${parseLocalDateString(c.date)?.getDate() || ''}</span></div>`;
     }).join('')}</div><div style="text-align: center; margin-top: 16px; font-size: 13px;">&#128994; None | &#128993; Mild | &#128992; Mod | &#128308; Severe</div>`;
 }
 
@@ -1477,8 +1515,18 @@ function renderPainTrend(days) {
 
 function renderHistory(days) {
     const checkIns = DataManager.getRecentCheckIns(days);
-    const exerciseLogs = DataManager.getExerciseLogs().filter(e => (new Date() - new Date(e.date)) / (1000*60*60*24) <= days);
-    const customWorkouts = DataManager.getCustomWorkouts().filter(w => (new Date() - new Date(w.date)) / (1000*60*60*24) <= days);
+    const exerciseLogs = DataManager.getExerciseLogs().filter(e => {
+        const logDate = parseLocalDateString(e.date);
+        if (!logDate) return false;
+        const daysDiff = (new Date() - logDate) / (1000*60*60*24);
+        return daysDiff <= days;
+    });
+    const customWorkouts = DataManager.getCustomWorkouts().filter(w => {
+        const workoutDate = parseLocalDateString(w.date);
+        if (!workoutDate) return false;
+        const daysDiff = (new Date() - workoutDate) / (1000*60*60*24);
+        return daysDiff <= days;
+    });
     
     const list = document.getElementById('history-list');
     if (checkIns.length === 0 && exerciseLogs.length === 0 && customWorkouts.length === 0) { 
@@ -1499,7 +1547,7 @@ function renderHistory(days) {
         const dayCu = customWorkouts.filter(w => w.date === date);
         
         let html = `<div class="history-item" style="background: white; padding: 18px; border-radius: 12px; margin-bottom: 12px;">
-            <div style="font-weight: 800; font-size: 16px; margin-bottom: 10px;">${new Date(date).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'})}</div>`;
+            <div style="font-weight: 800; font-size: 16px; margin-bottom: 10px;">${formatDateString(date, {weekday: 'short', month: 'short', day: 'numeric'})}</div>`;
         
         if (checkIn) {
             const status = DataManager.getKneeStatusForCheckIn(checkIn);
@@ -1615,7 +1663,7 @@ function updateMeasurementDisplay() {
     const latest = DataManager.getLatestBodyMeasurement();
     const el = document.getElementById('last-measurement-date');
     if (!el) return;
-    if (latest) el.textContent = `Last: ${new Date(latest.date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}`;
+    if (latest) el.textContent = `Last: ${formatDateString(latest.date, {month: 'short', day: 'numeric'})}`;
     else el.textContent = 'Tap to add';
 }
 
@@ -1863,7 +1911,7 @@ function renderEventsTimeline() {
     }
     
     container.innerHTML = events.map(e => {
-        const date = new Date(e.date).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'});
+        const date = formatDateString(e.date, {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'});
         const type = EVENT_TYPES[e.eventType];
         
         // Check for red flags
@@ -1943,6 +1991,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Initial rendering
+    const todayKey = DataManager.getLocalDateKey();
+    console.log('🚀 App initialized. Today\'s date key:', todayKey);
+    console.log('📅 Current date:', new Date().toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'}));
+    
     updateStreakDisplay();
     updateWeekSummary();
     updateMeasurementDisplay();
