@@ -495,50 +495,48 @@ const DataManager = {
         
         console.log('💾 saveCheckIn called for date:', today);
         console.log('📅 Current time:', new Date().toISOString());
-        console.log('📋 Existing check-ins:', checkIns.map(c => ({ date: c.date, createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : 'missing' })));
         
-        // Find existing check-in for today
-        const existingIndex = checkIns.findIndex(c => c.date === today);
-        
-        // If we found an existing check-in, verify it was actually created today
-        if (existingIndex >= 0) {
-            const existing = checkIns[existingIndex];
-            if (existing.createdAt) {
-                const createdDate = this.getLocalDateKey(new Date(existing.createdAt));
-                if (createdDate !== today) {
-                    console.warn('⚠️ Found check-in with today\'s date but created on:', createdDate);
-                    console.warn('⚠️ Moving it to correct date:', createdDate);
-                    // Move it to the correct date
-                    checkIns[existingIndex].date = createdDate;
-                    // Continue to create a new one for today
-                } else {
-                    console.log('✅ Updating existing check-in for today');
+        // Get existing check-ins for today
+        const todayCheckIns = checkIns.filter(c => {
+            if (c.date === today) {
+                if (c.createdAt) {
+                    const createdDate = this.getLocalDateKey(new Date(c.createdAt));
+                    return createdDate === today;
                 }
+                return true; // Old check-in without createdAt, assume it's for today
             }
-        }
+            return false;
+        });
         
+        console.log('📋 Existing check-ins for today:', todayCheckIns.length);
+        
+        // Always create a new check-in (allow multiple per day)
         const kciScore = this.calculateKCI(checkInData);
         const enrichedData = { 
             ...checkInData, 
+            id: `checkin-${now}`, // Unique ID for this check-in
             date: today, 
             kciScore,
             createdAt: now
         };
         
-        // Find the index again (in case we moved the old one)
-        const finalIndex = checkIns.findIndex(c => c.date === today && c.createdAt && this.getLocalDateKey(new Date(c.createdAt)) === today);
+        // Fix any check-ins with today's date but created on a different day
+        checkIns.forEach((checkIn, index) => {
+            if (checkIn.date === today && checkIn.createdAt) {
+                const createdDate = this.getLocalDateKey(new Date(checkIn.createdAt));
+                if (createdDate !== today) {
+                    console.warn('⚠️ Fixing check-in dated today but created on:', createdDate);
+                    checkIns[index].date = createdDate;
+                }
+            }
+        });
         
-        if (finalIndex >= 0) {
-            console.log('🔄 Updating check-in at index:', finalIndex);
-            checkIns[finalIndex] = enrichedData;
-        } else {
-            console.log('➕ Creating new check-in for today');
-            checkIns.push(enrichedData);
-        }
+        // Add the new check-in
+        checkIns.push(enrichedData);
         
         const success = this.storage.set('checkIns', checkIns);
         if (success) {
-            console.log('✅ Check-in saved for', today, 'KCI:', kciScore, 'createdAt:', new Date(now).toISOString());
+            console.log('✅ New check-in saved for', today, 'KCI:', kciScore, '(Total today:', todayCheckIns.length + 1, ')');
             return enrichedData;
         }
         return null;
@@ -549,7 +547,39 @@ const DataManager = {
     },
     
     getCheckIn(date) {
-        return this.getCheckIns().find(c => c.date === date);
+        // Return the most recent check-in for the given date
+        const checkIns = this.getCheckIns();
+        const dateCheckIns = checkIns.filter(c => {
+            if (c.date === date) {
+                if (c.createdAt) {
+                    const createdDate = this.getLocalDateKey(new Date(c.createdAt));
+                    return createdDate === date;
+                }
+                return true; // Old check-in without createdAt
+            }
+            return false;
+        });
+        
+        // Return the most recent one (highest createdAt)
+        if (dateCheckIns.length === 0) return null;
+        return dateCheckIns.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+    },
+    
+    getCheckInsForDate(date) {
+        // Return all check-ins for a given date, sorted by most recent first
+        const checkIns = this.getCheckIns();
+        const dateCheckIns = checkIns.filter(c => {
+            if (c.date === date) {
+                if (c.createdAt) {
+                    const createdDate = this.getLocalDateKey(new Date(c.createdAt));
+                    return createdDate === date;
+                }
+                return true; // Old check-in without createdAt
+            }
+            return false;
+        });
+        
+        return dateCheckIns.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     },
     
     getRecentCheckIns(days) {

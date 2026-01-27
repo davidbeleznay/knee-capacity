@@ -120,6 +120,8 @@ function switchView(viewName) {
     
     // Trigger view-specific rendering
     if (viewName === 'home') {
+        // Check if it's a new day first
+        checkForNewDay();
         // Always reload today's check-in to ensure form is fresh
         loadTodayCheckIn();
         const todayKey = DataManager.getLocalDateKey();
@@ -208,7 +210,12 @@ function saveCheckIn(e) {
     const todayKey = DataManager.getLocalDateKey();
     console.log('💾 Saving check-in for date:', todayKey);
     console.log('🕐 Current time:', new Date().toISOString());
-    console.log('💾 Saving check-in and calculating KCI...');
+    
+    // Check how many check-ins exist for today (before saving)
+    const todayCheckIns = DataManager.getCheckInsForDate(todayKey);
+    const checkInCount = todayCheckIns.length;
+    
+    console.log('💾 Saving new check-in... (you already have', checkInCount, 'check-in(s) today)');
     
     const checkInData = { 
         swelling: AppState.swelling, 
@@ -224,9 +231,21 @@ function saveCheckIn(e) {
         updateWeekSummary();
         renderKCIResult(enrichedData.kciScore);
         
+        // Update the count indicator
+        const newCount = checkInCount + 1;
+        const countIndicator = document.getElementById('checkin-count-indicator');
+        if (countIndicator) {
+            countIndicator.textContent = `${newCount} check-in${newCount > 1 ? 's' : ''} logged today`;
+            countIndicator.style.display = 'block';
+        }
+        
         const btn = document.getElementById('save-checkin');
-        btn.textContent = 'Calculated!';
+        btn.textContent = `Saved! (${newCount} today)`;
+        console.log(`✅ New check-in #${newCount} saved for today - you can log another if your condition changes`);
         btn.style.background = '#4CAF50';
+        
+        // Keep form populated with what they just saved, but they can change values
+        // and save again to create another check-in
         setTimeout(() => {
             btn.textContent = 'Calculate My Knee Status';
             btn.style.background = '';
@@ -322,29 +341,26 @@ function loadTodayCheckIn() {
     console.log('📅 Loading check-in for today:', todayKey);
     console.log('🕐 Current time:', now.toISOString());
     
-    // Get all check-ins and find the one that matches today exactly
-    const allCheckIns = DataManager.getCheckIns();
-    let checkIn = allCheckIns.find(c => c.date === todayKey);
+    // Get the most recent check-in for today (if any)
+    const checkIn = DataManager.getCheckIn(todayKey);
+    const todayCheckIns = DataManager.getCheckInsForDate(todayKey);
+    const checkInCount = todayCheckIns.length;
     
-    // Verify the check-in was actually created today
-    if (checkIn && checkIn.createdAt) {
-        const createdDate = DataManager.getLocalDateKey(new Date(checkIn.createdAt));
-        if (createdDate !== todayKey) {
-            console.warn('⚠️ Found check-in with today\'s date but created on:', createdDate);
-            console.warn('⚠️ Ignoring this check-in - it belongs to a different day');
-            checkIn = null; // Ignore it - it's not really for today
-        } else {
-            console.log('✅ Verified check-in was created today');
-        }
-    } else if (checkIn && !checkIn.createdAt) {
-        // Old check-in without createdAt - we can't verify, so be cautious
-        console.warn('⚠️ Found check-in without createdAt timestamp - treating as potentially stale');
-        // Only use it if it was created very recently (within last 24 hours)
-        // Since we can't know, let's be safe and ignore it
-        checkIn = null;
+    console.log('📋 Check-ins for today:', checkInCount);
+    if (checkIn) {
+        console.log('📋 Most recent check-in:', `Date: ${checkIn.date}, KCI: ${checkIn.kciScore}, Time: ${checkIn.timeOfDay}`);
     }
     
-    console.log('📋 Final check-in to load:', checkIn ? `Date: ${checkIn.date}, KCI: ${checkIn.kciScore}` : 'None');
+    // Update check-in count indicator if element exists
+    const countIndicator = document.getElementById('checkin-count-indicator');
+    if (countIndicator) {
+        if (checkInCount > 0) {
+            countIndicator.textContent = `${checkInCount} check-in${checkInCount > 1 ? 's' : ''} logged today`;
+            countIndicator.style.display = 'block';
+        } else {
+            countIndicator.style.display = 'none';
+        }
+    }
     
     // Always clear form first to ensure clean state
     document.querySelectorAll('.swelling-btn').forEach(b => b.classList.remove('active'));
@@ -447,16 +463,37 @@ function resetDailyCheckInUI() {
     if (notes) notes.value = '';
 }
 
+// Track the last known date to detect day changes
+let lastKnownDate = DataManager.getLocalDateKey();
+
+function checkForNewDay() {
+    const todayKey = DataManager.getLocalDateKey();
+    
+    if (todayKey !== lastKnownDate) {
+        console.log('🌅 New day detected! Previous:', lastKnownDate, 'Today:', todayKey);
+        lastKnownDate = todayKey;
+        
+        // Clear KCI and reset form for new day
+        clearKCIResult();
+        resetDailyCheckInUI();
+        loadTodayCheckIn(); // This will load today's check-in if it exists, or show empty form
+        updateWeekSummary();
+        updateStreakDisplay();
+        
+        return true; // Day changed
+    }
+    return false; // Same day
+}
+
 function scheduleMidnightReset() {
     const now = new Date();
     const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 2);
     const delayMs = nextMidnight.getTime() - now.getTime();
 
     setTimeout(() => {
-        clearKCIResult();
-        resetDailyCheckInUI();
-        updateWeekSummary();
-        scheduleMidnightReset();
+        console.log('⏰ Midnight reset triggered');
+        checkForNewDay();
+        scheduleMidnightReset(); // Schedule next reset
     }, Math.max(delayMs, 1000));
 }
 
@@ -2041,10 +2078,16 @@ document.addEventListener('DOMContentLoaded', () => {
         populateAnalyticsExerciseSelect();
     }
     
+    // Initialize last known date
+    lastKnownDate = DataManager.getLocalDateKey();
+    
     // Initial rendering
     const todayKey = DataManager.getLocalDateKey();
     console.log('🚀 App initialized. Today\'s date key:', todayKey);
     console.log('📅 Current date:', new Date().toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'}));
+    
+    // Check for new day on startup (in case app was left open overnight)
+    checkForNewDay();
     
     // Verify data is loaded
     const exerciseLogs = DataManager.getExerciseLogs();
@@ -2113,6 +2156,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') {
             console.log('📱 App backgrounded, ensuring data is synced...');
+        } else if (document.visibilityState === 'visible') {
+            // Check for new day when app becomes visible (user might have left it open overnight)
+            console.log('📱 App visible, checking for day change...');
+            if (checkForNewDay()) {
+                // If day changed, refresh the current view
+                if (AppState.currentView === 'home') {
+                    switchView('home');
+                }
+            }
         }
     });
 });
