@@ -231,25 +231,44 @@ function saveCheckIn(e) {
         updateWeekSummary();
         renderKCIResult(enrichedData.kciScore);
         
-        // Update the count indicator
-        const newCount = checkInCount + 1;
-        const countIndicator = document.getElementById('checkin-count-indicator');
-        if (countIndicator) {
-            countIndicator.textContent = `${newCount} check-in${newCount > 1 ? 's' : ''} logged today`;
-            countIndicator.style.display = 'block';
-        }
-        
-        const btn = document.getElementById('save-checkin');
-        btn.textContent = `Saved! (${newCount} today)`;
-        console.log(`✅ New check-in #${newCount} saved for today - you can log another if your condition changes`);
-        btn.style.background = '#4CAF50';
-        
-        // Keep form populated with what they just saved, but they can change values
-        // and save again to create another check-in
+        // Get the actual count after saving (to verify it worked)
+        // Use a small delay to ensure storage has been written
         setTimeout(() => {
-            btn.textContent = 'Calculate My Knee Status';
-            btn.style.background = '';
-        }, 2000);
+            const actualCheckIns = DataManager.getCheckInsForDate(todayKey);
+            const actualCount = actualCheckIns.length;
+            
+            console.log('📊 Verification - Check-ins for today after save:', actualCount);
+            console.log('📋 All check-ins for today:', actualCheckIns.map(c => ({
+                id: c.id,
+                time: c.timeOfDay,
+                pain: c.pain,
+                swelling: c.swelling,
+                kci: c.kciScore,
+                createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : 'missing'
+            })));
+            
+            // Update the count indicator
+            const countIndicator = document.getElementById('checkin-count-indicator');
+            if (countIndicator) {
+                countIndicator.textContent = `${actualCount} check-in${actualCount > 1 ? 's' : ''} logged today`;
+                countIndicator.style.display = 'block';
+                console.log('✅ Count indicator updated:', countIndicator.textContent);
+            } else {
+                console.warn('⚠️ Count indicator element not found!');
+            }
+            
+            const btn = document.getElementById('save-checkin');
+            if (btn) {
+                btn.textContent = `Saved! (${actualCount} today)`;
+                console.log(`✅ New check-in #${actualCount} saved for today - you can log another if your condition changes`);
+                btn.style.background = '#4CAF50';
+                
+                setTimeout(() => {
+                    btn.textContent = 'Calculate My Knee Status';
+                    btn.style.background = '';
+                }, 2000);
+            }
+        }, 100); // Small delay to ensure storage write completes
     }
 }
 
@@ -1600,7 +1619,19 @@ function renderPainTrend(days) {
 }
 
 function renderHistory(days) {
-    const checkIns = DataManager.getRecentCheckIns(days);
+    // Get ALL check-ins (not just one per date) and filter by days
+    const allCheckIns = DataManager.getCheckIns();
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffDateKey = DataManager.getLocalDateKey(cutoffDate);
+    
+    const checkIns = allCheckIns.filter(c => {
+        const checkInDate = parseLocalDateString(c.date);
+        if (!checkInDate) return false;
+        const checkInDateKey = DataManager.getLocalDateKey(checkInDate);
+        return checkInDateKey >= cutoffDateKey;
+    });
+    
     const exerciseLogs = DataManager.getExerciseLogs().filter(e => {
         const logDate = parseLocalDateString(e.date);
         if (!logDate) return false;
@@ -1620,7 +1651,7 @@ function renderHistory(days) {
         return; 
     }
     
-    // Create a combined map of date -> checkin/workouts
+    // Create a combined map of date -> checkins/workouts
     const dates = [...new Set([
         ...checkIns.map(c => c.date),
         ...exerciseLogs.map(e => e.date),
@@ -1628,20 +1659,39 @@ function renderHistory(days) {
     ])].sort().reverse();
 
     list.innerHTML = dates.map(date => {
-        const checkIn = checkIns.find(c => c.date === date);
+        // Get ALL check-ins for this date (sorted by most recent first)
+        const dateCheckIns = DataManager.getCheckInsForDate(date);
         const dayEx = exerciseLogs.filter(e => e.date === date);
         const dayCu = customWorkouts.filter(w => w.date === date);
         
         let html = `<div class="history-item" style="background: white; padding: 18px; border-radius: 12px; margin-bottom: 12px;">
             <div style="font-weight: 800; font-size: 16px; margin-bottom: 10px;">${formatDateString(date, {weekday: 'short', month: 'short', day: 'numeric'})}</div>`;
         
-        if (checkIn) {
-            const status = DataManager.getKneeStatusForCheckIn(checkIn);
+        // Display all check-ins for this date
+        if (dateCheckIns.length > 0) {
             const statusColors = { GREEN: '#4CAF50', YELLOW: '#FFC107', RED: '#F44336' };
-            html += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--gray-100);">
-                <span style="font-size: 14px; font-weight: 600;">Status: <span style="color: ${statusColors[status]}">${status}</span></span>
-                <span style="font-size: 12px; color: var(--gray-600);">${checkIn.swelling} | Pain ${checkIn.pain}/10</span>
-            </div>`;
+            const timeLabels = { morning: '🌅 AM', afternoon: '☀️ PM', evening: '🌙 Eve' };
+            
+            dateCheckIns.forEach((checkIn, index) => {
+                const status = DataManager.getKneeStatusForCheckIn(checkIn);
+                const timeLabel = timeLabels[checkIn.timeOfDay] || checkIn.timeOfDay || '';
+                const isLast = index === dateCheckIns.length - 1;
+                
+                html += `<div style="display: flex; justify-content: space-between; align-items: center; padding: ${index === 0 ? '8px 0 8px 0' : '8px 0'}; ${!isLast ? 'border-bottom: 1px solid var(--gray-200); margin-bottom: 4px;' : ''}">
+                    <div style="flex: 1;">
+                        <span style="font-size: 14px; font-weight: 600;">Status: <span style="color: ${statusColors[status]}">${status}</span></span>
+                        ${dateCheckIns.length > 1 ? `<span style="font-size: 11px; color: var(--gray-500); margin-left: 8px;">${timeLabel}</span>` : ''}
+                    </div>
+                    <span style="font-size: 12px; color: var(--gray-600);">${checkIn.swelling} | Pain ${checkIn.pain}/10</span>
+                </div>`;
+            });
+            
+            // Show count if multiple check-ins
+            if (dateCheckIns.length > 1) {
+                html += `<div style="font-size: 11px; color: var(--gray-500); margin-top: 4px; font-style: italic;">
+                    ${dateCheckIns.length} check-ins logged this day
+                </div>`;
+            }
         }
 
         if (dayEx.length > 0 || dayCu.length > 0) {

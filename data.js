@@ -536,7 +536,17 @@ const DataManager = {
         
         const success = this.storage.set('checkIns', checkIns);
         if (success) {
-            console.log('✅ New check-in saved for', today, 'KCI:', kciScore, '(Total today:', todayCheckIns.length + 1, ')');
+            // Verify the save by getting all check-ins for today again
+            const verifyCheckIns = this.getCheckInsForDate(today);
+            console.log('✅ New check-in saved for', today, 'KCI:', kciScore);
+            console.log('📊 Total check-ins for today after save:', verifyCheckIns.length);
+            console.log('📋 All check-ins for today:', verifyCheckIns.map(c => ({
+                id: c.id,
+                time: c.timeOfDay,
+                pain: c.pain,
+                swelling: c.swelling,
+                createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : 'missing'
+            })));
             return enrichedData;
         }
         return null;
