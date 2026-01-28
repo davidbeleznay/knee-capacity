@@ -498,7 +498,8 @@ textarea:focus {
     border-color: var(--primary);
 }
 
-.like-toggle {
+.like-toggle,
+.dislike-toggle {
     border: 2px solid var(--gray-300);
     background: white;
     border-radius: 12px;
@@ -558,6 +559,40 @@ textarea:focus {
 
 .exercise-tile.favorite-tile:hover {
     border-color: #FFC107;
+}
+
+/* Disliked exercise styling */
+.exercise-tile.disliked-tile {
+    opacity: 0.5;
+    filter: grayscale(0.6);
+}
+
+.exercise-tile.disliked-tile:hover {
+    opacity: 0.7;
+}
+
+.dislike-toggle {
+    font-size: 16px;
+    padding: 4px 8px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dislike-toggle:hover {
+    background: var(--gray-100);
+}
+
+.dislike-toggle.active {
+    background: var(--gray-300);
+    opacity: 1;
 }
 
 .tile-header {

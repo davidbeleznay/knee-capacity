@@ -324,15 +324,38 @@ function renderKCIResult(score) {
     laneName.style.color = info.color;
     planDesc.textContent = info.plan;
     
-    // 5. Update Recommendations
-    const recommendations = DataManager.getRecommendedExercises(info.lane.split(' ')[0]);
-    recommendationsList.innerHTML = recommendations.map(ex => `
-        <div class="kci-recommendation-tile" onclick="switchView('log'); selectExerciseForLogging('${ex.id}')">
-            <span class="tile-icon">${getExerciseIcon(ex.id)}</span>
-            <span class="tile-name">${ex.name}</span>
-            <span class="plus-log-btn">+</span>
-        </div>
-    `).join('');
+    // 5. Update Recommendations with kinetic chain coverage
+    // Extract primary lane (first word) for matching, but pass full lane string
+    const primaryLane = info.lane.split(' ')[0].toUpperCase();
+    const recommendations = DataManager.getRecommendedExercises(primaryLane, score);
+    const isBuildPrime = score >= 70;
+    const coverageNote = isBuildPrime 
+        ? 'Full kinetic chain coverage: Quad, Hip, Posterior, Ankle'
+        : 'Gentle coverage: Isometric Quad, Hip Control, Mobility';
+    
+    if (recommendations.length > 0) {
+        recommendationsList.innerHTML = `
+            <div style="font-size: 11px; color: var(--gray-600); margin-bottom: 12px; font-style: italic; text-align: center;">
+                ${coverageNote}
+            </div>
+            ${recommendations.map(rec => `
+                <div class="kci-recommendation-tile" onclick="switchView('log'); selectExerciseForLogging('${rec.exercise.id}')">
+                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
+                        <div style="font-size: 10px; text-transform: uppercase; color: var(--gray-600); font-weight: 700; letter-spacing: 0.5px;">
+                            ${rec.categoryLabel}
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="tile-icon">${getExerciseIcon(rec.exercise.id)}</span>
+                            <span class="tile-name">${rec.exercise.name}</span>
+                        </div>
+                    </div>
+                    <span class="plus-log-btn">+</span>
+                </div>
+            `).join('')}
+        `;
+    } else {
+        recommendationsList.innerHTML = '<p style="text-align: center; color: var(--gray-600); padding: 20px;">No exercises available for this lane</p>';
+    }
     
     // 6. Setup Buttons
     document.getElementById('kci-start-workout').onclick = () => {
@@ -751,12 +774,24 @@ function setupWorkoutHandlers() {
         likeBtn.onclick = (e) => {
             e.preventDefault();
             if (!AppState.selectedExercise) return;
-            setExerciseLike(AppState.selectedExercise.id, true);
+            // Toggle like (if already liked, unlike it)
+            const currentlyLiked = DataManager.isExerciseLiked(AppState.selectedExercise.id);
+            setExerciseLike(AppState.selectedExercise.id, !currentlyLiked);
+            // If liking, remove dislike
+            if (!currentlyLiked) {
+                setExerciseDislike(AppState.selectedExercise.id, false);
+            }
         };
         dislikeBtn.onclick = (e) => {
             e.preventDefault();
             if (!AppState.selectedExercise) return;
-            setExerciseLike(AppState.selectedExercise.id, false);
+            // Toggle dislike
+            const currentlyDisliked = DataManager.isExerciseDisliked(AppState.selectedExercise.id);
+            setExerciseDislike(AppState.selectedExercise.id, !currentlyDisliked);
+            // If disliking, remove like
+            if (!currentlyDisliked) {
+                setExerciseLike(AppState.selectedExercise.id, false);
+            }
         };
     }
     
@@ -899,10 +934,11 @@ function renderExerciseTiles() {
             const name = ex.name.replace(' (Isometric)', '').replace(' (Eccentric)', '');
             const isNotRecommended = section.type === 'not-recommended';
             const isFavorite = favoriteIds.includes(ex.id);
-            const likeIcon = '👍';
+            const isDisliked = DataManager.isExerciseDisliked(ex.id);
+            const likeIcon = isFavorite ? '❤️' : '🤍';
             
             html += `
-                <div id="tile-${ex.id}" class="exercise-tile ${isNotRecommended ? 'not-recommended' : ''} ${isFavorite ? 'favorite-tile' : ''}" 
+                <div id="tile-${ex.id}" class="exercise-tile ${isNotRecommended ? 'not-recommended' : ''} ${isFavorite ? 'favorite-tile' : ''} ${isDisliked ? 'disliked-tile' : ''}" 
                      onclick="selectExerciseForLogging('${ex.id}')">
                     <div class="tile-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                         <div style="flex: 1;">
@@ -913,9 +949,14 @@ function renderExerciseTiles() {
                             <div class="tile-name" style="font-size: 14px; font-weight: 700;">${name}</div>
                             <div class="tile-meta" style="font-size: 12px; color: var(--gray-600);">${ex.dosage}</div>
                         </div>
-                        <button class="like-toggle ${isFavorite ? 'liked' : ''}" data-like-btn="true" aria-pressed="${isFavorite}" onclick="event.stopPropagation(); toggleExerciseLike('${ex.id}')">
-                            ${likeIcon}
-                        </button>
+                        <div style="display: flex; gap: 4px;">
+                            <button class="like-toggle ${isFavorite ? 'liked' : ''}" data-like-btn="true" aria-pressed="${isFavorite}" onclick="event.stopPropagation(); toggleExerciseLike('${ex.id}')">
+                                ${likeIcon}
+                            </button>
+                            <button class="dislike-toggle ${isDisliked ? 'active' : ''}" data-dislike-btn="true" aria-pressed="${isDisliked}" onclick="event.stopPropagation(); toggleExerciseDislike('${ex.id}')">
+                                👎
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="tile-details" style="display: none; width: 100%; margin-top: 16px; border-top: 1px solid var(--gray-200); padding-top: 16px;">
@@ -961,6 +1002,10 @@ function setExerciseLike(exerciseId, liked) {
 
 function toggleExerciseLike(exerciseId) {
     const liked = DataManager.toggleExerciseLike(exerciseId);
+    // If liking, remove dislike
+    if (liked) {
+        DataManager.setExerciseDislike(exerciseId, false);
+    }
     updateExerciseLikeUI(exerciseId);
 
     const logSections = document.getElementById('log-sections');
@@ -971,24 +1016,72 @@ function toggleExerciseLike(exerciseId) {
     return liked;
 }
 
+function setExerciseDislike(exerciseId, disliked) {
+    DataManager.setExerciseDislike(exerciseId, disliked);
+    // If disliking, remove like
+    if (disliked) {
+        DataManager.setExerciseLike(exerciseId, false);
+    }
+    updateExerciseLikeUI(exerciseId);
+
+    const logSections = document.getElementById('log-sections');
+    if (!logSections || logSections.style.display !== 'none') {
+        renderExerciseTiles();
+    }
+}
+
+function toggleExerciseDislike(exerciseId) {
+    const disliked = DataManager.toggleExerciseDislike(exerciseId);
+    // If disliking, remove like
+    if (disliked) {
+        DataManager.setExerciseLike(exerciseId, false);
+    }
+    updateExerciseLikeUI(exerciseId);
+
+    const logSections = document.getElementById('log-sections');
+    if (!logSections || logSections.style.display !== 'none') {
+        renderExerciseTiles();
+    }
+
+    return disliked;
+}
+
 function updateExerciseLikeUI(exerciseId) {
     const liked = DataManager.isExerciseLiked(exerciseId);
+    const disliked = DataManager.isExerciseDisliked(exerciseId);
     const tile = document.getElementById(`tile-${exerciseId}`);
+    
     if (tile) {
         tile.classList.toggle('favorite-tile', liked);
+        tile.classList.toggle('disliked-tile', disliked);
+        
         const likeBtn = tile.querySelector('.like-toggle');
+        const dislikeBtn = tile.querySelector('.dislike-toggle');
+        
         if (likeBtn) {
-            likeBtn.textContent = liked ? '👍' : '👎';
+            likeBtn.textContent = liked ? '❤️' : '🤍';
             likeBtn.classList.toggle('liked', liked);
             likeBtn.setAttribute('aria-pressed', liked ? 'true' : 'false');
+        }
+        
+        if (dislikeBtn) {
+            dislikeBtn.textContent = '👎';
+            dislikeBtn.classList.toggle('active', disliked);
+            dislikeBtn.setAttribute('aria-pressed', disliked ? 'true' : 'false');
         }
     }
 
     if (AppState.selectedExercise && AppState.selectedExercise.id === exerciseId) {
         const likeBtn = document.getElementById('exercise-like');
         const dislikeBtn = document.getElementById('exercise-dislike');
-        if (likeBtn) likeBtn.classList.toggle('active', liked);
-        if (dislikeBtn) dislikeBtn.classList.remove('active');
+        if (likeBtn) {
+            likeBtn.textContent = liked ? '❤️ Unlike' : '🤍 Like';
+            likeBtn.classList.toggle('active', liked);
+        }
+        if (dislikeBtn) {
+            dislikeBtn.textContent = disliked ? '👎 Disliked' : '👎 Dislike';
+            dislikeBtn.classList.toggle('active', disliked);
+        }
     }
 }
 
@@ -1025,6 +1118,9 @@ function selectExerciseForLogging(id) {
     
     const ex = AppState.selectedExercise;
     document.getElementById('selected-exercise-name').textContent = ex.name;
+    
+    // Update like/dislike UI in form
+    updateExerciseLikeUI(id);
     
     // Populate exercise instructions
     if (ex.setup && ex.setup.length > 0) {

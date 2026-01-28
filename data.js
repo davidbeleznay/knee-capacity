@@ -122,7 +122,7 @@ const DataManager = {
             const stores = [
                 'sessions', 'checkIns', 'exerciseLogs', 
                 'customWorkouts', 'bodyMeasurements', 
-                'significantEvents', 'likedExercises'
+                'significantEvents', 'likedExercises', 'dislikedExercises'
             ];
             
             stores.forEach(store => {
@@ -161,7 +161,7 @@ const DataManager = {
         const stores = [
             'sessions', 'checkIns', 'exerciseLogs',
             'customWorkouts', 'bodyMeasurements',
-            'significantEvents', 'likedExercises'
+            'significantEvents', 'likedExercises', 'dislikedExercises'
         ];
 
         stores.forEach(store => {
@@ -184,7 +184,7 @@ const DataManager = {
             const storeKeys = new Set([
                 'sessions', 'checkIns', 'exerciseLogs',
                 'customWorkouts', 'bodyMeasurements',
-                'significantEvents', 'likedExercises'
+                'significantEvents', 'likedExercises', 'dislikedExercises'
             ]);
 
             let restored = false;
@@ -1355,6 +1355,37 @@ const DataManager = {
         return liked;
     },
     
+    // Dislike functionality
+    getDislikedExerciseIds() {
+        return this.storage.get('dislikedExercises', []);
+    },
+    
+    isExerciseDisliked(exerciseId) {
+        return this.getDislikedExerciseIds().includes(exerciseId);
+    },
+    
+    setExerciseDislike(exerciseId, disliked) {
+        const dislikedIds = this.getDislikedExerciseIds();
+        const index = dislikedIds.indexOf(exerciseId);
+        
+        if (disliked && index === -1) {
+            dislikedIds.push(exerciseId);
+        }
+        
+        if (!disliked && index !== -1) {
+            dislikedIds.splice(index, 1);
+        }
+        
+        this.storage.set('dislikedExercises', dislikedIds);
+        return dislikedIds;
+    },
+    
+    toggleExerciseDislike(exerciseId) {
+        const disliked = !this.isExerciseDisliked(exerciseId);
+        this.setExerciseDislike(exerciseId, disliked);
+        return disliked;
+    },
+    
     getDerivedMetrics() {
         const latest = this.getLatestBodyMeasurement();
         if (!latest) return {};
@@ -1402,25 +1433,150 @@ const DataManager = {
             .map(([name, count]) => ({ name, count }));
     },
 
-    getRecommendedExercises(lane) {
+    getRecommendedExercises(lane, kciScore = null) {
         const allExercises = window.EXERCISES || [];
         const logs = this.getExerciseLogs();
+        const likedIds = this.getLikedExerciseIds();
+        const dislikedIds = this.getDislikedExerciseIds();
         
-        // Filter by lane
-        const laneExercises = allExercises.filter(ex => ex.phase.includes(lane));
+        // Determine capacity tier based on KCI score
+        const isBuildPrime = kciScore !== null && kciScore >= 70;
         
-        // Sort by variety (last done date)
-        const sorted = laneExercises.sort((a, b) => {
-            const lastA = logs.filter(l => l.exerciseId === a.id).sort((x, y) => new Date(y.date) - new Date(x.date))[0];
-            const lastB = logs.filter(l => l.exerciseId === b.id).sort((x, y) => new Date(y.date) - new Date(x.date))[0];
+        // Get exercises done in last 3 days for variety
+        const today = this.getLocalDateKey();
+        const todayDate = this.parseLocalDate(today);
+        const threeDaysAgo = new Date(todayDate);
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+        const threeDaysAgoKey = this.getLocalDateKey(threeDaysAgo);
+        
+        const recentExerciseIds = new Set(
+            logs
+                .filter(log => {
+                    if (!log.date) return false;
+                    // Compare date strings directly (YYYY-MM-DD format sorts correctly)
+                    return log.date >= threeDaysAgoKey;
+                })
+                .map(log => log.exerciseId)
+        );
+        
+        // Category mappings
+        const categoryMap = {
+            'BUILD/PRIME': {
+                'Knee-Tendon + Control': 'Quad Strength',
+                'Hip + Pelvis Control': 'Hip Stability',
+                'Hamstrings + Posterior Chain': 'Posterior Chain',
+                'Calf/Ankle + Foot': 'Ankle/Foot'
+            },
+            'CALM': {
+                'Knee-Tendon + Control': 'Isometric Quad',
+                'Hip + Pelvis Control': 'Hip Control',
+                'Knee Mobility + ROM': 'Mobility'
+            }
+        };
+        
+        const categories = isBuildPrime 
+            ? ['Knee-Tendon + Control', 'Hip + Pelvis Control', 'Hamstrings + Posterior Chain', 'Calf/Ankle + Foot']
+            : ['Knee-Tendon + Control', 'Hip + Pelvis Control', 'Knee Mobility + ROM'];
+        
+        // Normalize lane to uppercase and handle compound lanes (done once outside loop)
+        const normalizedLane = lane.toUpperCase();
+        const lanePhases = normalizedLane.includes('OR') 
+            ? normalizedLane.split('OR').map(l => l.trim())
+            : [normalizedLane];
+        
+        const recommendations = [];
+        
+        // Select one exercise from each category
+        categories.forEach(category => {
+            // Filter exercises by category, lane, and exclude disliked
+            let candidates = allExercises.filter(ex => {
+                const categoryMatch = ex.category === category;
+                // Check if exercise phase matches any of the lane phases (case-insensitive)
+                const phaseMatch = ex.phase.some(phase => 
+                    lanePhases.some(lp => phase.toUpperCase() === lp || phase.toUpperCase().includes(lp))
+                );
+                const notDisliked = !dislikedIds.includes(ex.id);
+                const notRecent = !recentExerciseIds.has(ex.id); // Prefer variety
+                
+                return categoryMatch && phaseMatch && notDisliked;
+            });
             
-            const dateA = lastA ? new Date(lastA.date) : new Date(0);
-            const dateB = lastB ? new Date(lastB.date) : new Date(0);
+            // If no candidates excluding recent, allow recent ones (better than nothing)
+            if (candidates.length === 0) {
+                candidates = allExercises.filter(ex => {
+                    const categoryMatch = ex.category === category;
+                    const phaseMatch = ex.phase.some(phase => 
+                        lanePhases.some(lp => phase.toUpperCase() === lp || phase.toUpperCase().includes(lp))
+                    );
+                    const notDisliked = !dislikedIds.includes(ex.id);
+                    return categoryMatch && phaseMatch && notDisliked;
+                });
+            }
             
-            return dateA - dateB; // Oldest first
+            if (candidates.length === 0) return; // Skip if no exercises in category
+            
+            // Sort by: liked first, then not recent, then variety
+            candidates.sort((a, b) => {
+                const aLiked = likedIds.includes(a.id);
+                const bLiked = likedIds.includes(b.id);
+                const aRecent = recentExerciseIds.has(a.id);
+                const bRecent = recentExerciseIds.has(b.id);
+                
+                // Liked exercises first
+                if (aLiked && !bLiked) return -1;
+                if (!aLiked && bLiked) return 1;
+                
+                // Non-recent exercises preferred
+                if (!aRecent && bRecent) return -1;
+                if (aRecent && !bRecent) return 1;
+                
+                // Then by variety (last done date - compare date strings)
+                const exerciseLogsA = logs.filter(l => l.exerciseId === a.id);
+                const exerciseLogsB = logs.filter(l => l.exerciseId === b.id);
+                
+                const lastA = exerciseLogsA.length > 0 
+                    ? exerciseLogsA.sort((x, y) => {
+                        if (!x.date || !y.date) return 0;
+                        return y.date.localeCompare(x.date); // Most recent first
+                    })[0]
+                    : null;
+                const lastB = exerciseLogsB.length > 0
+                    ? exerciseLogsB.sort((x, y) => {
+                        if (!x.date || !y.date) return 0;
+                        return y.date.localeCompare(x.date); // Most recent first
+                    })[0]
+                    : null;
+                
+                const dateA = lastA ? lastA.date : null;
+                const dateB = lastB ? lastB.date : null;
+                
+                if (!dateA && dateB) return -1; // Never done preferred
+                if (dateA && !dateB) return 1;
+                if (!dateA && !dateB) return 0;
+                
+                return dateA.localeCompare(dateB); // Older first (earlier date string)
+            });
+            
+            // Randomly select from top candidates (top 3 if available, otherwise all)
+            const topCandidates = candidates.slice(0, Math.min(3, candidates.length));
+            const selected = topCandidates[Math.floor(Math.random() * topCandidates.length)];
+            
+            if (selected) {
+                const categoryLabel = (isBuildPrime ? categoryMap['BUILD/PRIME'] : categoryMap['CALM'])[category] || category;
+                recommendations.push({
+                    exercise: selected,
+                    categoryLabel: categoryLabel
+                });
+            }
         });
         
-        return sorted.slice(0, 3);
+        // Ensure no duplicates (shouldn't happen, but safety check)
+        const seenIds = new Set();
+        return recommendations.filter(rec => {
+            if (seenIds.has(rec.exercise.id)) return false;
+            seenIds.add(rec.exercise.id);
+            return true;
+        });
     },
 
     getExerciseProgression(exerciseId) {
