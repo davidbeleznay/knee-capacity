@@ -607,8 +607,11 @@
                     
                     <div class="form-group">
                         <label>Pain: <span id="baseline-pain-value">0</span>/10</label>
-                        <input type="range" id="baseline-pain-slider" min="0" max="10" value="0" class="slider" 
-                               oninput="document.getElementById('baseline-pain-value').textContent=this.value">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+                            <button type="button" class="calibration-pain-minus" data-slider="baseline-pain-slider" data-value="baseline-pain-value" data-state="baseline" aria-label="Decrease pain">−</button>
+                            <input type="range" id="baseline-pain-slider" min="0" max="10" value="0" class="slider" step="1" style="flex: 1;">
+                            <button type="button" class="calibration-pain-plus" data-slider="baseline-pain-slider" data-value="baseline-pain-value" data-state="baseline" aria-label="Increase pain">+</button>
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -646,8 +649,11 @@
                     
                     <div class="form-group">
                         <label>Pain: <span id="redline-pain-value">0</span>/10</label>
-                        <input type="range" id="redline-pain-slider" min="0" max="10" value="0" class="slider"
-                               oninput="document.getElementById('redline-pain-value').textContent=this.value">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+                            <button type="button" class="calibration-pain-minus" data-slider="redline-pain-slider" data-value="redline-pain-value" data-state="redline" aria-label="Decrease pain">−</button>
+                            <input type="range" id="redline-pain-slider" min="0" max="10" value="0" class="slider" step="1" style="flex: 1;">
+                            <button type="button" class="calibration-pain-plus" data-slider="redline-pain-slider" data-value="redline-pain-value" data-state="redline" aria-label="Increase pain">+</button>
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -685,8 +691,11 @@
                     
                     <div class="form-group">
                         <label>Pain: <span id="target-pain-value">0</span>/10</label>
-                        <input type="range" id="target-pain-slider" min="0" max="10" value="0" class="slider"
-                               oninput="document.getElementById('target-pain-value').textContent=this.value">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+                            <button type="button" class="calibration-pain-minus" data-slider="target-pain-slider" data-value="target-pain-value" data-state="target" aria-label="Decrease pain">−</button>
+                            <input type="range" id="target-pain-slider" min="0" max="10" value="0" class="slider" step="1" style="flex: 1;">
+                            <button type="button" class="calibration-pain-plus" data-slider="target-pain-slider" data-value="target-pain-value" data-state="target" aria-label="Increase pain">+</button>
+                        </div>
                     </div>
                     
                     <div id="calibration-validation" style="display: none; color: var(--red); font-size: 14px; margin-top: 12px; padding: 12px; background: #FFEBEE; border-radius: 8px;"></div>

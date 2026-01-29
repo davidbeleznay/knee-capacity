@@ -1435,6 +1435,40 @@ details[open] {
     color: white;
 }
 
+.calibration-pain-minus,
+.calibration-pain-plus {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+    border: 2px solid var(--gray-300);
+    border-radius: 8px;
+    background: white;
+    color: var(--gray-800);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.calibration-pain-minus:hover,
+.calibration-pain-plus:hover {
+    border-color: var(--primary);
+    background: #f0f7ff;
+    color: var(--primary);
+}
+
+.calibration-pain-minus:active,
+.calibration-pain-plus:active {
+    transform: scale(0.96);
+}
+
 .calibration-body .slider {
     width: 100%;
     height: 8px;

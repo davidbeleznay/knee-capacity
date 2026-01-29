@@ -2410,6 +2410,7 @@ function setupCalibrationOnboarding() {
     setupCalibrationScreen1();
     setupCalibrationScreen2();
     setupCalibrationScreen3();
+    setupCalibrationPainSteppers();
     
     // Skip button
     const skipBtn = document.getElementById('calibration-skip');
@@ -2420,9 +2421,50 @@ function setupCalibrationOnboarding() {
     }
 }
 
+function updateCalibrationPainSlider(sliderId, valueSpanId, stateKey) {
+    const slider = document.getElementById(sliderId);
+    const valueSpan = document.getElementById(valueSpanId);
+    if (!slider || !valueSpan) return;
+    const apply = () => {
+        const val = parseInt(slider.value, 10) || 0;
+        valueSpan.textContent = val;
+        if (stateKey === 'baseline') calibrationState.baseline.pain = val;
+        else if (stateKey === 'redline') calibrationState.redline.pain = val;
+        else if (stateKey === 'target') calibrationState.target.pain = val;
+        if (stateKey === 'baseline') validateScreen1();
+        else if (stateKey === 'redline') validateScreen2();
+        else if (stateKey === 'target') validateScreen3();
+    };
+    slider.addEventListener('input', apply);
+    slider.addEventListener('change', apply);
+    apply(); // sync initial display
+}
+
+function setupCalibrationPainSteppers() {
+    document.querySelectorAll('.calibration-pain-plus').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const slider = document.getElementById(this.getAttribute('data-slider'));
+            if (!slider) return;
+            const v = Math.min(10, parseInt(slider.value, 10) + 1);
+            slider.value = v;
+            slider.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+    });
+    document.querySelectorAll('.calibration-pain-minus').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const slider = document.getElementById(this.getAttribute('data-slider'));
+            if (!slider) return;
+            const v = Math.max(0, parseInt(slider.value, 10) - 1);
+            slider.value = v;
+            slider.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+    });
+}
+
 function setupCalibrationScreen1() {
     const swellingBtns = document.querySelectorAll('.swelling-btn[data-screen="baseline"]');
-    const painSlider = document.getElementById('baseline-pain-slider');
     const nextBtn = document.getElementById('calibration-next-1');
     
     swellingBtns.forEach(btn => {
@@ -2435,12 +2477,7 @@ function setupCalibrationScreen1() {
         };
     });
     
-    if (painSlider) {
-        painSlider.oninput = (e) => {
-            calibrationState.baseline.pain = parseInt(e.target.value);
-            validateScreen1();
-        };
-    }
+    updateCalibrationPainSlider('baseline-pain-slider', 'baseline-pain-value', 'baseline');
     
     const contextInput = document.getElementById('baseline-context');
     if (contextInput) {
@@ -2461,7 +2498,6 @@ function setupCalibrationScreen1() {
 
 function setupCalibrationScreen2() {
     const swellingBtns = document.querySelectorAll('.swelling-btn[data-screen="redline"]');
-    const painSlider = document.getElementById('redline-pain-slider');
     const nextBtn = document.getElementById('calibration-next-2');
     const backBtn = document.getElementById('calibration-back-2');
     
@@ -2475,12 +2511,7 @@ function setupCalibrationScreen2() {
         };
     });
     
-    if (painSlider) {
-        painSlider.oninput = (e) => {
-            calibrationState.redline.pain = parseInt(e.target.value);
-            validateScreen2();
-        };
-    }
+    updateCalibrationPainSlider('redline-pain-slider', 'redline-pain-value', 'redline');
     
     const contextInput = document.getElementById('redline-context');
     if (contextInput) {
@@ -2508,7 +2539,6 @@ function setupCalibrationScreen2() {
 
 function setupCalibrationScreen3() {
     const swellingBtns = document.querySelectorAll('.swelling-btn[data-screen="target"]');
-    const painSlider = document.getElementById('target-pain-slider');
     const completeBtn = document.getElementById('calibration-complete');
     const backBtn = document.getElementById('calibration-back-3');
     
@@ -2522,12 +2552,7 @@ function setupCalibrationScreen3() {
         };
     });
     
-    if (painSlider) {
-        painSlider.oninput = (e) => {
-            calibrationState.target.pain = parseInt(e.target.value);
-            validateScreen3();
-        };
-    }
+    updateCalibrationPainSlider('target-pain-slider', 'target-pain-value', 'target');
     
     if (completeBtn) {
         completeBtn.onclick = (e) => {
