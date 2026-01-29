@@ -865,8 +865,9 @@ const DataManager = {
         if (greenStreak >= 7) {
             capacity += 10;
         }
-        
-        return Math.max(0, Math.min(100, capacity));
+
+        // Round to nearest whole number for display, and clamp 0-100
+        return Math.max(0, Math.min(100, Math.round(capacity)));
     },
     
     calculateFixedKCI(checkInData) {

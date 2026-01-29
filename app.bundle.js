@@ -2631,6 +2631,22 @@ function showCalibrationScreen(screenNum) {
 }
 
 function saveCalibrationProfile() {
+    // Ensure we read the latest slider values directly from the DOM,
+    // in case any oninput handler didn't fire for some reason.
+    const baselinePainSlider = document.getElementById('baseline-pain-slider');
+    const redlinePainSlider = document.getElementById('redline-pain-slider');
+    const targetPainSlider = document.getElementById('target-pain-slider');
+
+    if (baselinePainSlider) {
+        calibrationState.baseline.pain = parseInt(baselinePainSlider.value, 10) || 0;
+    }
+    if (redlinePainSlider) {
+        calibrationState.redline.pain = parseInt(redlinePainSlider.value, 10) || 0;
+    }
+    if (targetPainSlider) {
+        calibrationState.target.pain = parseInt(targetPainSlider.value, 10) || 0;
+    }
+
     const profileData = {
         baselineSwelling: calibrationState.baseline.swelling,
         baselinePain: calibrationState.baseline.pain,
