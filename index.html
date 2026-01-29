@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KneeCapacity</title>
+    <title>Knee Capacity</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="custom-styles.css">
     <link rel="stylesheet" href="stopwatch-styles.css">
@@ -13,7 +13,7 @@
 </head>
 <body>
     <header>
-        <h1>💪 KneeCapacity</h1>
+        <h1>🦵 Knee Capacity</h1>
         <div id="header-badges" class="header-badges"></div>
     </header>
 
@@ -34,6 +34,20 @@
                     <div id="kci-score-display" style="font-size: 48px; font-weight: 900; color: var(--primary); margin: 8px 0;">0/100</div>
                     <div id="kci-progress-bar" class="kci-progress-bar" style="display: flex; gap: 4px; justify-content: center; margin-bottom: 16px;">
                         <!-- 10 blocks will be injected here -->
+                    </div>
+                </div>
+                
+                <!-- Personalized Context Card (shown when profile exists) -->
+                <div id="kci-personalized-context" style="display: none; background: white; padding: 16px; border-radius: 12px; border: 1px solid var(--gray-200); margin-bottom: 16px;">
+                    <div style="font-weight: 700; font-size: 13px; color: var(--gray-500); text-transform: uppercase; margin-bottom: 12px;">Personalized Context</div>
+                    <div id="kci-main-driver" style="font-size: 14px; color: var(--gray-700); margin-bottom: 12px; padding: 8px; background: #f5f5f5; border-radius: 6px;">
+                        <!-- Main driver will be injected here -->
+                    </div>
+                    <div id="kci-recovery-trend" style="font-size: 13px; color: var(--gray-600); margin-bottom: 8px;">
+                        <!-- Recovery trend will be injected here -->
+                    </div>
+                    <div id="kci-target-progress" style="font-size: 13px; color: var(--gray-600);">
+                        <!-- Target progress will be injected here -->
                     </div>
                 </div>
                 
@@ -342,6 +356,41 @@
         </div>
 
         <div id="exercises-view" class="view">
+            <!-- Exercise library will be rendered here -->
+        </div>
+
+        <div id="settings-view" class="view">
+            <section class="card">
+                <h2 style="margin: 0 0 20px 0;">⚙️ Settings</h2>
+                
+                <!-- Personal Knee Calibration Section -->
+                <div style="border-bottom: 2px solid var(--gray-200); padding-bottom: 24px; margin-bottom: 24px;">
+                    <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--gray-900);">🦵 Personal Knee Calibration</h3>
+                    
+                    <div id="calibration-status" style="margin-bottom: 16px;">
+                        <!-- Status will be injected here -->
+                    </div>
+                    
+                    <div id="calibration-envelope-display" style="display: none; background: #f5f5f5; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                        <!-- Envelope values will be displayed here -->
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px;">
+                        <button id="recalibrate-btn" class="primary-button" style="flex: 1;">🔄 Recalibrate</button>
+                        <button id="view-envelope-btn" class="secondary-button" style="flex: 1;">👁️ View Envelope</button>
+                    </div>
+                </div>
+                
+                <!-- Other Settings -->
+                <div>
+                    <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--gray-900);">App Information</h3>
+                    <div style="color: var(--gray-600); font-size: 14px; line-height: 1.6;">
+                        <p><strong>Version:</strong> 1.0.0</p>
+                        <p style="margin-top: 8px;">Personal Knee Capacity tracking app. Your data is stored locally on your device.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
             <h2>Library</h2>
             <div id="exercise-library"></div>
         </div>
@@ -529,7 +578,126 @@
         <button class="nav-btn" data-view="log"><span class="nav-icon">📝</span><span class="nav-label">Log</span></button>
         <button class="nav-btn" data-view="history"><span class="nav-icon">📊</span><span class="nav-label">Stats</span></button>
         <button class="nav-btn" data-view="exercises"><span class="nav-icon">💪</span><span class="nav-label">Library</span></button>
+        <button class="nav-btn" data-view="settings"><span class="nav-icon">⚙️</span><span class="nav-label">Settings</span></button>
     </nav>
+
+    <!-- Personal Capacity Calibration Onboarding Modal -->
+    <div id="calibration-modal" class="calibration-modal" style="display: none;">
+        <div class="calibration-modal-content">
+            <div id="calibration-screen-1" class="calibration-screen active">
+                <div class="calibration-header">
+                    <h2>🦵 Personal Knee Calibration</h2>
+                    <div class="calibration-progress">Screen 1 of 3</div>
+                </div>
+                <div class="calibration-body">
+                    <h3>Your Baseline</h3>
+                    <p style="color: var(--gray-600); margin-bottom: 24px;">
+                        On a light-loading week, what's your typical swelling and pain?
+                    </p>
+                    
+                    <div class="form-group">
+                        <label>Swelling</label>
+                        <div class="swelling-group">
+                            <button class="swelling-btn" data-level="none" data-screen="baseline">🟢 None</button>
+                            <button class="swelling-btn" data-level="mild" data-screen="baseline">🟡 Mild</button>
+                            <button class="swelling-btn" data-level="moderate" data-screen="baseline">🟠 Mod</button>
+                            <button class="swelling-btn" data-level="severe" data-screen="baseline">🔴 Bad</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Pain: <span id="baseline-pain-value">0</span>/10</label>
+                        <input type="range" id="baseline-pain-slider" min="0" max="10" value="0" class="slider" 
+                               oninput="document.getElementById('baseline-pain-value').textContent=this.value">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Context (optional)</label>
+                        <input type="text" id="baseline-context" placeholder="e.g., 2-3 strength sessions/week, no impact" 
+                               style="width: 100%; padding: 10px; border: 2px solid var(--gray-300); border-radius: 8px;">
+                    </div>
+                </div>
+                <div class="calibration-footer">
+                    <button id="calibration-skip" class="secondary-button">Skip</button>
+                    <button id="calibration-next-1" class="primary-button" disabled>Continue →</button>
+                </div>
+            </div>
+            
+            <div id="calibration-screen-2" class="calibration-screen" style="display: none;">
+                <div class="calibration-header">
+                    <h2>🦵 Personal Knee Calibration</h2>
+                    <div class="calibration-progress">Screen 2 of 3</div>
+                </div>
+                <div class="calibration-body">
+                    <h3>Your Redline</h3>
+                    <p style="color: var(--gray-600); margin-bottom: 24px;">
+                        After your hardest realistic week/tournament, what's peak swelling & pain?
+                    </p>
+                    
+                    <div class="form-group">
+                        <label>Swelling</label>
+                        <div class="swelling-group">
+                            <button class="swelling-btn" data-level="none" data-screen="redline">🟢 None</button>
+                            <button class="swelling-btn" data-level="mild" data-screen="redline">🟡 Mild</button>
+                            <button class="swelling-btn" data-level="moderate" data-screen="redline">🟠 Mod</button>
+                            <button class="swelling-btn" data-level="severe" data-screen="redline">🔴 Bad</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Pain: <span id="redline-pain-value">0</span>/10</label>
+                        <input type="range" id="redline-pain-slider" min="0" max="10" value="0" class="slider"
+                               oninput="document.getElementById('redline-pain-value').textContent=this.value">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Context (optional)</label>
+                        <input type="text" id="redline-context" placeholder="e.g., 8-hour tournament + 2 training days"
+                               style="width: 100%; padding: 10px; border: 2px solid var(--gray-300); border-radius: 8px;">
+                    </div>
+                </div>
+                <div class="calibration-footer">
+                    <button id="calibration-back-2" class="secondary-button">← Back</button>
+                    <button id="calibration-next-2" class="primary-button" disabled>Continue →</button>
+                </div>
+            </div>
+            
+            <div id="calibration-screen-3" class="calibration-screen" style="display: none;">
+                <div class="calibration-header">
+                    <h2>🦵 Personal Knee Calibration</h2>
+                    <div class="calibration-progress">Screen 3 of 3</div>
+                </div>
+                <div class="calibration-body">
+                    <h3>Your Target</h3>
+                    <p style="color: var(--gray-600); margin-bottom: 24px;">
+                        Under baseline loading, where do you want to be?
+                    </p>
+                    
+                    <div class="form-group">
+                        <label>Swelling</label>
+                        <div class="swelling-group">
+                            <button class="swelling-btn" data-level="none" data-screen="target">🟢 None</button>
+                            <button class="swelling-btn" data-level="mild" data-screen="target">🟡 Mild</button>
+                            <button class="swelling-btn" data-level="moderate" data-screen="target">🟠 Mod</button>
+                            <button class="swelling-btn" data-level="severe" data-screen="target">🔴 Bad</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Pain: <span id="target-pain-value">0</span>/10</label>
+                        <input type="range" id="target-pain-slider" min="0" max="10" value="0" class="slider"
+                               oninput="document.getElementById('target-pain-value').textContent=this.value">
+                    </div>
+                    
+                    <div id="calibration-validation" style="display: none; color: var(--red); font-size: 14px; margin-top: 12px; padding: 12px; background: #FFEBEE; border-radius: 8px;"></div>
+                </div>
+                <div class="calibration-footer">
+                    <button id="calibration-back-3" class="secondary-button">← Back</button>
+                    <button id="calibration-complete" class="primary-button" disabled>Complete Setup ✓</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="exercises.js"></script>

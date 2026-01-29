@@ -130,6 +130,11 @@ const DataManager = {
                     this.storage.set(store, []);
                 }
             });
+            
+            // Initialize kneeProfile storage (object, not array)
+            if (localStorage.getItem('kneeProfile') === null) {
+                // Don't initialize - let it be null until user completes onboarding
+            }
 
             if (localStorage.getItem('streak') === null) localStorage.setItem('streak', '0');
             if (localStorage.getItem('longestStreak') === null) localStorage.setItem('longestStreak', '0');
@@ -161,7 +166,7 @@ const DataManager = {
         const stores = [
             'sessions', 'checkIns', 'exerciseLogs',
             'customWorkouts', 'bodyMeasurements',
-            'significantEvents', 'likedExercises', 'dislikedExercises'
+            'significantEvents', 'likedExercises', 'dislikedExercises', 'kneeProfile'
         ];
 
         stores.forEach(store => {
@@ -170,6 +175,12 @@ const DataManager = {
                 this.backup.set(store, value);
             }
         });
+        
+        // Backup kneeProfile (object, not array)
+        const kneeProfile = this.getKneeProfile();
+        if (kneeProfile) {
+            this.backup.set('kneeProfile', kneeProfile);
+        }
 
         const streak = localStorage.getItem('streak');
         const longestStreak = localStorage.getItem('longestStreak');
@@ -184,7 +195,7 @@ const DataManager = {
             const storeKeys = new Set([
                 'sessions', 'checkIns', 'exerciseLogs',
                 'customWorkouts', 'bodyMeasurements',
-                'significantEvents', 'likedExercises', 'dislikedExercises'
+                'significantEvents', 'likedExercises', 'dislikedExercises', 'kneeProfile'
             ]);
 
             let restored = false;
@@ -193,7 +204,7 @@ const DataManager = {
                 if (storeKeys.has(key)) {
                     const localValue = this.storage.get(key, null);
                     const hasLocalData = Array.isArray(localValue) ? localValue.length > 0 : localValue !== null;
-                    const hasBackupData = Array.isArray(value) && value.length > 0;
+                    const hasBackupData = Array.isArray(value) ? value.length > 0 : (value !== null && typeof value === 'object');
                     if (!hasLocalData && hasBackupData) {
                         this.storage.set(key, value);
                         restored = true;
@@ -674,7 +685,7 @@ const DataManager = {
             { count: 50, emoji: '⭐', label: 'Star' },
             { count: 20, emoji: '🔥', label: 'Elite' },
             { count: 10, emoji: '🏆', label: 'Champ' },
-            { count: 1, emoji: '💪', label: 'Starter' }
+            { count: 1, emoji: '🦵', label: 'Starter' }
         ];
         
         return milestones.filter(m => totalWorkouts >= m.count);
@@ -755,6 +766,110 @@ const DataManager = {
     },
 
     calculateKCI(checkInData) {
+        // Check if personalized profile exists
+        const profile = this.getKneeProfile();
+        
+        if (profile) {
+            // Use personalized calculation
+            return this.calculatePersonalizedKCI(checkInData, profile);
+        } else {
+            // Fallback to fixed calculation
+            return this.calculateFixedKCI(checkInData);
+        }
+    },
+    
+    calculatePersonalizedKCI(checkInData, profile) {
+        const { swelling, pain } = checkInData;
+        const swellingValues = { 'none': 0, 'mild': 1, 'moderate': 2, 'severe': 3 };
+        
+        // Step 1: Calculate irritation score (swelling-weighted)
+        const S = (swellingValues[swelling] || 0) / 3; // Normalize swelling to 0-1
+        const P = (pain || 0) / 10; // Normalize pain to 0-1
+        const irritation = (profile.swellingWeight || 0.65) * S + (profile.painWeight || 0.35) * P;
+        
+        // Step 2: Calculate irritation at target, baseline, and redline
+        const I_target = (profile.swellingWeight || 0.65) * (profile.targetSwelling || 0) / 3 + 
+                         (profile.painWeight || 0.35) * (profile.targetPain || 0) / 10;
+        const I_baseline = (profile.swellingWeight || 0.65) * (profile.baselineSwelling || 0) / 3 + 
+                           (profile.painWeight || 0.35) * (profile.baselinePain || 0) / 10;
+        const I_redline = (profile.swellingWeight || 0.65) * (profile.redlineSwelling || 0) / 3 + 
+                          (profile.painWeight || 0.35) * (profile.redlinePain || 0) / 10;
+        
+        // Step 3: Map current irritation to 0-100 capacity scale
+        // Capacity = 100 × clamp(1 - (I - I_target) / (I_redline - I_target), 0, 1)
+        let capacity = 100;
+        
+        if (I_redline > I_target) {
+            const normalizedIrritation = (irritation - I_target) / (I_redline - I_target);
+            capacity = 100 * Math.max(0, Math.min(1, 1 - normalizedIrritation));
+        } else {
+            // Edge case: if redline equals target, use simple comparison
+            if (irritation <= I_target) capacity = 100;
+            else capacity = 0;
+        }
+        
+        // Step 4: Safety guardrail - swelling ≥ moderate (2) caps capacity at 40
+        const currentSwellingValue = swellingValues[swelling] || 0;
+        if (currentSwellingValue >= 2) {
+            capacity = Math.min(40, capacity);
+        }
+        
+        // Step 5: Apply trend bonuses/penalties (similar to fixed calculation)
+        const recentCheckIns = this.getRecentCheckIns(4);
+        
+        // Activity spike logic
+        const yesterdayDate = new Date();
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterday = this.getCheckIn(this.getLocalDateKey(yesterdayDate));
+        if (yesterday && yesterday.activityLevel === 'Active' && checkInData.activityLevel === 'Active') {
+            capacity -= 10;
+        }
+        
+        // Trend detection (getting worse)
+        if (recentCheckIns.length >= 3) {
+            const todayPain = pain;
+            const prevPain = recentCheckIns[1].pain || 0;
+            const todaySwelling = swellingValues[swelling] || 0;
+            const prevSwelling = swellingValues[recentCheckIns[1].swelling] || 0;
+            
+            if (todayPain >= prevPain + 2 || todaySwelling > prevSwelling) {
+                capacity -= 5;
+            }
+        }
+        
+        // Improving trend bonus
+        if (recentCheckIns.length >= 2) {
+            const prevPain = recentCheckIns[1].pain || 0;
+            const prevSwelling = swellingValues[recentCheckIns[1].swelling] || 0;
+            if (pain < prevPain || swellingValues[swelling] < prevSwelling) {
+                capacity += 5;
+            }
+        }
+        
+        // Consistent workouts bonus
+        const last7DaysLogs = this.getExerciseLogs().filter(log => {
+            const diff = (new Date() - new Date(log.date)) / (1000 * 60 * 60 * 24);
+            return diff <= 7;
+        });
+        if (last7DaysLogs.length >= 2) {
+            capacity += 5;
+        }
+        
+        // Streak bonus
+        let greenStreak = 0;
+        const allCheckInsSorted = this.getCheckIns().sort((a, b) => new Date(b.date) - new Date(a.date));
+        for (const c of allCheckInsSorted) {
+            if (c.kciScore > 70) greenStreak++;
+            else break;
+        }
+        if (greenStreak >= 7) {
+            capacity += 10;
+        }
+        
+        return Math.max(0, Math.min(100, capacity));
+    },
+    
+    calculateFixedKCI(checkInData) {
         let score = 100;
         const { swelling, pain, activityLevel } = checkInData;
 
@@ -1384,6 +1499,186 @@ const DataManager = {
         const disliked = !this.isExerciseDisliked(exerciseId);
         this.setExerciseDislike(exerciseId, disliked);
         return disliked;
+    },
+    
+    // Personal Knee Profile (Capacity Calibration)
+    getKneeProfile() {
+        return this.storage.get('kneeProfile', null);
+    },
+    
+    hasKneeProfile() {
+        const profile = this.getKneeProfile();
+        return profile !== null && profile !== undefined;
+    },
+    
+    setKneeProfile(profile) {
+        const enrichedProfile = {
+            ...profile,
+            calibratedAt: this.getLocalDateKey(),
+            version: 1
+        };
+        const success = this.storage.set('kneeProfile', enrichedProfile);
+        if (success && this.backup) {
+            this.backup.set('kneeProfile', enrichedProfile);
+        }
+        return success;
+    },
+    
+    saveKneeProfile(profileData) {
+        // Convert swelling strings to numbers
+        const swellingValues = { 'none': 0, 'mild': 1, 'moderate': 2, 'severe': 3 };
+        
+        const profile = {
+            baselineSwelling: typeof profileData.baselineSwelling === 'string' 
+                ? swellingValues[profileData.baselineSwelling] 
+                : profileData.baselineSwelling,
+            baselinePain: parseInt(profileData.baselinePain) || 0,
+            redlineSwelling: typeof profileData.redlineSwelling === 'string'
+                ? swellingValues[profileData.redlineSwelling]
+                : profileData.redlineSwelling,
+            redlinePain: parseInt(profileData.redlinePain) || 0,
+            targetSwelling: typeof profileData.targetSwelling === 'string'
+                ? swellingValues[profileData.targetSwelling]
+                : profileData.targetSwelling,
+            targetPain: parseInt(profileData.targetPain) || 0,
+            baselineContext: profileData.baselineContext || '',
+            redlineContext: profileData.redlineContext || '',
+            swellingWeight: 0.65,
+            painWeight: 0.35
+        };
+        
+        return this.setKneeProfile(profile);
+    },
+    
+    // Calculate deltas vs baseline for personalized display
+    calculateDeltas(checkIn) {
+        const profile = this.getKneeProfile();
+        if (!profile || !checkIn) return null;
+        
+        const swellingValues = { 'none': 0, 'mild': 1, 'moderate': 2, 'severe': 3 };
+        const currentSwelling = swellingValues[checkIn.swelling] || 0;
+        const currentPain = checkIn.pain || 0;
+        
+        const swellingDelta = currentSwelling - profile.baselineSwelling;
+        const painDelta = currentPain - profile.baselinePain;
+        
+        // Determine main driver (largest absolute delta)
+        const absSwellingDelta = Math.abs(swellingDelta);
+        const absPainDelta = Math.abs(painDelta);
+        
+        let mainDriver = '';
+        if (absSwellingDelta > absPainDelta) {
+            const sign = swellingDelta > 0 ? '+' : '';
+            mainDriver = `Swelling ${sign}${swellingDelta.toFixed(1)} above baseline`;
+        } else if (absPainDelta > absSwellingDelta) {
+            const sign = painDelta > 0 ? '+' : '';
+            mainDriver = `Pain ${sign}${painDelta.toFixed(1)} above baseline`;
+        } else if (absSwellingDelta > 0 || absPainDelta > 0) {
+            mainDriver = `Swelling ${swellingDelta > 0 ? '+' : ''}${swellingDelta.toFixed(1)}, Pain ${painDelta > 0 ? '+' : ''}${painDelta.toFixed(1)}`;
+        } else {
+            mainDriver = 'At baseline';
+        }
+        
+        return {
+            swellingDelta: swellingDelta.toFixed(1),
+            painDelta: painDelta.toFixed(1),
+            mainDriver
+        };
+    },
+    
+    // Track recovery trends for personalized display
+    getRecoveryTrend() {
+        const profile = this.getKneeProfile();
+        if (!profile) return null;
+        
+        const checkIns = this.getCheckIns().sort((a, b) => {
+            const dateA = this.parseLocalDate(a.date);
+            const dateB = this.parseLocalDate(b.date);
+            return dateB - dateA; // Most recent first
+        });
+        
+        // Days since last Capacity ≥70
+        let daysSinceGreen = null;
+        const todayKey = this.getLocalDateKey();
+        const today = this.parseLocalDate(todayKey);
+        
+        for (let i = 0; i < checkIns.length; i++) {
+            const checkIn = checkIns[i];
+            if (checkIn.kciScore >= 70) {
+                const checkInDate = this.parseLocalDate(checkIn.date);
+                const diffDays = Math.floor((today - checkInDate) / (1000 * 60 * 60 * 24));
+                daysSinceGreen = diffDays;
+                break;
+            }
+        }
+        
+        // Calculate average recovery time (days from <70 to ≥70)
+        let recoveryTimes = [];
+        let inRecovery = false;
+        let recoveryStartDate = null;
+        
+        // Sort chronologically (oldest first) for recovery tracking
+        const sortedCheckIns = [...checkIns].sort((a, b) => {
+            const dateA = this.parseLocalDate(a.date);
+            const dateB = this.parseLocalDate(b.date);
+            return dateA - dateB;
+        });
+        
+        for (let i = 0; i < sortedCheckIns.length; i++) {
+            const checkIn = sortedCheckIns[i];
+            const checkInDate = this.parseLocalDate(checkIn.date);
+            
+            if (checkIn.kciScore < 70 && !inRecovery) {
+                inRecovery = true;
+                recoveryStartDate = checkInDate;
+            } else if (checkIn.kciScore >= 70 && inRecovery && recoveryStartDate) {
+                const recoveryDays = Math.floor((checkInDate - recoveryStartDate) / (1000 * 60 * 60 * 24));
+                if (recoveryDays > 0) {
+                    recoveryTimes.push(recoveryDays);
+                }
+                inRecovery = false;
+                recoveryStartDate = null;
+            }
+        }
+        
+        const avgRecoveryTime = recoveryTimes.length > 0
+            ? (recoveryTimes.reduce((a, b) => a + b, 0) / recoveryTimes.length).toFixed(1)
+            : null;
+        
+        // Determine trend (improving/stable/declining)
+        if (checkIns.length < 3) {
+            return { daysSinceGreen, avgRecoveryTime, trend: 'insufficient_data' };
+        }
+        
+        const recent = checkIns.slice(0, 3).map(c => c.kciScore || 0);
+        const older = checkIns.slice(3, 6).map(c => c.kciScore || 0);
+        
+        if (older.length === 0) {
+            return { daysSinceGreen, avgRecoveryTime, trend: 'insufficient_data' };
+        }
+        
+        const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+        const olderAvg = older.reduce((a, b) => a + b, 0) / older.length;
+        
+        let trend = 'stable';
+        if (recentAvg > olderAvg + 5) trend = 'improving';
+        else if (recentAvg < olderAvg - 5) trend = 'declining';
+        
+        return { daysSinceGreen, avgRecoveryTime, trend };
+    },
+    
+    // Calculate progress to target zone (≥70)
+    getTargetProgress(currentScore) {
+        const profile = this.getKneeProfile();
+        if (!profile) return null;
+        
+        const targetZone = 70;
+        const pointsFromTarget = targetZone - currentScore;
+        
+        return {
+            pointsFromTarget: pointsFromTarget > 0 ? pointsFromTarget : 0,
+            isInTargetZone: currentScore >= targetZone
+        };
     },
     
     getDerivedMetrics() {

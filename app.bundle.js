@@ -150,6 +150,9 @@ function switchView(viewName) {
     if (viewName === 'exercises') {
         renderExerciseLibrary('all');
     }
+    if (viewName === 'settings') {
+        renderSettings();
+    }
 }
 
 function setupNavigation() {
@@ -280,8 +283,15 @@ function renderKCIResult(score) {
     const laneName = document.getElementById('kci-lane-name');
     const planDesc = document.getElementById('kci-plan-desc');
     const recommendationsList = document.getElementById('kci-recommendations');
+    const personalizedContext = document.getElementById('kci-personalized-context');
+    const mainDriver = document.getElementById('kci-main-driver');
+    const recoveryTrend = document.getElementById('kci-recovery-trend');
+    const targetProgress = document.getElementById('kci-target-progress');
     
     const info = DataManager.getKCIMessage(score);
+    
+    // Check if personalized profile exists
+    const hasProfile = DataManager.hasKneeProfile();
     
     // 1. Show container
     container.style.display = 'block';
@@ -317,14 +327,72 @@ function renderKCIResult(score) {
         progressBar.appendChild(block);
     }
     
-    // 4. Update Message & Plan
+    // 4. Show personalized context if profile exists
+    if (hasProfile) {
+        personalizedContext.style.display = 'block';
+        
+        // Get today's check-in for delta calculation
+        const todayKey = DataManager.getLocalDateKey();
+        const todayCheckIn = DataManager.getCheckIn(todayKey);
+        
+        if (todayCheckIn) {
+            const deltas = DataManager.calculateDeltas(todayCheckIn);
+            if (deltas) {
+                mainDriver.innerHTML = `<strong>Main Driver:</strong> ${deltas.mainDriver}`;
+            } else {
+                mainDriver.innerHTML = '<strong>Main Driver:</strong> Unable to calculate';
+            }
+        } else {
+            mainDriver.innerHTML = '<strong>Main Driver:</strong> Complete check-in to see deltas';
+        }
+        
+        // Recovery trend
+        const recovery = DataManager.getRecoveryTrend();
+        if (recovery) {
+            let trendText = '';
+            if (recovery.daysSinceGreen !== null) {
+                trendText += `Days since ≥70: ${recovery.daysSinceGreen}`;
+            } else {
+                trendText += 'Days since ≥70: No recent green days';
+            }
+            
+            if (recovery.avgRecoveryTime) {
+                trendText += `<br>Avg recovery time: ${recovery.avgRecoveryTime} days`;
+            }
+            
+            if (recovery.trend !== 'insufficient_data') {
+                const trendEmoji = recovery.trend === 'improving' ? '📈' : recovery.trend === 'declining' ? '📉' : '➡️';
+                trendText += `<br>Trend: ${trendEmoji} ${recovery.trend}`;
+            }
+            
+            recoveryTrend.innerHTML = `<strong>Recovery Trend:</strong><br>${trendText}`;
+        } else {
+            recoveryTrend.innerHTML = '<strong>Recovery Trend:</strong> Insufficient data';
+        }
+        
+        // Target progress
+        const progress = DataManager.getTargetProgress(score);
+        if (progress) {
+            if (progress.isInTargetZone) {
+                targetProgress.innerHTML = '<strong>Target Progress:</strong> ✅ In target zone (≥70)';
+            } else {
+                targetProgress.innerHTML = `<strong>Target Progress:</strong> ${progress.pointsFromTarget} points from target zone`;
+            }
+        } else {
+            targetProgress.innerHTML = '<strong>Target Progress:</strong> Unable to calculate';
+        }
+    } else {
+        personalizedContext.style.display = 'none';
+    }
+    
+    // 5. Update Message & Plan
     messageDisplay.textContent = info.text;
     messageDisplay.style.color = info.color;
     laneName.textContent = info.lane;
     laneName.style.color = info.color;
     planDesc.textContent = info.plan;
     
-    // 5. Update Recommendations with kinetic chain coverage
+    // 6. Update Recommendations with kinetic chain coverage
     // Extract primary lane (first word) for matching, but pass full lane string
     const primaryLane = info.lane.split(' ')[0].toUpperCase();
     const recommendations = DataManager.getRecommendedExercises(primaryLane, score);
@@ -357,7 +425,7 @@ function renderKCIResult(score) {
         recommendationsList.innerHTML = '<p style="text-align: center; color: var(--gray-600); padding: 20px;">No exercises available for this lane</p>';
     }
     
-    // 6. Setup Buttons
+    // 7. Setup Buttons
     document.getElementById('kci-start-workout').onclick = () => {
         if (recommendations.length > 0) {
             switchView('log');
@@ -371,7 +439,7 @@ function renderKCIResult(score) {
         if (typeof renderExerciseTiles === 'function') renderExerciseTiles();
     };
     
-    // 7. Smooth Scroll
+    // 8. Smooth Scroll
     setTimeout(() => {
         container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 300);
@@ -2313,4 +2381,524 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+    
+    // Personal Capacity Calibration Onboarding
+    setupCalibrationOnboarding();
 });
+
+// Personal Capacity Calibration Onboarding Functions
+let calibrationState = {
+    currentScreen: 1,
+    baseline: { swelling: null, pain: 0, context: '' },
+    redline: { swelling: null, pain: 0, context: '' },
+    target: { swelling: null, pain: 0 },
+    isRecalibration: false
+};
+
+function setupCalibrationOnboarding() {
+    const modal = document.getElementById('calibration-modal');
+    if (!modal) return;
+    
+    // Check if profile exists - if not, show onboarding
+    if (!DataManager.hasKneeProfile()) {
+        console.log('🦵 No knee profile found - showing calibration onboarding');
+        showCalibrationScreen(1);
+        modal.style.display = 'flex';
+    }
+    
+    // Screen 1 handlers
+    setupCalibrationScreen1();
+    setupCalibrationScreen2();
+    setupCalibrationScreen3();
+    
+    // Skip button
+    const skipBtn = document.getElementById('calibration-skip');
+    if (skipBtn) {
+        skipBtn.onclick = () => {
+            modal.style.display = 'none';
+        };
+    }
+}
+
+function setupCalibrationScreen1() {
+    const swellingBtns = document.querySelectorAll('.swelling-btn[data-screen="baseline"]');
+    const painSlider = document.getElementById('baseline-pain-slider');
+    const nextBtn = document.getElementById('calibration-next-1');
+    
+    swellingBtns.forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            swellingBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            calibrationState.baseline.swelling = btn.dataset.level;
+            validateScreen1();
+        };
+    });
+    
+    if (painSlider) {
+        painSlider.oninput = (e) => {
+            calibrationState.baseline.pain = parseInt(e.target.value);
+            validateScreen1();
+        };
+    }
+    
+    const contextInput = document.getElementById('baseline-context');
+    if (contextInput) {
+        contextInput.oninput = (e) => {
+            calibrationState.baseline.context = e.target.value;
+        };
+    }
+    
+    if (nextBtn) {
+        nextBtn.onclick = (e) => {
+            e.preventDefault();
+            if (calibrationState.baseline.swelling !== null) {
+                showCalibrationScreen(2);
+            }
+        };
+    }
+}
+
+function setupCalibrationScreen2() {
+    const swellingBtns = document.querySelectorAll('.swelling-btn[data-screen="redline"]');
+    const painSlider = document.getElementById('redline-pain-slider');
+    const nextBtn = document.getElementById('calibration-next-2');
+    const backBtn = document.getElementById('calibration-back-2');
+    
+    swellingBtns.forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            swellingBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            calibrationState.redline.swelling = btn.dataset.level;
+            validateScreen2();
+        };
+    });
+    
+    if (painSlider) {
+        painSlider.oninput = (e) => {
+            calibrationState.redline.pain = parseInt(e.target.value);
+            validateScreen2();
+        };
+    }
+    
+    const contextInput = document.getElementById('redline-context');
+    if (contextInput) {
+        contextInput.oninput = (e) => {
+            calibrationState.redline.context = e.target.value;
+        };
+    }
+    
+    if (nextBtn) {
+        nextBtn.onclick = (e) => {
+            e.preventDefault();
+            if (validateScreen2()) {
+                showCalibrationScreen(3);
+            }
+        };
+    }
+    
+    if (backBtn) {
+        backBtn.onclick = (e) => {
+            e.preventDefault();
+            showCalibrationScreen(1);
+        };
+    }
+}
+
+function setupCalibrationScreen3() {
+    const swellingBtns = document.querySelectorAll('.swelling-btn[data-screen="target"]');
+    const painSlider = document.getElementById('target-pain-slider');
+    const completeBtn = document.getElementById('calibration-complete');
+    const backBtn = document.getElementById('calibration-back-3');
+    
+    swellingBtns.forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            swellingBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            calibrationState.target.swelling = btn.dataset.level;
+            validateScreen3();
+        };
+    });
+    
+    if (painSlider) {
+        painSlider.oninput = (e) => {
+            calibrationState.target.pain = parseInt(e.target.value);
+            validateScreen3();
+        };
+    }
+    
+    if (completeBtn) {
+        completeBtn.onclick = (e) => {
+            e.preventDefault();
+            if (validateScreen3()) {
+                saveCalibrationProfile();
+            }
+        };
+    }
+    
+    if (backBtn) {
+        backBtn.onclick = (e) => {
+            e.preventDefault();
+            showCalibrationScreen(2);
+        };
+    }
+}
+
+function validateScreen1() {
+    const nextBtn = document.getElementById('calibration-next-1');
+    if (nextBtn) {
+        nextBtn.disabled = calibrationState.baseline.swelling === null;
+    }
+}
+
+function validateScreen2() {
+    const nextBtn = document.getElementById('calibration-next-2');
+    const validationDiv = document.getElementById('calibration-validation');
+    
+    if (calibrationState.redline.swelling === null) {
+        if (nextBtn) nextBtn.disabled = true;
+        return false;
+    }
+    
+    // Validate redline > baseline
+    const swellingValues = { 'none': 0, 'mild': 1, 'moderate': 2, 'severe': 3 };
+    const baselineSwelling = swellingValues[calibrationState.baseline.swelling] || 0;
+    const redlineSwelling = swellingValues[calibrationState.redline.swelling] || 0;
+    const baselinePain = calibrationState.baseline.pain || 0;
+    const redlinePain = calibrationState.redline.pain || 0;
+    
+    const isRedlineHigher = (redlineSwelling > baselineSwelling) || 
+                           (redlineSwelling === baselineSwelling && redlinePain > baselinePain);
+    
+    if (!isRedlineHigher && validationDiv) {
+        validationDiv.style.display = 'block';
+        validationDiv.textContent = '⚠️ Redline should be higher than baseline (more swelling/pain after hard week)';
+        if (nextBtn) nextBtn.disabled = true;
+        return false;
+    }
+    
+    if (validationDiv) validationDiv.style.display = 'none';
+    if (nextBtn) nextBtn.disabled = false;
+    return true;
+}
+
+function validateScreen3() {
+    const completeBtn = document.getElementById('calibration-complete');
+    const validationDiv = document.getElementById('calibration-validation');
+    
+    if (calibrationState.target.swelling === null) {
+        if (completeBtn) completeBtn.disabled = true;
+        return false;
+    }
+    
+    // Validate target ≤ baseline
+    const swellingValues = { 'none': 0, 'mild': 1, 'moderate': 2, 'severe': 3 };
+    const baselineSwelling = swellingValues[calibrationState.baseline.swelling] || 0;
+    const targetSwelling = swellingValues[calibrationState.target.swelling] || 0;
+    const baselinePain = calibrationState.baseline.pain || 0;
+    const targetPain = calibrationState.target.pain || 0;
+    
+    const isTargetLower = (targetSwelling < baselineSwelling) ||
+                         (targetSwelling === baselineSwelling && targetPain <= baselinePain);
+    
+    if (!isTargetLower && validationDiv) {
+        validationDiv.style.display = 'block';
+        validationDiv.textContent = '⚠️ Target should be equal to or better than baseline';
+        if (completeBtn) completeBtn.disabled = true;
+        return false;
+    }
+    
+    if (validationDiv) validationDiv.style.display = 'none';
+    if (completeBtn) completeBtn.disabled = false;
+    return true;
+}
+
+function showCalibrationScreen(screenNum) {
+    calibrationState.currentScreen = screenNum;
+    
+    // Hide all screens
+    document.querySelectorAll('.calibration-screen').forEach(screen => {
+        screen.style.display = 'none';
+    });
+    
+    // Show target screen
+    const targetScreen = document.getElementById(`calibration-screen-${screenNum}`);
+    if (targetScreen) {
+        targetScreen.style.display = 'block';
+    }
+}
+
+function saveCalibrationProfile() {
+    const profileData = {
+        baselineSwelling: calibrationState.baseline.swelling,
+        baselinePain: calibrationState.baseline.pain,
+        redlineSwelling: calibrationState.redline.swelling,
+        redlinePain: calibrationState.redline.pain,
+        targetSwelling: calibrationState.target.swelling,
+        targetPain: calibrationState.target.pain,
+        baselineContext: calibrationState.baseline.context,
+        redlineContext: calibrationState.redline.context
+    };
+    
+    const success = DataManager.saveKneeProfile(profileData);
+    
+    if (success) {
+        console.log('✅ Knee profile saved:', profileData);
+        const modal = document.getElementById('calibration-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        
+        // Check if this is a recalibration (profile already existed)
+        const wasRecalibration = DataManager.hasKneeProfile() && calibrationState.isRecalibration;
+        
+        // Show success message
+        if (wasRecalibration) {
+            alert('✅ Calibration updated! Your knee capacity calculations have been recalibrated.');
+            // Refresh settings view if we're on it
+            if (AppState.currentView === 'settings') {
+                renderSettings();
+            }
+        } else {
+            alert('✅ Personal calibration complete! Your knee capacity will now be personalized to your baseline.');
+        }
+        
+        // Reset calibration state
+        calibrationState = {
+            currentScreen: 1,
+            baseline: { swelling: null, pain: 0, context: '' },
+            redline: { swelling: null, pain: 0, context: '' },
+            target: { swelling: null, pain: 0 },
+            isRecalibration: false
+        };
+    } else {
+        alert('❌ Failed to save profile. Please try again.');
+    }
+}
+
+// Settings View Functions
+function renderSettings() {
+    const statusDiv = document.getElementById('calibration-status');
+    const envelopeDisplay = document.getElementById('calibration-envelope-display');
+    const recalibrateBtn = document.getElementById('recalibrate-btn');
+    const viewEnvelopeBtn = document.getElementById('view-envelope-btn');
+    
+    if (!statusDiv) return;
+    
+    const hasProfile = DataManager.hasKneeProfile();
+    const profile = DataManager.getKneeProfile();
+    
+    if (hasProfile && profile) {
+        // Show calibrated status
+        const swellingLabels = { 0: 'None', 1: 'Mild', 2: 'Moderate', 3: 'Severe' };
+        const calibratedDate = profile.calibratedAt || 'Unknown';
+        
+        statusDiv.innerHTML = `
+            <div style="background: #E8F5E9; padding: 12px; border-radius: 8px; border-left: 4px solid #4CAF50;">
+                <div style="font-weight: 700; color: #2E7D32; margin-bottom: 8px;">✅ Calibrated</div>
+                <div style="font-size: 13px; color: var(--gray-700);">
+                    Calibrated on: ${calibratedDate}<br>
+                    Your knee capacity is personalized to your baseline.
+                </div>
+            </div>
+        `;
+        
+        // Setup recalibrate button
+        if (recalibrateBtn) {
+            recalibrateBtn.onclick = (e) => {
+                e.preventDefault();
+                startRecalibration();
+            };
+        }
+        
+        // Setup view envelope button
+        if (viewEnvelopeBtn) {
+            viewEnvelopeBtn.onclick = (e) => {
+                e.preventDefault();
+                toggleEnvelopeDisplay();
+            };
+        }
+        
+        // Render envelope display
+        renderEnvelopeDisplay(profile, swellingLabels);
+    } else {
+        // Show not calibrated status
+        statusDiv.innerHTML = `
+            <div style="background: #FFF3E0; padding: 12px; border-radius: 8px; border-left: 4px solid #FF9800;">
+                <div style="font-weight: 700; color: #E65100; margin-bottom: 8px;">⚠️ Not Calibrated</div>
+                <div style="font-size: 13px; color: var(--gray-700);">
+                    Your knee capacity uses standard thresholds. Calibrate for personalized tracking.
+                </div>
+            </div>
+        `;
+        
+        if (recalibrateBtn) {
+            recalibrateBtn.textContent = '🎯 Start Calibration';
+            recalibrateBtn.onclick = (e) => {
+                e.preventDefault();
+                startRecalibration();
+            };
+        }
+        
+        if (viewEnvelopeBtn) {
+            viewEnvelopeBtn.style.display = 'none';
+        }
+    }
+}
+
+function renderEnvelopeDisplay(profile, swellingLabels) {
+    const envelopeDisplay = document.getElementById('calibration-envelope-display');
+    if (!envelopeDisplay) return;
+    
+    envelopeDisplay.innerHTML = `
+        <div style="margin-bottom: 16px;">
+            <h4 style="margin: 0 0 12px 0; font-size: 16px; color: var(--gray-900);">Your Knee Envelope</h4>
+            
+            <div style="margin-bottom: 12px;">
+                <strong style="font-size: 13px; color: var(--gray-600);">Baseline (Light-loading week):</strong>
+                <div style="margin-top: 4px; padding-left: 12px; font-size: 14px;">
+                    Swelling: ${swellingLabels[profile.baselineSwelling] || 'Unknown'} | Pain: ${profile.baselinePain}/10
+                    ${profile.baselineContext ? `<br><em style="font-size: 12px; color: var(--gray-600);">${profile.baselineContext}</em>` : ''}
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <strong style="font-size: 13px; color: var(--gray-600);">Redline (Hardest realistic week):</strong>
+                <div style="margin-top: 4px; padding-left: 12px; font-size: 14px;">
+                    Swelling: ${swellingLabels[profile.redlineSwelling] || 'Unknown'} | Pain: ${profile.redlinePain}/10
+                    ${profile.redlineContext ? `<br><em style="font-size: 12px; color: var(--gray-600);">${profile.redlineContext}</em>` : ''}
+                </div>
+            </div>
+            
+            <div>
+                <strong style="font-size: 13px; color: var(--gray-600);">Target (Under baseline loading):</strong>
+                <div style="margin-top: 4px; padding-left: 12px; font-size: 14px;">
+                    Swelling: ${swellingLabels[profile.targetSwelling] || 'Unknown'} | Pain: ${profile.targetPain}/10
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function toggleEnvelopeDisplay() {
+    const envelopeDisplay = document.getElementById('calibration-envelope-display');
+    const viewEnvelopeBtn = document.getElementById('view-envelope-btn');
+    
+    if (!envelopeDisplay || !viewEnvelopeBtn) return;
+    
+    if (envelopeDisplay.style.display === 'none' || !envelopeDisplay.style.display) {
+        envelopeDisplay.style.display = 'block';
+        viewEnvelopeBtn.textContent = '👁️ Hide Envelope';
+    } else {
+        envelopeDisplay.style.display = 'none';
+        viewEnvelopeBtn.textContent = '👁️ View Envelope';
+    }
+}
+
+function startRecalibration() {
+    const modal = document.getElementById('calibration-modal');
+    if (!modal) return;
+    
+    const profile = DataManager.getKneeProfile();
+    const isRecalibration = profile !== null;
+    
+    // Mark as recalibration
+    calibrationState.isRecalibration = isRecalibration;
+    
+    // If recalibrating, pre-populate with existing values
+    if (isRecalibration && profile) {
+        const swellingLevels = { 0: 'none', 1: 'mild', 2: 'moderate', 3: 'severe' };
+        
+        calibrationState.baseline = {
+            swelling: swellingLevels[profile.baselineSwelling] || null,
+            pain: profile.baselinePain || 0,
+            context: profile.baselineContext || ''
+        };
+        calibrationState.redline = {
+            swelling: swellingLevels[profile.redlineSwelling] || null,
+            pain: profile.redlinePain || 0,
+            context: profile.redlineContext || ''
+        };
+        calibrationState.target = {
+            swelling: swellingLevels[profile.targetSwelling] || null,
+            pain: profile.targetPain || 0
+        };
+        
+        // Pre-populate form fields
+        setTimeout(() => {
+            // Baseline
+            if (calibrationState.baseline.swelling) {
+                const baselineBtn = document.querySelector(`.swelling-btn[data-level="${calibrationState.baseline.swelling}"][data-screen="baseline"]`);
+                if (baselineBtn) {
+                    baselineBtn.click();
+                }
+            }
+            const baselinePainSlider = document.getElementById('baseline-pain-slider');
+            const baselinePainValue = document.getElementById('baseline-pain-value');
+            if (baselinePainSlider && baselinePainValue) {
+                baselinePainSlider.value = calibrationState.baseline.pain;
+                baselinePainValue.textContent = calibrationState.baseline.pain;
+            }
+            const baselineContext = document.getElementById('baseline-context');
+            if (baselineContext) {
+                baselineContext.value = calibrationState.baseline.context;
+            }
+            
+            // Redline
+            if (calibrationState.redline.swelling) {
+                const redlineBtn = document.querySelector(`.swelling-btn[data-level="${calibrationState.redline.swelling}"][data-screen="redline"]`);
+                if (redlineBtn) {
+                    redlineBtn.click();
+                }
+            }
+            const redlinePainSlider = document.getElementById('redline-pain-slider');
+            const redlinePainValue = document.getElementById('redline-pain-value');
+            if (redlinePainSlider && redlinePainValue) {
+                redlinePainSlider.value = calibrationState.redline.pain;
+                redlinePainValue.textContent = calibrationState.redline.pain;
+            }
+            const redlineContext = document.getElementById('redline-context');
+            if (redlineContext) {
+                redlineContext.value = calibrationState.redline.context;
+            }
+            
+            // Target
+            if (calibrationState.target.swelling) {
+                const targetBtn = document.querySelector(`.swelling-btn[data-level="${calibrationState.target.swelling}"][data-screen="target"]`);
+                if (targetBtn) {
+                    targetBtn.click();
+                }
+            }
+            const targetPainSlider = document.getElementById('target-pain-slider');
+            const targetPainValue = document.getElementById('target-pain-value');
+            if (targetPainSlider && targetPainValue) {
+                targetPainSlider.value = calibrationState.target.pain;
+                targetPainValue.textContent = calibrationState.target.pain;
+            }
+            
+            // Enable buttons since values are pre-filled
+            validateScreen1();
+            if (calibrationState.redline.swelling) {
+                validateScreen2();
+            }
+            if (calibrationState.target.swelling) {
+                validateScreen3();
+            }
+        }, 100);
+    } else {
+        // Reset state for new calibration
+        calibrationState = {
+            currentScreen: 1,
+            baseline: { swelling: null, pain: 0, context: '' },
+            redline: { swelling: null, pain: 0, context: '' },
+            target: { swelling: null, pain: 0 },
+            isRecalibration: false
+        };
+    }
+    
+    // Show modal starting at screen 1
+    showCalibrationScreen(1);
+    modal.style.display = 'flex';
+}
