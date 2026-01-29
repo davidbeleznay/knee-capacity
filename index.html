@@ -606,12 +606,22 @@
                     </div>
                     
                     <div class="form-group">
-                        <label>Pain: <span id="baseline-pain-value">0</span>/10</label>
-                        <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
-                            <button type="button" class="calibration-pain-minus" data-slider="baseline-pain-slider" data-value="baseline-pain-value" data-state="baseline" aria-label="Decrease pain">−</button>
-                            <input type="range" id="baseline-pain-slider" min="0" max="10" value="0" class="slider" step="1" style="flex: 1;">
-                            <button type="button" class="calibration-pain-plus" data-slider="baseline-pain-slider" data-value="baseline-pain-value" data-state="baseline" aria-label="Increase pain">+</button>
+                        <label>Pain (tap a number)</label>
+                        <div class="calibration-pain-buttons" id="baseline-pain-buttons" data-value-span="baseline-pain-value" data-slider="baseline-pain-slider" data-state="baseline" role="group" aria-label="Pain 0-10">
+                            <button type="button" class="calibration-pain-num" data-pain="0">0</button>
+                            <button type="button" class="calibration-pain-num" data-pain="1">1</button>
+                            <button type="button" class="calibration-pain-num" data-pain="2">2</button>
+                            <button type="button" class="calibration-pain-num" data-pain="3">3</button>
+                            <button type="button" class="calibration-pain-num" data-pain="4">4</button>
+                            <button type="button" class="calibration-pain-num" data-pain="5">5</button>
+                            <button type="button" class="calibration-pain-num" data-pain="6">6</button>
+                            <button type="button" class="calibration-pain-num" data-pain="7">7</button>
+                            <button type="button" class="calibration-pain-num" data-pain="8">8</button>
+                            <button type="button" class="calibration-pain-num" data-pain="9">9</button>
+                            <button type="button" class="calibration-pain-num" data-pain="10">10</button>
                         </div>
+                        <input type="hidden" id="baseline-pain-slider" min="0" max="10" value="0">
+                        <span id="baseline-pain-value" class="visually-hidden">0</span>
                     </div>
                     
                     <div class="form-group">
@@ -648,12 +658,22 @@
                     </div>
                     
                     <div class="form-group">
-                        <label>Pain: <span id="redline-pain-value">0</span>/10</label>
-                        <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
-                            <button type="button" class="calibration-pain-minus" data-slider="redline-pain-slider" data-value="redline-pain-value" data-state="redline" aria-label="Decrease pain">−</button>
-                            <input type="range" id="redline-pain-slider" min="0" max="10" value="0" class="slider" step="1" style="flex: 1;">
-                            <button type="button" class="calibration-pain-plus" data-slider="redline-pain-slider" data-value="redline-pain-value" data-state="redline" aria-label="Increase pain">+</button>
+                        <label>Pain (tap a number)</label>
+                        <div class="calibration-pain-buttons" id="redline-pain-buttons" data-value-span="redline-pain-value" data-slider="redline-pain-slider" data-state="redline" role="group" aria-label="Pain 0-10">
+                            <button type="button" class="calibration-pain-num" data-pain="0">0</button>
+                            <button type="button" class="calibration-pain-num" data-pain="1">1</button>
+                            <button type="button" class="calibration-pain-num" data-pain="2">2</button>
+                            <button type="button" class="calibration-pain-num" data-pain="3">3</button>
+                            <button type="button" class="calibration-pain-num" data-pain="4">4</button>
+                            <button type="button" class="calibration-pain-num" data-pain="5">5</button>
+                            <button type="button" class="calibration-pain-num" data-pain="6">6</button>
+                            <button type="button" class="calibration-pain-num" data-pain="7">7</button>
+                            <button type="button" class="calibration-pain-num" data-pain="8">8</button>
+                            <button type="button" class="calibration-pain-num" data-pain="9">9</button>
+                            <button type="button" class="calibration-pain-num" data-pain="10">10</button>
                         </div>
+                        <input type="hidden" id="redline-pain-slider" min="0" max="10" value="0">
+                        <span id="redline-pain-value" class="visually-hidden">0</span>
                     </div>
                     
                     <div class="form-group">
@@ -690,12 +710,22 @@
                     </div>
                     
                     <div class="form-group">
-                        <label>Pain: <span id="target-pain-value">0</span>/10</label>
-                        <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
-                            <button type="button" class="calibration-pain-minus" data-slider="target-pain-slider" data-value="target-pain-value" data-state="target" aria-label="Decrease pain">−</button>
-                            <input type="range" id="target-pain-slider" min="0" max="10" value="0" class="slider" step="1" style="flex: 1;">
-                            <button type="button" class="calibration-pain-plus" data-slider="target-pain-slider" data-value="target-pain-value" data-state="target" aria-label="Increase pain">+</button>
+                        <label>Pain (tap a number)</label>
+                        <div class="calibration-pain-buttons" id="target-pain-buttons" data-value-span="target-pain-value" data-slider="target-pain-slider" data-state="target" role="group" aria-label="Pain 0-10">
+                            <button type="button" class="calibration-pain-num" data-pain="0">0</button>
+                            <button type="button" class="calibration-pain-num" data-pain="1">1</button>
+                            <button type="button" class="calibration-pain-num" data-pain="2">2</button>
+                            <button type="button" class="calibration-pain-num" data-pain="3">3</button>
+                            <button type="button" class="calibration-pain-num" data-pain="4">4</button>
+                            <button type="button" class="calibration-pain-num" data-pain="5">5</button>
+                            <button type="button" class="calibration-pain-num" data-pain="6">6</button>
+                            <button type="button" class="calibration-pain-num" data-pain="7">7</button>
+                            <button type="button" class="calibration-pain-num" data-pain="8">8</button>
+                            <button type="button" class="calibration-pain-num" data-pain="9">9</button>
+                            <button type="button" class="calibration-pain-num" data-pain="10">10</button>
                         </div>
+                        <input type="hidden" id="target-pain-slider" min="0" max="10" value="0">
+                        <span id="target-pain-value" class="visually-hidden">0</span>
                     </div>
                     
                     <div id="calibration-validation" style="display: none; color: var(--red); font-size: 14px; margin-top: 12px; padding: 12px; background: #FFEBEE; border-radius: 8px;"></div>

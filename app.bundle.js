@@ -2410,7 +2410,7 @@ function setupCalibrationOnboarding() {
     setupCalibrationScreen1();
     setupCalibrationScreen2();
     setupCalibrationScreen3();
-    setupCalibrationPainSteppers();
+    setupCalibrationPainButtons();
     
     // Skip button
     const skipBtn = document.getElementById('calibration-skip');
@@ -2421,45 +2421,41 @@ function setupCalibrationOnboarding() {
     }
 }
 
-function updateCalibrationPainSlider(sliderId, valueSpanId, stateKey) {
+function setCalibrationPainValue(containerId, value) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const val = Math.max(0, Math.min(10, parseInt(value, 10) || 0));
+    const sliderId = container.getAttribute('data-slider');
+    const valueSpanId = container.getAttribute('data-value-span');
+    const stateKey = container.getAttribute('data-state');
     const slider = document.getElementById(sliderId);
     const valueSpan = document.getElementById(valueSpanId);
-    if (!slider || !valueSpan) return;
-    const apply = () => {
-        const val = parseInt(slider.value, 10) || 0;
-        valueSpan.textContent = val;
-        if (stateKey === 'baseline') calibrationState.baseline.pain = val;
-        else if (stateKey === 'redline') calibrationState.redline.pain = val;
-        else if (stateKey === 'target') calibrationState.target.pain = val;
-        if (stateKey === 'baseline') validateScreen1();
-        else if (stateKey === 'redline') validateScreen2();
-        else if (stateKey === 'target') validateScreen3();
-    };
-    slider.addEventListener('input', apply);
-    slider.addEventListener('change', apply);
-    apply(); // sync initial display
+    if (slider) slider.value = val;
+    if (valueSpan) valueSpan.textContent = val;
+    if (stateKey === 'baseline') calibrationState.baseline.pain = val;
+    else if (stateKey === 'redline') calibrationState.redline.pain = val;
+    else if (stateKey === 'target') calibrationState.target.pain = val;
+    if (stateKey === 'baseline') validateScreen1();
+    else if (stateKey === 'redline') validateScreen2();
+    else if (stateKey === 'target') validateScreen3();
+    container.querySelectorAll('.calibration-pain-num').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.getAttribute('data-pain'), 10) === val);
+    });
 }
 
-function setupCalibrationPainSteppers() {
-    document.querySelectorAll('.calibration-pain-plus').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const slider = document.getElementById(this.getAttribute('data-slider'));
-            if (!slider) return;
-            const v = Math.min(10, parseInt(slider.value, 10) + 1);
-            slider.value = v;
-            slider.dispatchEvent(new Event('input', { bubbles: true }));
+function setupCalibrationPainButtons() {
+    document.querySelectorAll('.calibration-pain-buttons').forEach(container => {
+        const containerId = container.id;
+        const stateKey = container.getAttribute('data-state');
+        container.querySelectorAll('.calibration-pain-num').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const value = this.getAttribute('data-pain');
+                setCalibrationPainValue(containerId, value);
+            });
         });
-    });
-    document.querySelectorAll('.calibration-pain-minus').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const slider = document.getElementById(this.getAttribute('data-slider'));
-            if (!slider) return;
-            const v = Math.max(0, parseInt(slider.value, 10) - 1);
-            slider.value = v;
-            slider.dispatchEvent(new Event('input', { bubbles: true }));
-        });
+        const initialVal = stateKey === 'baseline' ? calibrationState.baseline.pain : stateKey === 'redline' ? calibrationState.redline.pain : calibrationState.target.pain;
+        setCalibrationPainValue(containerId, initialVal);
     });
 }
 
@@ -2476,8 +2472,6 @@ function setupCalibrationScreen1() {
             validateScreen1();
         };
     });
-    
-    updateCalibrationPainSlider('baseline-pain-slider', 'baseline-pain-value', 'baseline');
     
     const contextInput = document.getElementById('baseline-context');
     if (contextInput) {
@@ -2510,8 +2504,6 @@ function setupCalibrationScreen2() {
             validateScreen2();
         };
     });
-    
-    updateCalibrationPainSlider('redline-pain-slider', 'redline-pain-value', 'redline');
     
     const contextInput = document.getElementById('redline-context');
     if (contextInput) {
@@ -2551,8 +2543,6 @@ function setupCalibrationScreen3() {
             validateScreen3();
         };
     });
-    
-    updateCalibrationPainSlider('target-pain-slider', 'target-pain-value', 'target');
     
     if (completeBtn) {
         completeBtn.onclick = (e) => {
@@ -2876,12 +2866,7 @@ function startRecalibration() {
                     baselineBtn.click();
                 }
             }
-            const baselinePainSlider = document.getElementById('baseline-pain-slider');
-            const baselinePainValue = document.getElementById('baseline-pain-value');
-            if (baselinePainSlider && baselinePainValue) {
-                baselinePainSlider.value = calibrationState.baseline.pain;
-                baselinePainValue.textContent = calibrationState.baseline.pain;
-            }
+            setCalibrationPainValue('baseline-pain-buttons', calibrationState.baseline.pain);
             const baselineContext = document.getElementById('baseline-context');
             if (baselineContext) {
                 baselineContext.value = calibrationState.baseline.context;
@@ -2894,12 +2879,7 @@ function startRecalibration() {
                     redlineBtn.click();
                 }
             }
-            const redlinePainSlider = document.getElementById('redline-pain-slider');
-            const redlinePainValue = document.getElementById('redline-pain-value');
-            if (redlinePainSlider && redlinePainValue) {
-                redlinePainSlider.value = calibrationState.redline.pain;
-                redlinePainValue.textContent = calibrationState.redline.pain;
-            }
+            setCalibrationPainValue('redline-pain-buttons', calibrationState.redline.pain);
             const redlineContext = document.getElementById('redline-context');
             if (redlineContext) {
                 redlineContext.value = calibrationState.redline.context;
@@ -2912,12 +2892,7 @@ function startRecalibration() {
                     targetBtn.click();
                 }
             }
-            const targetPainSlider = document.getElementById('target-pain-slider');
-            const targetPainValue = document.getElementById('target-pain-value');
-            if (targetPainSlider && targetPainValue) {
-                targetPainSlider.value = calibrationState.target.pain;
-                targetPainValue.textContent = calibrationState.target.pain;
-            }
+            setCalibrationPainValue('target-pain-buttons', calibrationState.target.pain);
             
             // Enable buttons since values are pre-filled
             validateScreen1();
