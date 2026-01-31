@@ -147,9 +147,6 @@ function switchView(viewName) {
         renderAnalytics(AppState.analyticsDays);
         renderMeasurementSummary();
     }
-    if (viewName === 'exercises') {
-        renderExerciseLibrary('all');
-    }
     if (viewName === 'settings') {
         renderSettings();
     }
@@ -1006,8 +1003,9 @@ function renderExerciseTiles() {
             const likeIcon = isFavorite ? '❤️' : '🤍';
             
             html += `
-                <div id="tile-${ex.id}" class="exercise-tile ${isNotRecommended ? 'not-recommended' : ''} ${isFavorite ? 'favorite-tile' : ''} ${isDisliked ? 'disliked-tile' : ''}" 
+                <div id="tile-${ex.id}" class="exercise-tile ${ex.isNew ? 'exercise-tile-new' : ''} ${isNotRecommended ? 'not-recommended' : ''} ${isFavorite ? 'favorite-tile' : ''} ${isDisliked ? 'disliked-tile' : ''}" 
                      onclick="selectExerciseForLogging('${ex.id}')">
+                    ${ex.isNew ? '<div class="tile-new-strip" aria-label="New exercise">NEW</div>' : ''}
                     <div class="tile-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                         <div style="flex: 1;">
                             <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">

@@ -1304,6 +1304,30 @@ details[open] {
     transition: background 0.3s ease;
 }
 
+/* New exercise tiles: very obvious in Log */
+.exercise-tile-new {
+    position: relative;
+    padding-top: 28px !important;
+    border: 2px solid #1565C0 !important;
+    background: linear-gradient(to bottom, #E3F2FD 0%, #fff 32px) !important;
+    box-shadow: 0 0 0 1px #1565C0;
+}
+
+.tile-new-strip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    text-align: center;
+    padding: 4px 8px;
+    background: #1565C0;
+    color: white;
+    border-radius: 8px 8px 0 0;
+}
+
 .tile-new-badge {
     display: inline-block;
     font-size: 9px;
@@ -1312,8 +1336,8 @@ details[open] {
     letter-spacing: 0.5px;
     padding: 2px 6px;
     border-radius: 4px;
-    background: #E3F2FD;
-    color: #1565C0;
+    background: #1565C0;
+    color: white;
     border: 1px solid #1565C0;
 }
 
