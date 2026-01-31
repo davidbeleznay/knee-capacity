@@ -1012,6 +1012,7 @@ function renderExerciseTiles() {
                         <div style="flex: 1;">
                             <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
                                 <div class="tile-category" style="font-size: 9px; text-transform: uppercase; color: var(--primary); font-weight: 800;">${ex.category}</div>
+                                ${ex.isNew ? '<span class="tile-new-badge">New</span>' : ''}
                                 ${isFavorite ? '<span style="color: #FFD700; font-size: 14px;">⭐</span>' : ''}
                             </div>
                             <div class="tile-name" style="font-size: 14px; font-weight: 700;">${name}</div>
@@ -1208,6 +1209,36 @@ function selectExerciseForLogging(id) {
         document.getElementById('instructions-tempo').style.display = 'block';
     } else {
         document.getElementById('instructions-tempo').style.display = 'none';
+    }
+    
+    // Progressions (new detail)
+    const progressionsSection = document.getElementById('instructions-progressions');
+    const progressionsList = document.getElementById('progressions-list');
+    if (ex.progressions && ex.progressions.length > 0 && progressionsSection && progressionsList) {
+        progressionsList.innerHTML = ex.progressions.map(p => `<li>${p}</li>`).join('');
+        progressionsSection.style.display = 'block';
+    } else if (progressionsSection) {
+        progressionsSection.style.display = 'none';
+    }
+    
+    // Regressions (new detail)
+    const regressionsSection = document.getElementById('instructions-regressions');
+    const regressionsList = document.getElementById('regressions-list');
+    if (ex.regressions && ex.regressions.length > 0 && regressionsSection && regressionsList) {
+        regressionsList.innerHTML = ex.regressions.map(r => `<li>${r}</li>`).join('');
+        regressionsSection.style.display = 'block';
+    } else if (regressionsSection) {
+        regressionsSection.style.display = 'none';
+    }
+    
+    // Stop/Modify if (new detail)
+    const stopModifySection = document.getElementById('instructions-stop-modify');
+    const stopModifyText = document.getElementById('stop-modify-text');
+    if (ex.stopModify && stopModifySection && stopModifyText) {
+        stopModifyText.textContent = ex.stopModify;
+        stopModifySection.style.display = 'block';
+    } else if (stopModifySection) {
+        stopModifySection.style.display = 'none';
     }
     
     // Start with instructions collapsed on ALL devices
@@ -1471,41 +1502,60 @@ function renderExerciseTrends(id) {
         }).join('')}</div>`;
 }
 
-function renderExerciseLibrary() {
+function renderExerciseLibrary(filter) {
     const container = document.getElementById('exercise-library');
     if (!container) return;
 
-    // Group exercises by category
-    const categories = [...new Set(EXERCISES.map(ex => ex.category))].sort();
+    // filter: 'all' | 'new' (new = isNew: true only, for testing)
+    const exercisesToShow = filter === 'new' ? EXERCISES.filter(ex => ex.isNew === true) : EXERCISES;
+    const categories = [...new Set(exercisesToShow.map(ex => ex.category))].sort();
     
-    container.innerHTML = categories.map(cat => {
-        const catExercises = EXERCISES.filter(ex => ex.category === cat);
-        return `
-            <div class="category-section" style="margin-bottom: 24px;">
-                <h3 style="background: var(--primary); color: white; padding: 8px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 16px;">${cat}</h3>
-                <div class="exercise-cards-grid">
-                    ${catExercises.map(ex => `
-                        <div class="exercise-card" style="margin-bottom: 12px;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                                <h4 style="margin: 0; color: var(--primary);">${ex.name}</h4>
-                                <div style="display: flex; gap: 4px;">
-                                    ${ex.phase.map(p => `<span class="tile-phase-badge badge-${p.toLowerCase()}">${p}</span>`).join('')}
-                                    ${ex.availability === 'GREEN-only' ? '<span class="tile-phase-badge" style="background: #E8F5E9; color: #2E7D32; border: 1px solid #2E7D32;">GREEN ONLY</span>' : ''}
+    const filterHtml = `
+        <div class="library-filter" style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+            <button type="button" class="library-filter-btn ${(!filter || filter === 'all') ? 'active' : ''}" data-library-filter="all">All</button>
+            <button type="button" class="library-filter-btn ${filter === 'new' ? 'active' : ''}" data-library-filter="new">New (test batch)</button>
+        </div>
+    `;
+    
+    const contentHtml = categories.length === 0
+        ? '<p style="color: var(--gray-600); padding: 24px;">No exercises in this filter. Remove <code>isNew: true</code> from exercises in exercises.js to "keep" them and they will appear under All.</p>'
+        : categories.map(cat => {
+            const catExercises = exercisesToShow.filter(ex => ex.category === cat);
+            return `
+                <div class="category-section" style="margin-bottom: 24px;">
+                    <h3 style="background: var(--primary); color: white; padding: 8px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 16px;">${cat}</h3>
+                    <div class="exercise-cards-grid">
+                        ${catExercises.map(ex => `
+                            <div class="exercise-card" style="margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                    <h4 style="margin: 0; color: var(--primary);">${ex.name}${ex.isNew ? ' <span class="tile-new-badge">New</span>' : ''}</h4>
+                                    <div style="display: flex; gap: 4px;">
+                                        ${ex.phase.map(p => `<span class="tile-phase-badge badge-${p.toLowerCase()}">${p}</span>`).join('')}
+                                        ${ex.availability === 'GREEN-only' ? '<span class="tile-phase-badge" style="background: #E8F5E9; color: #2E7D32; border: 1px solid #2E7D32;">GREEN ONLY</span>' : ''}
+                                    </div>
+                                </div>
+                                <p style="font-size: 14px; margin-bottom: 8px; line-height: 1.4;">${ex.description}</p>
+                                <div style="font-size: 13px; color: var(--gray-600); margin-bottom: 8px;">
+                                    <strong>Target:</strong> ${ex.targetMuscles}
+                                </div>
+                                <div style="background: #f5f5f5; padding: 8px; border-radius: 6px; font-size: 13px;">
+                                    <strong>Why:</strong> ${ex.why}
                                 </div>
                             </div>
-                            <p style="font-size: 14px; margin-bottom: 8px; line-height: 1.4;">${ex.description}</p>
-                            <div style="font-size: 13px; color: var(--gray-600); margin-bottom: 8px;">
-                                <strong>Target:</strong> ${ex.targetMuscles}
-                            </div>
-                            <div style="background: #f5f5f5; padding: 8px; border-radius: 6px; font-size: 13px;">
-                                <strong>Why:</strong> ${ex.why}
-                            </div>
-                        </div>
-                    `).join('')}
+                        `).join('')}
+                    </div>
                 </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+    
+    container.innerHTML = filterHtml + contentHtml;
+    
+    container.querySelectorAll('.library-filter-btn').forEach(btn => {
+        btn.onclick = function(e) {
+            e.preventDefault();
+            renderExerciseLibrary(this.getAttribute('data-library-filter'));
+        };
+    });
 }
 // Analytics Module
 

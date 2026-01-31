@@ -765,6 +765,250 @@ const EXERCISES = [
         ],
         targetMuscles: "Lateral Stability, Reactive Strength",
         tempo: "Quick, rhythmic hops"
+    },
+    // --- NEW EXERCISES (test batch: isNew: true — filter in Library to test, remove flag to keep) ---
+    {
+        id: "box-squat-controlled",
+        name: "Box Squat (Controlled Depth)",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["BUILD", "PRIME"],
+        dosage: "4 sets x 5–8 reps",
+        defaultHoldTime: 0,
+        defaultWeight: "last-used",
+        trackingFocus: "reps",
+        description: "Load quads and hips with depth control; easy progression; OA-friendly when depth is managed.",
+        why: "Builds squat strength with a clear depth target and reduced fear of going too deep.",
+        setup: [
+            "Sit back to a box/bench/chair; light touch (don't fully relax)",
+            "Shins mostly vertical; knees track over toes"
+        ],
+        execution: [
+            "2–3 sec down, 1 sec pause, stand tall"
+        ],
+        targetMuscles: "Quadriceps, Glutes, Hip Control",
+        tempo: "2–3s down, 1s pause, stand tall",
+        progressions: ["Higher box → lower box → add dumbbells → tempo (3–1–1)"],
+        regressions: ["Higher box + bodyweight only; use hands lightly for assistance"],
+        stopModify: "Sharp joint pinch during depth → raise box height / reduce ROM.",
+        isNew: true
+    },
+    {
+        id: "cyclist-squat-heels-elevated",
+        name: "Cyclist Squat (Heels Elevated)",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["BUILD", "PRIME"],
+        dosage: "3 sets x 6–10 reps",
+        defaultHoldTime: 0,
+        defaultWeight: "last-used",
+        trackingFocus: "reps",
+        description: "Quad-biased squat pattern without machines; strong hypertrophy signal.",
+        why: "Loads quads through knee travel in a controlled way.",
+        setup: [
+            "Heels elevated (small wedge/plates/books)",
+            "Stay tall; knees travel forward naturally (within comfort)"
+        ],
+        execution: [
+            "3 sec down, smooth up"
+        ],
+        targetMuscles: "Quadriceps",
+        tempo: "3s down, smooth up",
+        progressions: ["Add load (DBs), increase ROM, slower eccentrics"],
+        regressions: ["Smaller heel lift + partial range"],
+        stopModify: "Patellofemoral irritation in deep flexion → reduce depth.",
+        isNew: true
+    },
+    {
+        id: "rfess",
+        name: "RFESS (Rear-Foot Elevated Split Squat)",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["BUILD", "PRIME"],
+        dosage: "3 sets x 6–10 reps/side",
+        defaultHoldTime: 0,
+        defaultWeight: "last-used",
+        trackingFocus: "reps",
+        description: "High ROI strength move: quads + glutes + knee control; huge carryover.",
+        why: "Single-leg strength and stability with minimal equipment.",
+        setup: [
+            "Back foot on couch/chair; front foot planted",
+            "Slight forward torso lean; knee tracks over 2nd/3rd toe"
+        ],
+        execution: [
+            "Control bottom; no bounce"
+        ],
+        targetMuscles: "Quadriceps, Glutes, Hip Stabilizers",
+        tempo: "Controlled descent and rise",
+        progressions: ["Add DBs; tempo (3 sec down); increase range"],
+        regressions: ["Standard split squat (rear foot on floor); shorter ROM"],
+        isNew: true
+    },
+    {
+        id: "seated-knee-extension-iso-hold",
+        name: "Seated Knee Extension Iso Hold (Band or Machine)",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["CALM", "BUILD"],
+        dosage: "4 sets x 30–45s hold",
+        defaultHoldTime: 40,
+        defaultWeight: 0,
+        trackingFocus: "hold",
+        description: "Direct quad tendon loading at chosen knee angle; great when squats feel \"grindy.\"",
+        why: "Loads the tendon at a specific angle without full range compression.",
+        setup: [
+            "Sit tall, thigh supported",
+            "Hold at ~45–60° knee bend (start here)"
+        ],
+        execution: [
+            "Push hard but smooth; no shaking into pain"
+        ],
+        targetMuscles: "Quadriceps, Patellar Tendon",
+        tempo: "30–45s hold",
+        progressions: ["Increase hold intensity (RPE 7–9), add 5–10s, or change angle slightly"],
+        regressions: ["Lighter band, shorter holds (15–20s), more comfortable angle"],
+        stopModify: "Avoid aggressive lockout if that irritates your knee.",
+        isNew: true
+    },
+    {
+        id: "long-arc-quad",
+        name: "Long Arc Quad (LAQ) (Band / Ankle Weight)",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["CALM", "BUILD"],
+        dosage: "3 sets x 12–20 reps/side",
+        defaultHoldTime: 0,
+        defaultWeight: "last-used",
+        trackingFocus: "reps",
+        description: "Quad volume without big compressive loads.",
+        why: "Builds quad strength through range with minimal joint stress.",
+        setup: [
+            "Seated or lying; band or ankle weight on lower leg"
+        ],
+        execution: [
+            "Slow up, slow down; pause 1 sec near top (don't snap-lock)"
+        ],
+        targetMuscles: "Quadriceps",
+        tempo: "Slow up/down, 1s pause near top",
+        progressions: ["Add load; slow eccentrics; partials at end-range only if tolerated"],
+        isNew: true
+    },
+    {
+        id: "calf-raises-straight-knee",
+        name: "Calf Raises (Straight-Knee) (Gastroc Focus)",
+        category: "Calf/Ankle + Foot",
+        availability: "always",
+        phase: ["BUILD", "PRIME"],
+        dosage: "4 sets x 6–12 reps",
+        defaultHoldTime: 0,
+        defaultWeight: "last-used",
+        trackingFocus: "reps",
+        description: "Landing stiffness + force transfer; complements soleus (bent-knee).",
+        why: "Gastroc strength supports ankle stiffness and reduces knee compensation.",
+        setup: [
+            "Knee straight (not locked hard)",
+            "Full range: big stretch → strong top"
+        ],
+        execution: [
+            "2 sec down minimum"
+        ],
+        targetMuscles: "Gastrocnemius, Ankle Stabilizers",
+        tempo: "2s down minimum",
+        progressions: ["Single-leg; add load; tempo"],
+        isNew: true
+    },
+    {
+        id: "calf-raise-iso-hold",
+        name: "Calf Raise Iso Hold (Mid-Top Range)",
+        category: "Calf/Ankle + Foot",
+        availability: "always",
+        phase: ["CALM", "BUILD"],
+        dosage: "4 sets x 30–45s hold",
+        defaultHoldTime: 40,
+        defaultWeight: 0,
+        trackingFocus: "hold",
+        description: "Flare-day friendly tendon loading; builds ankle stiffness without impact.",
+        why: "Iso hold at mid-top range is gentler than full reps.",
+        setup: [
+            "Hold \"half to three-quarter\" height (not max tiptoe)",
+            "Keep pressure even through big toe"
+        ],
+        execution: [
+            "Hold position steadily for 30–45s"
+        ],
+        targetMuscles: "Gastrocnemius, Soleus, Ankle",
+        tempo: "30–45s hold",
+        isNew: true
+    },
+    {
+        id: "snap-downs-landing",
+        name: "Snap-Downs (Landing Mechanics)",
+        category: "Knee-Tendon + Control",
+        availability: "GREEN-only",
+        phase: ["PRIME"],
+        dosage: "3 sets x 5 reps",
+        defaultHoldTime: 0,
+        defaultWeight: 0,
+        trackingFocus: "reps",
+        description: "Teach quiet, stacked landings; prepares for jumping without full jump volume.",
+        why: "Builds landing mechanics before adding height or volume.",
+        setup: [
+            "Start tall → quick drop to athletic position",
+            "Land \"quiet,\" knees track, ribs down, hips back"
+        ],
+        execution: [
+            "Quick drop; absorb softly; hold 2s"
+        ],
+        targetMuscles: "Landing Mechanics, Deceleration",
+        tempo: "Explosive snap, 2s hold",
+        progressions: ["Add mini hop → snap-down; add lateral snap-down"],
+        isNew: true
+    },
+    {
+        id: "pogos-low-amplitude",
+        name: "Pogos (Low-Amplitude)",
+        category: "Calf/Ankle + Foot",
+        availability: "GREEN-only",
+        phase: ["PRIME"],
+        dosage: "4 sets x 10–20s",
+        defaultHoldTime: 15,
+        defaultWeight: 0,
+        trackingFocus: "hold",
+        description: "Elastic ankle stiffness + low-level impact tolerance.",
+        why: "Introduces light impact and reactivity through the ankle.",
+        setup: [
+            "Small bounces; minimal knee bend; spring from ankles"
+        ],
+        execution: [
+            "Rhythmic small bounces; stay on balls of feet"
+        ],
+        targetMuscles: "Ankle Stiffness, Tendon Reactivity",
+        tempo: "10–20s bouts",
+        progressions: ["Longer bouts; single-leg; line pogos"],
+        isNew: true
+    },
+    {
+        id: "line-hops-low-dose",
+        name: "Line Hops (Low Dose)",
+        category: "Calf/Ankle + Foot",
+        availability: "GREEN-only",
+        phase: ["PRIME"],
+        dosage: "3 sets x 10–20 reps",
+        defaultHoldTime: 0,
+        defaultWeight: 0,
+        trackingFocus: "reps",
+        description: "Gentle lateral/forward impact exposure (very volleyball-relevant).",
+        why: "Low-dose impact to build tolerance for court movement.",
+        setup: [
+            "Hop over a line; keep it snappy and low"
+        ],
+        execution: [
+            "Controlled hops; minimal height; land quiet"
+        ],
+        targetMuscles: "Lateral Stability, Ankle, Impact Tolerance",
+        tempo: "Snappy, low",
+        progressions: ["Side-to-side → forward/back → single-leg"],
+        isNew: true
     }
 ];
 
