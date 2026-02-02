@@ -564,7 +564,8 @@ const EXERCISES = [
             "Lower slowly with control"
         ],
         targetMuscles: "Soleus (Deep Calf)",
-        tempo: "2s up, 1s hold, 3s down"
+        tempo: "2s up, 1s hold, 3s down",
+        enhancement: "Slant board: face downhill, heels off the back edge. Same movement, better range—exactly what you want for ankle mobility. Keep 3x12–20 reps."
     },
     {
         id: "tibialis-raises-wall",
@@ -589,7 +590,8 @@ const EXERCISES = [
             "Lower slowly to floor"
         ],
         targetMuscles: "Tibialis Anterior (Front of Shin)",
-        tempo: "1s up, 1s hold, 2s down"
+        tempo: "1s up, 1s hold, 2s down",
+        enhancement: "Slant board: stand on board facing uphill instead of against a wall. Same movement, better range of motion. Your 3x15–25 rep scheme works great."
     },
     {
         id: "foot-tripod-holds",
@@ -664,7 +666,8 @@ const EXERCISES = [
             "Keep inner heel elevated throughout"
         ],
         targetMuscles: "VMO, Knee Terminal Extension",
-        tempo: "2s down, 1s up"
+        tempo: "2s down, 1s up",
+        enhancement: "Slant board: face downhill with working foot on the board. Makes this significantly more effective for VMO activation. Try 3x8–10 per leg."
     },
     {
         id: "split-squat-iso",
@@ -689,7 +692,8 @@ const EXERCISES = [
             "Breathe and engage core"
         ],
         targetMuscles: "Quadriceps, Glutes, Tendon Tolerance",
-        tempo: "Steady hold"
+        tempo: "Steady hold",
+        enhancement: "Slant board: front foot on board facing downhill. Dramatically increases the depth you can achieve. Your 3x30–45s holds are spot on."
     },
     {
         id: "pogo-hops",
@@ -791,6 +795,7 @@ const EXERCISES = [
         progressions: ["Higher box → lower box → add dumbbells → tempo (3–1–1)"],
         regressions: ["Higher box + bodyweight only; use hands lightly for assistance"],
         stopModify: "Sharp joint pinch during depth → raise box height / reduce ROM.",
+        enhancement: "Slant board: put the board under your feet facing downhill. Game changer for getting deeper with better form. Your 4x5–8 works great here.",
         isNew: true
     },
     {
@@ -1008,6 +1013,121 @@ const EXERCISES = [
         targetMuscles: "Lateral Stability, Ankle, Impact Tolerance",
         tempo: "Snappy, low",
         progressions: ["Side-to-side → forward/back → single-leg"],
+        isNew: true
+    },
+    // --- Slant-board / decline additions ---
+    {
+        id: "kot-calf-raises",
+        name: "KOT (Knees Over Toes) Calf Raises",
+        category: "Calf/Ankle + Foot",
+        availability: "always",
+        phase: ["BUILD", "PRIME"],
+        dosage: "3 sets x 12–15 reps",
+        defaultHoldTime: 0,
+        defaultWeight: 0,
+        trackingFocus: "reps",
+        description: "Face downhill on slant board, heels off the back edge. Knees bent slightly. The angle plus knee bend targets soleus, which directly supports knee health.",
+        why: "Soleus strength supports landing and force transfer; slant board amplifies the effect.",
+        setup: [
+            "Slant board facing downhill",
+            "Heels off the back edge",
+            "Knees bent slightly"
+        ],
+        execution: [
+            "Raise up slowly",
+            "Pause at top",
+            "Lower even slower (4–5 seconds down)"
+        ],
+        targetMuscles: "Soleus, Ankle Stability",
+        tempo: "Slow up, pause top, 4–5s down",
+        progressions: ["Add load; single-leg; longer eccentric"],
+        regressions: ["Smaller angle; shorter range"],
+        stopModify: "Calf cramping or Achilles irritation → reduce range or angle.",
+        isNew: true
+    },
+    {
+        id: "patrick-step",
+        name: "Patrick Step (Backward Sled Alternative)",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["BUILD", "PRIME"],
+        dosage: "3 sets x 10 steps per leg",
+        defaultHoldTime: 0,
+        defaultWeight: 0,
+        trackingFocus: "reps",
+        description: "Stand on slant board facing uphill. Step backward off the board one foot at a time in a controlled manner, then step back up. Backward loading is very knee-friendly and builds VMO strength.",
+        why: "Same posterior-chain benefit as backward sled/Nordic progressions but more knee-specific.",
+        setup: [
+            "Slant board facing uphill",
+            "Stand on board",
+            "Space to step backward off"
+        ],
+        execution: [
+            "Step backward off board one foot at a time",
+            "Controlled pace",
+            "Step back up onto board"
+        ],
+        targetMuscles: "VMO, Quadriceps, Posterior Chain",
+        tempo: "Controlled steps",
+        progressions: ["Add weight; slower step-down; higher board"],
+        regressions: ["Shorter steps; hold rail for balance"],
+        isNew: true
+    },
+    {
+        id: "single-leg-tibialis-raise",
+        name: "Single-Leg Tibialis Raise",
+        category: "Calf/Ankle + Foot",
+        availability: "always",
+        phase: ["BUILD", "PRIME"],
+        dosage: "3 sets x 15–20 reps per leg",
+        defaultHoldTime: 0,
+        defaultWeight: 0,
+        trackingFocus: "reps",
+        description: "Face uphill on slant board on one leg; lift toes as high as possible. Single-leg challenges balance and builds ankle stability at the same time.",
+        why: "Tibialis strength + single-leg balance = better ankle and knee control.",
+        setup: [
+            "Slant board facing uphill",
+            "Stand on one leg on board",
+            "Use wall for balance if needed"
+        ],
+        execution: [
+            "Lift toes as high as possible",
+            "Hold 1s at top",
+            "Lower slowly"
+        ],
+        targetMuscles: "Tibialis Anterior, Ankle Stabilizers",
+        tempo: "1s up, 1s hold, 2s down",
+        progressions: ["No support; add reps; slower eccentric"],
+        regressions: ["Two legs; hold wall"],
+        isNew: true
+    },
+    {
+        id: "deep-squat-hold",
+        name: "Deep Squat Hold",
+        category: "Knee-Tendon + Control",
+        availability: "always",
+        phase: ["CALM", "BUILD"],
+        dosage: "2–3 sets x 45–60s hold",
+        defaultHoldTime: 45,
+        defaultWeight: 0,
+        trackingFocus: "hold",
+        description: "Feet on slant board facing downhill; sit into the deepest squat you can manage comfortably. Active mobility work—fills the gap between Wall Sit and Spanish Squat.",
+        why: "The slant lets you get deeper without compensations; builds end-range tolerance.",
+        setup: [
+            "Slant board facing downhill",
+            "Feet on board",
+            "Sit into deepest comfortable squat"
+        ],
+        execution: [
+            "Hold the position steadily",
+            "Breathe normally",
+            "No bouncing"
+        ],
+        targetMuscles: "Quadriceps, Hip Mobility, Ankle",
+        tempo: "45–60s hold",
+        progressions: ["Longer hold; lower board angle; add light load"],
+        regressions: ["Higher angle; shorter hold; hold support"],
+        stopModify: "Pinch or sharp pain in deep flexion → reduce depth or raise board.",
         isNew: true
     }
 ];

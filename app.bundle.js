@@ -1239,6 +1239,16 @@ function selectExerciseForLogging(id) {
         stopModifySection.style.display = 'none';
     }
     
+    // Consider (enhancement / slant board)
+    const enhancementSection = document.getElementById('instructions-enhancement');
+    const enhancementText = document.getElementById('enhancement-text');
+    if (ex.enhancement && enhancementSection && enhancementText) {
+        enhancementText.textContent = ex.enhancement;
+        enhancementSection.style.display = 'block';
+    } else if (enhancementSection) {
+        enhancementSection.style.display = 'none';
+    }
+    
     // Start with instructions collapsed on ALL devices
     const instructionsContent = document.getElementById('instructions-content');
     instructionsContent.style.display = 'none';
