@@ -935,6 +935,7 @@ function renderExerciseTiles() {
 
     // Filter exercises into groups
     const favoriteIds = DataManager.getFavoriteExerciseIds();
+    const dislikedIds = DataManager.getDislikedExerciseIds();
     
     const sections = groups.map(group => {
         const exercises = EXERCISES.filter(ex => {
@@ -944,14 +945,18 @@ function renderExerciseTiles() {
             return true;
         });
 
-        // Sort: Favorites first, then by name
+        // Sort: Liked at top (by like order), then neutral by name, then disliked at bottom
         exercises.sort((a, b) => {
-            const aFav = favoriteIds.indexOf(a.id);
-            const bFav = favoriteIds.indexOf(b.id);
-            
-            if (aFav !== -1 && bFav !== -1) return aFav - bFav;
-            if (aFav !== -1) return -1;
-            if (bFav !== -1) return 1;
+            const aLiked = favoriteIds.indexOf(a.id) !== -1;
+            const bLiked = favoriteIds.indexOf(b.id) !== -1;
+            const aDisliked = dislikedIds.indexOf(a.id) !== -1;
+            const bDisliked = dislikedIds.indexOf(b.id) !== -1;
+            if (aLiked && !bLiked) return -1;
+            if (!aLiked && bLiked) return 1;
+            if (aDisliked && !bDisliked) return 1;
+            if (!aDisliked && bDisliked) return -1;
+            if (aLiked && bLiked) return favoriteIds.indexOf(a.id) - favoriteIds.indexOf(b.id);
+            if (aDisliked && bDisliked) return dislikedIds.indexOf(a.id) - dislikedIds.indexOf(b.id);
             return a.name.localeCompare(b.name);
         });
 
@@ -986,11 +991,16 @@ function renderExerciseTiles() {
         });
         
         sectionExercises.sort((a, b) => {
-            const aFav = favoriteIds.indexOf(a.id);
-            const bFav = favoriteIds.indexOf(b.id);
-            if (aFav !== -1 && bFav !== -1) return aFav - bFav;
-            if (aFav !== -1) return -1;
-            if (bFav !== -1) return 1;
+            const aLiked = favoriteIds.indexOf(a.id) !== -1;
+            const bLiked = favoriteIds.indexOf(b.id) !== -1;
+            const aDisliked = dislikedIds.indexOf(a.id) !== -1;
+            const bDisliked = dislikedIds.indexOf(b.id) !== -1;
+            if (aLiked && !bLiked) return -1;
+            if (!aLiked && bLiked) return 1;
+            if (aDisliked && !bDisliked) return 1;
+            if (!aDisliked && bDisliked) return -1;
+            if (aLiked && bLiked) return favoriteIds.indexOf(a.id) - favoriteIds.indexOf(b.id);
+            if (aDisliked && bDisliked) return dislikedIds.indexOf(a.id) - dislikedIds.indexOf(b.id);
             return a.name.localeCompare(b.name);
         });
 
