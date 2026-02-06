@@ -107,7 +107,7 @@ function renderExerciseTiles() {
     const favoriteIds = DataManager.getFavoriteExerciseIds(5);
     
     const sections = groups.map(group => {
-        const exercises = EXERCISES.filter(ex => {
+        const exercises = (window.EXERCISES || []).filter(ex => {
             const phaseMatch = ex.phase.some(p => group.phases.includes(p.toUpperCase()));
             if (!phaseMatch) return false;
             if (ex.availability === 'GREEN-only' && kneeStatus !== 'green') return false;
@@ -504,10 +504,10 @@ function renderExerciseLibrary() {
     if (!container) return;
 
     // Group exercises by category
-    const categories = [...new Set(EXERCISES.map(ex => ex.category))].sort();
+    const categories = [...new Set((window.EXERCISES || []).map(ex => ex.category))].sort();
     
     container.innerHTML = categories.map(cat => {
-        const catExercises = EXERCISES.filter(ex => ex.category === cat);
+        const catExercises = (window.EXERCISES || []).filter(ex => ex.category === cat);
         return `
             <div class="category-section" style="margin-bottom: 24px;">
                 <h3 style="background: var(--primary); color: white; padding: 8px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 16px;">${cat}</h3>

@@ -121,6 +121,17 @@ function updateStreakDisplay() {
     }
 }
 
+function showPersistenceWarning() {
+    var el = document.getElementById('persistence-warning-banner');
+    if (!el) return;
+    el.hidden = false;
+    var dismiss = document.getElementById('persistence-warning-dismiss');
+    if (dismiss && !dismiss._persistenceBound) {
+        dismiss._persistenceBound = true;
+        dismiss.addEventListener('click', function () { el.hidden = true; });
+    }
+}
+
 /** Badge id -> placeholder emoji for celebration modal */
 var CELEBRATION_BADGE_EMOJI = { spark: 'âœ¨', anchor: 'âš“', double_digits: 'ðŸ”Ÿ', two_weeks: 'ðŸ“…', habit_groove: 'ðŸŽ¯', month_one: 'ðŸ†' };
 
@@ -684,7 +695,7 @@ function renderExerciseTiles() {
     const favoriteIds = DataManager.getFavoriteExerciseIds(5);
     
     const sections = groups.map(group => {
-        const exercises = EXERCISES.filter(ex => {
+        const exercises = (window.EXERCISES || []).filter(ex => {
             const phaseMatch = ex.phase.some(p => group.phases.includes(p.toUpperCase()));
             if (!phaseMatch) return false;
             if (ex.availability === 'GREEN-only' && kneeStatus !== 'green') return false;
@@ -955,6 +966,9 @@ function saveExerciseLog() {
         if (result && result.success && result.celebration && typeof showCelebrationModal === 'function') {
             showCelebrationModal(result.celebration);
         }
+        if (result && !result.success && result.error === 'persistence_failed' && typeof showPersistenceWarning === 'function') {
+            showPersistenceWarning();
+        }
     }, 1000);
 }
 
@@ -1016,6 +1030,9 @@ function saveCustomWorkout() {
         if (result && result.success && result.celebration && typeof showCelebrationModal === 'function') {
             showCelebrationModal(result.celebration);
         }
+        if (result && !result.success && result.error === 'persistence_failed' && typeof showPersistenceWarning === 'function') {
+            showPersistenceWarning();
+        }
     }, 1000);
 }
 
@@ -1075,10 +1092,10 @@ function renderExerciseLibrary() {
     if (!container) return;
 
     // Group exercises by category
-    const categories = [...new Set(EXERCISES.map(ex => ex.category))].sort();
+    const categories = [...new Set((window.EXERCISES || []).map(ex => ex.category))].sort();
     
     container.innerHTML = categories.map(cat => {
-        const catExercises = EXERCISES.filter(ex => ex.category === cat);
+        const catExercises = (window.EXERCISES || []).filter(ex => ex.category === cat);
         return `
             <div class="category-section" style="margin-bottom: 24px;">
                 <h3 style="background: var(--primary); color: white; padding: 8px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 16px;">${cat}</h3>
