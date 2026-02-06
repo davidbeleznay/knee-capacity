@@ -79,7 +79,12 @@ function setupWorkoutHandlers() {
 function renderExerciseTiles() {
     const container = document.getElementById('exercise-tiles');
     if (!container) return;
-    
+    const exercises = window.EXERCISES || [];
+    if (!exercises.length) {
+        container.innerHTML = '<p style="padding:16px;color:var(--gray-600);">Exercises did not load. Refresh the page (Ctrl+F5 to clear cache). If it persists, open DevTools (F12) and check the Console for errors.</p>';
+        return;
+    }
+
     const kneeStatus = DataManager.getKneeStatus();
     
     // Define Relevance Groups based on Status
@@ -240,6 +245,10 @@ function toggleExerciseDetails(id) {
 }
 
 function selectExerciseForLogging(id) {
+    if (typeof window.getExerciseById !== 'function') {
+        console.error('selectExerciseForLogging: exercises.js not loaded (getExerciseById missing)');
+        return;
+    }
     AppState.selectedExercise = window.getExerciseById(id);
     if (!AppState.selectedExercise) return;
     

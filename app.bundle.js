@@ -180,21 +180,25 @@ function switchView(viewName) {
     
     AppState.currentView = viewName;
     
-    // Trigger view-specific rendering
-    if (viewName === 'home') {
-        updateKneeStatusCard();
-        updateWeekSummary();
-    }
-    if (viewName === 'log') {
-        renderExerciseTiles();
-        renderTodaysSummary();
-    }
-    if (viewName === 'history') {
-        renderAnalytics(AppState.analyticsDays);
-        renderMeasurementSummary();
-    }
-    if (viewName === 'exercises') {
-        renderExerciseLibrary('all');
+    // Trigger view-specific rendering (catch so one view cannot break the app)
+    try {
+        if (viewName === 'home') {
+            updateKneeStatusCard();
+            updateWeekSummary();
+        }
+        if (viewName === 'log') {
+            if (typeof renderExerciseTiles === 'function') renderExerciseTiles();
+            if (typeof renderTodaysSummary === 'function') renderTodaysSummary();
+        }
+        if (viewName === 'history') {
+            if (typeof renderAnalytics === 'function') renderAnalytics(AppState.analyticsDays);
+            if (typeof renderMeasurementSummary === 'function') renderMeasurementSummary();
+        }
+        if (viewName === 'exercises') {
+            if (typeof renderExerciseLibrary === 'function') renderExerciseLibrary('all');
+        }
+    } catch (e) {
+        console.error('[switchView] render error for view:', viewName, e.message, e);
     }
 }
 
@@ -667,7 +671,12 @@ function setupWorkoutHandlers() {
 function renderExerciseTiles() {
     const container = document.getElementById('exercise-tiles');
     if (!container) return;
-    
+    const exercises = window.EXERCISES || [];
+    if (!exercises.length) {
+        container.innerHTML = '<p style="padding:16px;color:var(--gray-600);">Exercises did not load. Refresh the page (Ctrl+F5 to clear cache). If it persists, open DevTools (F12) and check the Console for errors.</p>';
+        return;
+    }
+
     const kneeStatus = DataManager.getKneeStatus();
     
     // Define Relevance Groups based on Status
@@ -828,6 +837,10 @@ function toggleExerciseDetails(id) {
 }
 
 function selectExerciseForLogging(id) {
+    if (typeof window.getExerciseById !== 'function') {
+        console.error('selectExerciseForLogging: exercises.js not loaded (getExerciseById missing)');
+        return;
+    }
     AppState.selectedExercise = window.getExerciseById(id);
     if (!AppState.selectedExercise) return;
     
