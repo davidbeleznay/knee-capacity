@@ -378,6 +378,9 @@ function saveExerciseLog() {
         if (result && result.success && result.celebration && typeof showCelebrationModal === 'function') {
             showCelebrationModal(result.celebration);
         }
+        if (result && !result.success && result.error === 'persistence_failed' && typeof showPersistenceWarning === 'function') {
+            showPersistenceWarning();
+        }
     }, 1000);
 }
 
@@ -438,6 +441,9 @@ function saveCustomWorkout() {
         updateStreakDisplay();
         if (result && result.success && result.celebration && typeof showCelebrationModal === 'function') {
             showCelebrationModal(result.celebration);
+        }
+        if (result && !result.success && result.error === 'persistence_failed' && typeof showPersistenceWarning === 'function') {
+            showPersistenceWarning();
         }
     }, 1000);
 }

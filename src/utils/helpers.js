@@ -98,6 +98,17 @@ function updateStreakDisplay() {
     }
 }
 
+function showPersistenceWarning() {
+    var el = document.getElementById('persistence-warning-banner');
+    if (!el) return;
+    el.hidden = false;
+    var dismiss = document.getElementById('persistence-warning-dismiss');
+    if (dismiss && !dismiss._persistenceBound) {
+        dismiss._persistenceBound = true;
+        dismiss.addEventListener('click', function () { el.hidden = true; });
+    }
+}
+
 /** Badge id -> placeholder emoji for celebration modal */
 var CELEBRATION_BADGE_EMOJI = { spark: '✨', anchor: '⚓', double_digits: '🔟', two_weeks: '📅', habit_groove: '🎯', month_one: '🏆' };
 

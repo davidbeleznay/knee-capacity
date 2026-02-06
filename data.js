@@ -17,20 +17,28 @@ const DataManager = {
                 console.error(`Storage Error (set ${key}):`, e);
             }
             
-            // Always attempt a backup write (even if localStorage fails).
-            if (typeof DataManager !== 'undefined' && DataManager.backup) {
+            // Seed backup only after a successful localStorage write.
+            if (localSuccess && typeof DataManager !== 'undefined' && DataManager.backup) {
                 DataManager.backup.set(key, value);
             }
 
             return localSuccess;
         },
-        get(key, defaultValue = []) {
+        /**
+         * @template T
+         * @param {string} key
+         * @returns {{ status: 'missing' | 'ok' | 'error', value?: T, raw?: string }}
+         */
+        get(key) {
+            let raw = null;
             try {
-                const item = localStorage.getItem(key);
-                return item ? JSON.parse(item) : defaultValue;
+                raw = localStorage.getItem(key);
+                if (raw === null) return { status: 'missing' };
+                const value = JSON.parse(raw);
+                return { status: 'ok', value };
             } catch (e) {
                 console.error(`Storage Error (get ${key}):`, e);
-                return defaultValue;
+                return { status: 'error', raw: raw !== null && raw !== undefined ? raw : undefined };
             }
         }
     },
@@ -127,6 +135,8 @@ const DataManager = {
             
             stores.forEach(store => {
                 if (localStorage.getItem(store) === null) {
+                    // Do not create exerciseLogs until first log is saved; treat missing as uninitialized
+                    if (store === 'exerciseLogs') return;
                     this.storage.set(store, []);
                 }
             });
@@ -145,9 +155,42 @@ const DataManager = {
             this.initializeBaselineMeasurement();
             this.normalizeCheckIns();
             console.log('✅ DataManager initialized');
+            this.runStorageDiagnostic();
         } catch (e) {
             console.error('Initialization error:', e);
         }
+    },
+
+    /** Dev-only: log storage and streak state to console. No UI. */
+    runStorageDiagnostic() {
+        const lines = [];
+        const key = '__storage_test_' + Date.now();
+        try {
+            localStorage.setItem(key, '1');
+            const read = localStorage.getItem(key);
+            localStorage.removeItem(key);
+            lines.push('storage: ' + (read === '1' ? 'ok (write test passed)' : 'error (write test failed)'));
+        } catch (e) {
+            lines.push('storage: error (' + (e && e.message) + ')');
+        }
+        const logsResult = this.storage.get('exerciseLogs');
+        const logsStatus = logsResult.status;
+        const logsCount = logsStatus === 'ok' && Array.isArray(logsResult.value) ? logsResult.value.length : 0;
+        lines.push('exerciseLogs: ' + logsStatus + (logsStatus === 'ok' ? ' count=' + logsCount : ''));
+        const streakKeys = ['streak', 'longestStreak', 'lastStreakDate', 'graceTokens', 'graceTokenCap'];
+        const streakParts = [];
+        let streakStatus = 'ok';
+        streakKeys.forEach(k => {
+            const raw = localStorage.getItem(k);
+            if (raw === null) {
+                streakParts.push(k + '=missing');
+                if (k === 'streak' || k === 'longestStreak') streakStatus = 'missing';
+            } else {
+                streakParts.push(k + '=' + raw);
+            }
+        });
+        lines.push('streak: ' + streakStatus + ' ' + streakParts.join(', '));
+        console.log('[DataManager diagnostic]\n' + lines.join('\n'));
     },
 
     requestPersistentStorage() {
@@ -170,7 +213,8 @@ const DataManager = {
         ];
 
         stores.forEach(store => {
-            const value = this.storage.get(store, null);
+            const r = this.storage.get(store);
+            const value = r.status === 'ok' ? r.value : null;
             if (Array.isArray(value) && value.length > 0) {
                 this.backup.set(store, value);
             }
@@ -214,7 +258,8 @@ const DataManager = {
 
             records.forEach(({ key, value }) => {
                 if (storeKeys.has(key)) {
-                    const localValue = this.storage.get(key, null);
+                    const r = this.storage.get(key);
+                    const localValue = r.status === 'ok' ? r.value : null;
                     const hasLocalData = Array.isArray(localValue) ? localValue.length > 0 : localValue !== null;
                     const hasBackupData = Array.isArray(value) ? value.length > 0 : (value !== null && typeof value === 'object');
                     if (!hasLocalData && hasBackupData) {
@@ -395,7 +440,8 @@ const DataManager = {
     },
     
     getBodyMeasurements() {
-        return this.storage.get('bodyMeasurements');
+        const r = this.storage.get('bodyMeasurements');
+        return r.status === 'ok' ? r.value : [];
     },
     
     getLatestBodyMeasurement() {
@@ -460,36 +506,49 @@ const DataManager = {
         return success;
     },
 
-    /** Returns { success: boolean, celebration?: object } for UI (e.g. modal). */
+    /** Returns { success: boolean, celebration?: object, error?: string } for UI (e.g. modal). */
     _saveAndCompleteDay(saveFn) {
         const success = saveFn();
-        if (!success) return { success: false };
+        if (!success) return { success: false, error: 'persistence_failed' };
         const result = this.completeDailyCheckIn(new Date());
         return { success: true, celebration: result.celebration || null };
     },
     
     getSessions() {
-        return this.storage.get('sessions');
+        const r = this.storage.get('sessions');
+        return r.status === 'ok' ? r.value : [];
     },
     
-    // Exercise Logs
+    // Exercise Logs (in-memory cache when persistence fails so UI still shows the new log)
+    _exerciseLogsPendingCache: null,
+
     saveExerciseLog(exerciseData) {
         const self = this;
-        return this._saveAndCompleteDay(function save() {
-            const logs = self.getExerciseLogs();
-            const newLog = {
-                ...exerciseData,
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString(),
-                date: self.getLocalDateKey()
-            };
-            logs.push(newLog);
-            return self.storage.set('exerciseLogs', logs);
-        });
+        const logs = this.getExerciseLogs().slice();
+        const newLog = {
+            ...exerciseData,
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString(),
+            date: this.getLocalDateKey()
+        };
+        logs.push(newLog);
+        const success = this.storage.set('exerciseLogs', logs);
+        if (!success) {
+            this._exerciseLogsPendingCache = logs;
+            if (typeof console !== 'undefined' && console.warn) {
+                console.warn('[DataManager] saveExerciseLog: persistence failed; log kept in memory.');
+            }
+            return { success: false, error: 'persistence_failed' };
+        }
+        this._exerciseLogsPendingCache = null;
+        const result = this.completeDailyCheckIn(new Date());
+        return { success: true, celebration: result.celebration || null };
     },
-    
+
     getExerciseLogs() {
-        return this.storage.get('exerciseLogs');
+        if (this._exerciseLogsPendingCache !== null) return this._exerciseLogsPendingCache;
+        const r = this.storage.get('exerciseLogs');
+        return r.status === 'ok' ? r.value : [];
     },
     
     getExerciseLogsByDate(date) {
@@ -526,7 +585,8 @@ const DataManager = {
     },
     
     getCustomWorkouts() {
-        return this.storage.get('customWorkouts');
+        const r = this.storage.get('customWorkouts');
+        return r.status === 'ok' ? r.value : [];
     },
     
     getCustomWorkoutsByDate(date) {
@@ -611,7 +671,8 @@ const DataManager = {
     },
     
     getCheckIns() {
-        return this.storage.get('checkIns');
+        const r = this.storage.get('checkIns');
+        return r.status === 'ok' ? r.value : [];
     },
     
     getCheckIn(date) {
@@ -659,73 +720,75 @@ const DataManager = {
     },
     
     // Streak calculation
+    /**
+     * Recomputes streak from exercise logs + custom workouts. Only runs when exerciseLogs
+     * is present (status 'ok') and has at least one log; never writes streak=0 due to missing/errored logs.
+     * @returns {{ status: 'computed', streak: number } | { status: 'skipped', reason: 'missing'|'error'|'empty' }}
+     */
     updateStreak() {
-        const exerciseLogs = this.getExerciseLogs();
-        const customWorkouts = this.getCustomWorkouts();
-        
-        const allWorkouts = [...exerciseLogs, ...customWorkouts];
-        if (allWorkouts.length === 0) {
-            localStorage.setItem('streak', '0');
-            this.backup.set('streak', '0');
-            return 0;
+        const logsResult = this.storage.get('exerciseLogs');
+        if (logsResult.status !== 'ok') {
+            return { status: 'skipped', reason: logsResult.status };
         }
-        
+        if (!Array.isArray(logsResult.value) || logsResult.value.length === 0) {
+            return { status: 'skipped', reason: 'empty' };
+        }
+        const exerciseLogs = logsResult.value;
+        const customWorkouts = this.getCustomWorkouts();
+        const allWorkouts = [...exerciseLogs, ...customWorkouts];
+
         // Extract dates, handling both old (timestamp only) and new (date field) formats
         const dates = allWorkouts.map(w => {
             if (w.date) return w.date;
             if (w.timestamp) return w.timestamp.split('T')[0];
             return null;
         }).filter(d => d !== null);
-        
+
         if (dates.length === 0) {
-            localStorage.setItem('streak', '0');
-            this.backup.set('streak', '0');
-            return 0;
+            return { status: 'skipped', reason: 'empty' };
         }
-        
+
         const uniqueDates = [...new Set(dates)].sort().reverse();
-        
         const today = this.getLocalDateKey();
         const yesterdayDate = new Date();
         yesterdayDate.setDate(yesterdayDate.getDate() - 1);
         const yesterday = this.getLocalDateKey(yesterdayDate);
-        
+
         // If no workout today or yesterday, streak is broken
         if (uniqueDates[0] !== today && uniqueDates[0] !== yesterday) {
             localStorage.setItem('streak', '0');
             this.backup.set('streak', '0');
-            return 0;
+            return { status: 'computed', streak: 0 };
         }
-        
+
         let streak = 1;
         for (let i = 0; i < uniqueDates.length - 1; i++) {
             const d1 = new Date(uniqueDates[i]);
             const d2 = new Date(uniqueDates[i+1]);
             const diff = (d1 - d2) / (1000 * 60 * 60 * 24);
-            
-            if (diff <= 1.1) { // Allowing some buffer for timezones
+            if (diff <= 1.1) {
                 streak++;
             } else {
                 break;
             }
         }
-        
+
         const longest = parseInt(localStorage.getItem('longestStreak') || '0');
         if (streak > longest) {
             localStorage.setItem('longestStreak', streak.toString());
             this.backup.set('longestStreak', streak.toString());
         }
-        
         localStorage.setItem('streak', streak.toString());
         this.backup.set('streak', streak.toString());
-        return streak;
+        return { status: 'computed', streak };
     },
-    
+
     getCurrentStreak() {
-        // Use stored streak when lastStreakDate is set (completeDailyCheckIn flow); else recalculate from workouts
         const lastStreakDate = localStorage.getItem('lastStreakDate');
         if (lastStreakDate) return parseInt(localStorage.getItem('streak') || '0', 10);
-        return this.updateStreak();
+        const result = this.updateStreak();
+        if (result.status === 'computed') return result.streak;
+        return parseInt(localStorage.getItem('streak') || '0', 10);
     },
 
     /**
@@ -1184,7 +1247,8 @@ const DataManager = {
     },
     
     getSignificantEvents(days = 90) {
-        const events = this.storage.get('significantEvents');
+        const r = this.storage.get('significantEvents');
+        const events = r.status === 'ok' ? r.value : [];
         if (!days) return events;
         
         const cutoff = new Date();
@@ -1616,7 +1680,8 @@ const DataManager = {
     },
 
     getLikedExerciseIds() {
-        return this.storage.get('likedExercises', []);
+        const r = this.storage.get('likedExercises');
+        return r.status === 'ok' ? r.value : [];
     },
 
     isExerciseLiked(exerciseId) {
@@ -1647,7 +1712,8 @@ const DataManager = {
     
     // Dislike functionality
     getDislikedExerciseIds() {
-        return this.storage.get('dislikedExercises', []);
+        const r = this.storage.get('dislikedExercises');
+        return r.status === 'ok' ? r.value : [];
     },
     
     isExerciseDisliked(exerciseId) {
@@ -1678,7 +1744,8 @@ const DataManager = {
     
     // Personal Knee Profile (Capacity Calibration)
     getKneeProfile() {
-        return this.storage.get('kneeProfile', null);
+        const r = this.storage.get('kneeProfile');
+        return r.status === 'ok' ? r.value : null;
     },
     
     hasKneeProfile() {

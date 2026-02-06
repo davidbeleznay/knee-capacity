@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storage sanity tests</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 640px; margin: 24px auto; padding: 16px; }
+        h1 { font-size: 20px; margin-bottom: 16px; }
+        .case { margin-bottom: 20px; padding: 12px; border-radius: 8px; border: 1px solid #e0e0e0; }
+        .case h2 { font-size: 14px; margin: 0 0 8px 0; }
+        .pass { background: #E8F5E9; border-color: #4CAF50; }
+        .fail { background: #FFEBEE; border-color: #F44336; }
+        .case pre { margin: 0; font-size: 12px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Storage sanity tests</h1>
+    <div id="results"></div>
+    <script src="milestones.js"></script>
+    <script src="data.js"></script>
+    <script>
+        (function () {
+            var results = document.getElementById('results');
+            function todayKey() {
+                var d = new Date();
+                return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            }
+            function pass(name, msg) {
+                results.innerHTML += '<div class="case pass"><h2>✓ ' + name + '</h2><pre>' + (msg || '') + '</pre></div>';
+                console.log('PASS: ' + name, msg || '');
+            }
+            function fail(name, msg) {
+                results.innerHTML += '<div class="case fail"><h2>✗ ' + name + '</h2><pre>' + (msg || '') + '</pre></div>';
+                console.error('FAIL: ' + name, msg || '');
+            }
+
+            // Case A: exerciseLogs missing; streak exists; app start → streak preserved, no streak=0, no exerciseLogs=[]
+            function runCaseA() {
+                var name = 'Case A: exerciseLogs missing, streak exists, app start';
+                try {
+                    localStorage.removeItem('exerciseLogs');
+                    localStorage.setItem('streak', '5');
+                    localStorage.setItem('longestStreak', '10');
+                    localStorage.setItem('lastStreakDate', todayKey());
+                    DataManager._exerciseLogsPendingCache = null;
+                    DataManager.init();
+                    var exLogsRaw = localStorage.getItem('exerciseLogs');
+                    var streak = localStorage.getItem('streak');
+                    if (exLogsRaw !== null) {
+                        fail(name, 'exerciseLogs was written (expected missing). value: ' + exLogsRaw.substring(0, 80));
+                        return;
+                    }
+                    if (streak !== '5') {
+                        fail(name, 'streak was overwritten. expected 5, got: ' + streak);
+                        return;
+                    }
+                    pass(name, 'exerciseLogs still missing; streak=5 preserved.');
+                } catch (e) {
+                    fail(name, e && (e.message || String(e)));
+                }
+            }
+
+            // Case B: exerciseLogs parse error; app start → no overwrite; warning logged
+            function runCaseB() {
+                var name = 'Case B: exerciseLogs parse error, app start';
+                try {
+                    localStorage.setItem('exerciseLogs', 'not valid json');
+                    DataManager._exerciseLogsPendingCache = null;
+                    var warned = false;
+                    var orig = console.error;
+                    console.error = function () {
+                        warned = true;
+                        orig.apply(console, arguments);
+                    };
+                    DataManager.init();
+                    console.error = orig;
+                    var exLogsRaw = localStorage.getItem('exerciseLogs');
+                    if (exLogsRaw !== 'not valid json') {
+                        fail(name, 'exerciseLogs was overwritten. expected "not valid json", got: ' + (exLogsRaw ? exLogsRaw.substring(0, 80) : 'null'));
+                        return;
+                    }
+                    pass(name, 'exerciseLogs not overwritten (still invalid). Warning logged: ' + warned);
+                } catch (e) {
+                    fail(name, e && (e.message || String(e)));
+                }
+            }
+
+            // Case C: user saves a log, then reload → log persists and renders for today
+            function runCaseC() {
+                var name = 'Case C: save log then reload';
+                try {
+                    localStorage.removeItem('exerciseLogs');
+                    localStorage.setItem('streak', '0');
+                    localStorage.removeItem('lastStreakDate');
+                    DataManager._exerciseLogsPendingCache = null;
+                    DataManager.init();
+                    var today = todayKey();
+                    var result = DataManager.saveExerciseLog({
+                        exerciseId: 'sanity-test',
+                        exerciseName: 'Sanity Test',
+                        setsCompleted: 1,
+                        repsPerSet: 1,
+                        holdTimeSeconds: 0,
+                        weightUsed: 0,
+                        rpe: 5,
+                        pain: 0,
+                        lane: 'BUILD',
+                        notes: ''
+                    });
+                    if (!result || !result.success) {
+                        fail(name, 'saveExerciseLog failed: ' + (result && result.error || 'no result'));
+                        return;
+                    }
+                    var logsAfterSave = DataManager.getExerciseLogs();
+                    if (!logsAfterSave || logsAfterSave.length !== 1) {
+                        fail(name, 'after save expected 1 log, got: ' + (logsAfterSave ? logsAfterSave.length : 0));
+                        return;
+                    }
+                    if (logsAfterSave[0].date !== today) {
+                        fail(name, 'log date expected ' + today + ', got: ' + logsAfterSave[0].date);
+                        return;
+                    }
+                    // Simulate reload: clear in-memory cache and read from storage
+                    DataManager._exerciseLogsPendingCache = null;
+                    var logsAfterReload = DataManager.getExerciseLogs();
+                    var todays = DataManager.getTodaysExerciseLogs();
+                    if (!logsAfterReload || logsAfterReload.length !== 1) {
+                        fail(name, 'after reload expected 1 log from storage, got: ' + (logsAfterReload ? logsAfterReload.length : 0));
+                        return;
+                    }
+                    if (todays.length !== 1) {
+                        fail(name, 'getTodaysExerciseLogs() expected 1, got: ' + todays.length);
+                        return;
+                    }
+                    pass(name, 'Log persisted and renders for today (' + today + ').');
+                } catch (e) {
+                    fail(name, e && (e.message || String(e)));
+                }
+            }
+
+            runCaseA();
+            runCaseB();
+            runCaseC();
+        })();
+    </script>
+</body>
+</html>
