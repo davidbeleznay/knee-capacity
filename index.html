@@ -26,6 +26,7 @@
                     TOTAL WORKOUTS: <span id="home-total-workouts">0</span>
                 </div>
                 <div id="home-milestone-badges" class="home-badges"></div>
+                <div id="home-streak-progress" class="streak-progress-line" style="font-size: 12px; color: var(--gray-600); margin-top: 8px;"></div>
             </div>
 
             <section id="kci-result-container" class="card" style="display: none; margin-top: 16px; border: 2px solid var(--primary); background: #f9fff9;">
@@ -35,6 +36,7 @@
                     <div id="kci-progress-bar" class="kci-progress-bar" style="display: flex; gap: 4px; justify-content: center; margin-bottom: 16px;">
                         <!-- 10 blocks will be injected here -->
                     </div>
+                    <div id="kci-streak-progress" class="streak-progress-line" style="font-size: 12px; color: var(--gray-600); margin-top: 8px;"></div>
                 </div>
                 
                 <!-- Personalized Context Card (shown when profile exists) -->
@@ -135,7 +137,7 @@
                 <h2>Log Workout</h2>
 
             <section class="card" id="exercise-log-form" style="display:none;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                <div class="exercise-form-header">
                     <h3 id="selected-exercise-name" style="margin: 0;">Exercise</h3>
                     <button id="close-form" class="secondary-button" style="width: auto; margin: 0; padding: 8px 16px;">Close</button>
                 </div>
@@ -191,7 +193,7 @@
                 </div>
 
                 <!-- Primary Metrics -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                <div class="metrics-grid">
                     <div class="form-row" style="margin: 0;">
                         <label>Sets</label>
                         <div class="input-stepper">
@@ -210,7 +212,7 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                <div class="metrics-grid">
                     <div class="form-row" id="hold-tracker" style="margin: 0;">
                         <label>Hold (sec)</label>
                         <div class="input-stepper">
@@ -746,7 +748,20 @@
         </div>
     </div>
 
+    <!-- Celebration modal (full-screen, shown when a streak milestone is hit) -->
+    <div id="celebration-modal" class="celebration-modal" role="dialog" aria-labelledby="celebration-title" aria-modal="true" hidden>
+        <div class="celebration-modal-backdrop"></div>
+        <div class="celebration-modal-content">
+            <div class="celebration-badge" id="celebration-badge">🏆</div>
+            <h2 class="celebration-title" id="celebration-title">Milestone</h2>
+            <p class="celebration-subtitle" id="celebration-subtitle">You did it.</p>
+            <div class="celebration-progress" id="celebration-progress">Day 7 → Next: Day 14</div>
+            <button type="button" class="celebration-dismiss" id="celebration-dismiss">Continue</button>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="milestones.js"></script>
     <script src="exercises.js"></script>
     <script src="data.js"></script>
     <script src="app.bundle.js"></script>

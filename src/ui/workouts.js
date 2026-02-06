@@ -351,8 +351,8 @@ function closeExerciseForm() {
 
 function saveExerciseLog() {
     if (!AppState.selectedExercise) return;
-    
-    DataManager.saveExerciseLog({
+
+    var result = DataManager.saveExerciseLog({
         exerciseId: AppState.selectedExercise.id,
         exerciseName: AppState.selectedExercise.name,
         setsCompleted: parseInt(document.getElementById('sets-completed').value),
@@ -364,11 +364,21 @@ function saveExerciseLog() {
         lane: AppState.selectedLane,
         notes: document.getElementById('exercise-notes').value
     });
-    
-    const btn = document.getElementById('save-exercise');
+
+    var btn = document.getElementById('save-exercise');
     btn.textContent = 'Logged!';
     btn.style.background = '#4CAF50';
-    setTimeout(() => { btn.textContent = 'Log'; btn.style.background = ''; closeExerciseForm(); renderTodaysSummary(); updateWeekSummary(); updateStreakDisplay(); }, 1000);
+    setTimeout(function () {
+        btn.textContent = 'Log';
+        btn.style.background = '';
+        closeExerciseForm();
+        renderTodaysSummary();
+        updateWeekSummary();
+        updateStreakDisplay();
+        if (result && result.success && result.celebration && typeof showCelebrationModal === 'function') {
+            showCelebrationModal(result.celebration);
+        }
+    }, 1000);
 }
 
 function selectCustomWorkout(type) {
@@ -406,7 +416,8 @@ function closeCustomForm() {
 
 function saveCustomWorkout() {
     if (!AppState.selectedCustomWorkout) return;
-    DataManager.saveCustomWorkout({
+
+    var result = DataManager.saveCustomWorkout({
         workoutCategory: AppState.selectedCustomWorkout,
         workoutType: document.getElementById('custom-workout-type').value || AppState.selectedCustomWorkout,
         durationMinutes: parseInt(document.getElementById('custom-duration').value),
@@ -415,10 +426,20 @@ function saveCustomWorkout() {
         lane: AppState.selectedLane,
         notes: document.getElementById('custom-notes').value
     });
-    const btn = document.getElementById('save-custom-workout');
+
+    var btn = document.getElementById('save-custom-workout');
     btn.textContent = 'Logged!';
     btn.style.background = '#4CAF50';
-    setTimeout(() => { btn.textContent = 'Log'; btn.style.background = ''; closeCustomForm(); renderTodaysSummary(); updateStreakDisplay(); }, 1000);
+    setTimeout(function () {
+        btn.textContent = 'Log';
+        btn.style.background = '';
+        closeCustomForm();
+        renderTodaysSummary();
+        updateStreakDisplay();
+        if (result && result.success && result.celebration && typeof showCelebrationModal === 'function') {
+            showCelebrationModal(result.celebration);
+        }
+    }, 1000);
 }
 
 function renderTodaysSummary() {

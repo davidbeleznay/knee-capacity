@@ -53,7 +53,13 @@ header h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
     backdrop-filter: blur(10px);
 }
 
-main { padding: 16px; max-width: 600px; margin: 0 auto; }
+main {
+    padding: 16px;
+    max-width: 600px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
 
 .view { display: none; }
 .view.active { display: block; animation: fadeIn 0.3s ease; }
@@ -82,6 +88,7 @@ main { padding: 16px; max-width: 600px; margin: 0 auto; }
     padding: 24px;
     margin-bottom: 16px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-sizing: border-box;
 }
 
 .card h2, .card h3 { 
@@ -460,6 +467,48 @@ textarea:focus {
     margin-bottom: 0;
 }
 
+/* Log view: contain width and avoid horizontal page scroll */
+#log-view {
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+#exercise-log-form {
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+#exercise-log-form .form-row,
+#exercise-log-form textarea,
+#exercise-log-form .exercise-instructions,
+#exercise-log-form .instructions-content {
+    box-sizing: border-box;
+    max-width: 100%;
+}
+
+.exercise-form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.exercise-form-header h3 {
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
 .custom-toggle-button {
     margin-top: 0;
     display: flex;
@@ -684,6 +733,8 @@ textarea:focus {
     border-radius: 12px;
     padding: 4px;
     min-height: 52px;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .input-stepper button {
@@ -710,6 +761,7 @@ textarea:focus {
 
 .input-stepper input {
     width: 100%;
+    min-width: 0;
     border: none;
     background: transparent;
     text-align: center;
@@ -717,6 +769,7 @@ textarea:focus {
     font-weight: 800;
     color: var(--gray-900);
     -moz-appearance: textfield;
+    box-sizing: border-box;
 }
 
 .input-stepper input::-webkit-outer-spin-button,
@@ -1033,19 +1086,24 @@ details[open] {
     bottom: 0;
     left: 0;
     right: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     background: white;
     display: flex;
     border-top: 1px solid var(--gray-300);
     padding: 8px;
     box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
     z-index: 100;
+    overflow-x: hidden;
 }
 
 .nav-btn {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     padding: 6px;
     background: none;
     border: none;
@@ -1065,8 +1123,15 @@ details[open] {
     background: #E8F5E9;
 }
 
-.nav-icon { font-size: 22px; margin-bottom: 4px; }
-.nav-label { font-size: 11px; font-weight: 700; }
+.nav-icon { font-size: 22px; margin-bottom: 4px; flex-shrink: 0; }
+.nav-label {
+    font-size: 11px;
+    font-weight: 700;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+    overflow-wrap: break-word;
+}
 
 /* Header Badges */
 .header-badges {
@@ -1201,6 +1266,22 @@ details[open] {
     .exercise-tiles { grid-template-columns: repeat(2, 1fr); gap: 8px; }
     .activity-grid { grid-template-columns: 1fr; }
     .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+}
+
+@media (max-width: 430px) {
+    #exercise-log-form {
+        padding: 16px;
+    }
+    #exercise-log-form .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+    #exercise-log-form .form-row {
+        min-width: 0;
+        width: 100%;
+    }
+    #exercise-log-form .instructions-content {
+        padding: 0 12px 16px 12px;
+    }
 }
 
 /* Exercise Instructions Section */
@@ -1626,5 +1707,80 @@ details[open] {
 
 #kci-score-display {
     animation: countUp 0.5s ease-out;
+}
+
+/* Celebration modal – full-screen, simple */
+.celebration-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.celebration-modal[hidden] {
+    display: none;
+}
+
+.celebration-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.celebration-modal-content {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    padding: 32px 24px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.celebration-badge {
+    font-size: 56px;
+    line-height: 1;
+    margin-bottom: 16px;
+}
+
+.celebration-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--gray-900);
+    margin-bottom: 8px;
+}
+
+.celebration-subtitle {
+    font-size: 16px;
+    color: var(--gray-600);
+    margin-bottom: 24px;
+    line-height: 1.4;
+}
+
+.celebration-progress {
+    font-size: 14px;
+    color: var(--primary);
+    font-weight: 700;
+    margin-bottom: 24px;
+}
+
+.celebration-dismiss {
+    width: 100%;
+    padding: 14px 24px;
+    font-size: 16px;
+    font-weight: 700;
+    color: white;
+    background: var(--primary);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.celebration-dismiss:hover {
+    background: var(--primary-dark);
 }
 

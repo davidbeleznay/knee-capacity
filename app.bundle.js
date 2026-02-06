@@ -1,4 +1,4 @@
-// State Management Module
+﻿// State Management Module
 const AppState = {
     swelling: null,
     pain: 0,
@@ -25,23 +25,6 @@ function getState(key) {
 function getExerciseIcon(id) {
     // Return empty string - no icons/badges needed
     return '';
-}
-
-// Parse YYYY-MM-DD date string as LOCAL date (not UTC)
-// This prevents timezone issues where "2024-09-24" becomes Sept 23 in some timezones
-function parseLocalDateString(dateString) {
-    if (!dateString || typeof dateString !== 'string') return null;
-    const parts = dateString.split('-').map(Number);
-    if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
-    // Create date in local timezone: new Date(year, month-1, day)
-    return new Date(parts[0], parts[1] - 1, parts[2]);
-}
-
-// Format date string (YYYY-MM-DD) to locale date string
-function formatDateString(dateString, options = {weekday: 'short', month: 'short', day: 'numeric'}) {
-    const date = parseLocalDateString(dateString);
-    if (!date) return dateString; // Fallback to original string if parsing fails
-    return date.toLocaleDateString('en-US', options);
 }
 
 function adjustValue(inputId, delta) {
@@ -80,6 +63,34 @@ function adjustValue(inputId, delta) {
     input.value = value;
 }
 
+/**
+ * @returns {{ currentStreak: number, nextMilestoneDay: number|null, daysRemaining: number|null, percentProgress: number|null }}
+ */
+function getStreakProgress() {
+    var currentStreak = typeof DataManager !== 'undefined' ? DataManager.getCurrentStreak() : 0;
+    var next = typeof window.getNextMilestone === 'function' ? window.getNextMilestone(currentStreak) : undefined;
+    var nextMilestoneDay = next ? next.day : null;
+    var daysRemaining = next ? (next.day - currentStreak) : null;
+    var percentProgress = next ? Math.min(100, Math.round((currentStreak / next.day) * 100)) : (currentStreak > 0 ? 100 : null);
+    return { currentStreak, nextMilestoneDay, daysRemaining, percentProgress };
+}
+
+function renderStreakProgress(containerId) {
+    var el = document.getElementById(containerId);
+    if (!el) return;
+    var p = getStreakProgress();
+    if (p.nextMilestoneDay != null) {
+        el.textContent = 'Day ' + p.currentStreak + ' â†’ Next: Day ' + p.nextMilestoneDay + ' (' + p.daysRemaining + ' left, ' + p.percentProgress + '%)';
+        el.style.display = '';
+    } else if (p.currentStreak > 0) {
+        el.textContent = 'Day ' + p.currentStreak + ' (max milestone reached)';
+        el.style.display = '';
+    } else {
+        el.textContent = 'Log a workout to start your streak';
+        el.style.display = '';
+    }
+}
+
 function updateStreakDisplay() {
     const streak = DataManager.getCurrentStreak();
     const badges = DataManager.getBadges();
@@ -98,13 +109,53 @@ function updateStreakDisplay() {
             `<span class="milestone-badge-home" data-label="${b.label}">${b.emoji}</span>`
         ).join('') || '<span style="font-size: 12px; opacity: 0.8;">WORKOUT TO EARN BADGES</span>';
     }
-    
+
+    renderStreakProgress('home-streak-progress');
+
     // Update Header Badges
     const headerBadges = document.getElementById('header-badges');
     if (headerBadges) {
         headerBadges.innerHTML = badges.map(b => 
             `<span class="header-badge" title="${b.label}">${b.emoji}</span>`
         ).join('');
+    }
+}
+
+/** Badge id -> placeholder emoji for celebration modal */
+var CELEBRATION_BADGE_EMOJI = { spark: 'âœ¨', anchor: 'âš“', double_digits: 'ðŸ”Ÿ', two_weeks: 'ðŸ“…', habit_groove: 'ðŸŽ¯', month_one: 'ðŸ†' };
+
+function showCelebrationModal(celebration) {
+    if (!celebration || typeof celebration.day !== 'number') return;
+    var el = document.getElementById('celebration-modal');
+    var badgeEl = document.getElementById('celebration-badge');
+    var titleEl = document.getElementById('celebration-title');
+    var subtitleEl = document.getElementById('celebration-subtitle');
+    var progressEl = document.getElementById('celebration-progress');
+    var dismissBtn = document.getElementById('celebration-dismiss');
+    if (!el || !badgeEl || !titleEl || !subtitleEl || !progressEl) return;
+
+    var badgeId = (celebration.badges && celebration.badges[0]) ? celebration.badges[0] : '';
+    badgeEl.textContent = CELEBRATION_BADGE_EMOJI[badgeId] || 'ðŸ†';
+    titleEl.textContent = celebration.title || 'Milestone';
+    subtitleEl.textContent = celebration.subtitle || '';
+
+    var next = typeof window.getNextMilestone === 'function' ? window.getNextMilestone(celebration.day) : undefined;
+    if (next) {
+        progressEl.textContent = 'Day ' + celebration.day + ' â†’ Next: Day ' + next.day;
+        progressEl.style.display = '';
+    } else {
+        progressEl.textContent = 'Day ' + celebration.day + ' â€“ max milestone reached';
+        progressEl.style.display = '';
+    }
+
+    el.hidden = false;
+
+    if (dismissBtn && !dismissBtn._celebrationBound) {
+        dismissBtn._celebrationBound = true;
+        dismissBtn.addEventListener('click', function () {
+            el.hidden = true;
+            updateStreakDisplay();
+        });
     }
 }
 // View Router Module
@@ -120,23 +171,7 @@ function switchView(viewName) {
     
     // Trigger view-specific rendering
     if (viewName === 'home') {
-        // Check if it's a new day first
-        checkForNewDay();
-        // Always reload today's check-in to ensure form is fresh
-        loadTodayCheckIn();
-        const todayKey = DataManager.getLocalDateKey();
-        const checkIn = DataManager.getCheckIn(todayKey);
-        // Verify check-in is actually for today
-        if (checkIn && checkIn.createdAt) {
-            const createdDate = DataManager.getLocalDateKey(new Date(checkIn.createdAt));
-            if (createdDate === todayKey && checkIn.kciScore !== undefined) {
-                renderKCIResult(checkIn.kciScore);
-            } else {
-                clearKCIResult();
-            }
-        } else {
-            clearKCIResult();
-        }
+        updateKneeStatusCard();
         updateWeekSummary();
     }
     if (viewName === 'log') {
@@ -147,46 +182,48 @@ function switchView(viewName) {
         renderAnalytics(AppState.analyticsDays);
         renderMeasurementSummary();
     }
-    if (viewName === 'settings') {
-        renderSettings();
+    if (viewName === 'exercises') {
+        renderExerciseLibrary('all');
     }
 }
 
 function setupNavigation() {
     document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.onclick = function(e) { 
-            e.preventDefault();
-            switchView(this.dataset.view); 
-        };
+        const handler = function() { switchView(this.dataset.view); };
+        btn.ontouchstart = handler;
+        btn.onclick = handler;
     });
 }
 // Check-In UI Module
 function setupCheckInHandlers() {
     document.querySelectorAll('.swelling-btn').forEach(btn => {
-        btn.onclick = function(e) {
-            e.preventDefault();
+        const handler = function() {
             document.querySelectorAll('.swelling-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             AppState.swelling = this.dataset.level;
         };
+        btn.ontouchstart = handler;
+        btn.onclick = handler;
     });
     
     document.querySelectorAll('.activity-level-btn').forEach(btn => {
-        btn.onclick = function(e) {
-            e.preventDefault();
+        const handler = function() {
             document.querySelectorAll('.activity-level-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             AppState.activityLevel = this.dataset.level;
         };
+        btn.ontouchstart = handler;
+        btn.onclick = handler;
     });
     
     document.querySelectorAll('.time-btn').forEach(btn => {
-        btn.onclick = function(e) {
-            e.preventDefault();
+        const handler = function() {
             document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             AppState.timeOfDay = this.dataset.time;
         };
+        btn.ontouchstart = handler;
+        btn.onclick = handler;
     });
     
     document.getElementById('pain-slider').oninput = (e) => {
@@ -194,28 +231,16 @@ function setupCheckInHandlers() {
         AppState.pain = parseInt(e.target.value);
     };
     
-    document.getElementById('save-checkin').onclick = (e) => {
-        e.preventDefault();
-        saveCheckIn();
-    };
+    document.getElementById('save-checkin').onclick = saveCheckIn;
 }
 
-function saveCheckIn(e) {
-    if (e) e.preventDefault();
+function saveCheckIn() {
     if (!AppState.swelling) {
         alert('! Select swelling');
         return;
     }
     
-    const todayKey = DataManager.getLocalDateKey();
-    console.log('💾 Saving check-in for date:', todayKey);
-    console.log('🕐 Current time:', new Date().toISOString());
-    
-    // Check how many check-ins exist for today (before saving)
-    const todayCheckIns = DataManager.getCheckInsForDate(todayKey);
-    const checkInCount = todayCheckIns.length;
-    
-    console.log('💾 Saving new check-in... (you already have', checkInCount, 'check-in(s) today)');
+    console.log('ðŸ’¾ Saving check-in and calculating KCI...');
     
     const checkInData = { 
         swelling: AppState.swelling, 
@@ -231,44 +256,13 @@ function saveCheckIn(e) {
         updateWeekSummary();
         renderKCIResult(enrichedData.kciScore);
         
-        // Get the actual count after saving (to verify it worked)
-        // Use a small delay to ensure storage has been written
+        const btn = document.getElementById('save-checkin');
+        btn.textContent = 'Calculated!';
+        btn.style.background = '#4CAF50';
         setTimeout(() => {
-            const actualCheckIns = DataManager.getCheckInsForDate(todayKey);
-            const actualCount = actualCheckIns.length;
-            
-            console.log('📊 Verification - Check-ins for today after save:', actualCount);
-            console.log('📋 All check-ins for today:', actualCheckIns.map(c => ({
-                id: c.id,
-                time: c.timeOfDay,
-                pain: c.pain,
-                swelling: c.swelling,
-                kci: c.kciScore,
-                createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : 'missing'
-            })));
-            
-            // Update the count indicator
-            const countIndicator = document.getElementById('checkin-count-indicator');
-            if (countIndicator) {
-                countIndicator.textContent = `${actualCount} check-in${actualCount > 1 ? 's' : ''} logged today`;
-                countIndicator.style.display = 'block';
-                console.log('✅ Count indicator updated:', countIndicator.textContent);
-            } else {
-                console.warn('⚠️ Count indicator element not found!');
-            }
-            
-            const btn = document.getElementById('save-checkin');
-            if (btn) {
-                btn.textContent = `Saved! (${actualCount} today)`;
-                console.log(`✅ New check-in #${actualCount} saved for today - you can log another if your condition changes`);
-                btn.style.background = '#4CAF50';
-                
-                setTimeout(() => {
-                    btn.textContent = 'Calculate My Knee Status';
-                    btn.style.background = '';
-                }, 2000);
-            }
-        }, 100); // Small delay to ensure storage write completes
+            btn.textContent = 'Calculate My Knee Status';
+            btn.style.background = '';
+        }, 2000);
     }
 }
 
@@ -280,19 +274,14 @@ function renderKCIResult(score) {
     const laneName = document.getElementById('kci-lane-name');
     const planDesc = document.getElementById('kci-plan-desc');
     const recommendationsList = document.getElementById('kci-recommendations');
-    const personalizedContext = document.getElementById('kci-personalized-context');
-    const mainDriver = document.getElementById('kci-main-driver');
-    const recoveryTrend = document.getElementById('kci-recovery-trend');
-    const targetProgress = document.getElementById('kci-target-progress');
     
     const info = DataManager.getKCIMessage(score);
     
-    // Check if personalized profile exists
-    const hasProfile = DataManager.hasKneeProfile();
-    
     // 1. Show container
     container.style.display = 'block';
-    
+
+    if (typeof renderStreakProgress === 'function') renderStreakProgress('kci-streak-progress');
+
     // 2. Animate score count up
     let current = 0;
     const duration = 1000; // 1 second
@@ -324,105 +313,24 @@ function renderKCIResult(score) {
         progressBar.appendChild(block);
     }
     
-    // 4. Show personalized context if profile exists
-    if (hasProfile) {
-        personalizedContext.style.display = 'block';
-        
-        // Get today's check-in for delta calculation
-        const todayKey = DataManager.getLocalDateKey();
-        const todayCheckIn = DataManager.getCheckIn(todayKey);
-        
-        if (todayCheckIn) {
-            const deltas = DataManager.calculateDeltas(todayCheckIn);
-            if (deltas) {
-                mainDriver.innerHTML = `<strong>Main Driver:</strong> ${deltas.mainDriver}`;
-            } else {
-                mainDriver.innerHTML = '<strong>Main Driver:</strong> Unable to calculate';
-            }
-        } else {
-            mainDriver.innerHTML = '<strong>Main Driver:</strong> Complete check-in to see deltas';
-        }
-        
-        // Recovery trend
-        const recovery = DataManager.getRecoveryTrend();
-        if (recovery) {
-            let trendText = '';
-            if (recovery.daysSinceGreen !== null) {
-                trendText += `Days since ≥70: ${recovery.daysSinceGreen}`;
-            } else {
-                trendText += 'Days since ≥70: No recent green days';
-            }
-            
-            if (recovery.avgRecoveryTime) {
-                trendText += `<br>Avg recovery time: ${recovery.avgRecoveryTime} days`;
-            }
-            
-            if (recovery.trend !== 'insufficient_data') {
-                const trendEmoji = recovery.trend === 'improving' ? '📈' : recovery.trend === 'declining' ? '📉' : '➡️';
-                trendText += `<br>Trend: ${trendEmoji} ${recovery.trend}`;
-            }
-            
-            recoveryTrend.innerHTML = `<strong>Recovery Trend:</strong><br>${trendText}`;
-        } else {
-            recoveryTrend.innerHTML = '<strong>Recovery Trend:</strong> Insufficient data';
-        }
-        
-        // Target progress
-        const progress = DataManager.getTargetProgress(score);
-        if (progress) {
-            if (progress.isInTargetZone) {
-                targetProgress.innerHTML = '<strong>Target Progress:</strong> ✅ In target zone (≥70)';
-            } else {
-                targetProgress.innerHTML = `<strong>Target Progress:</strong> ${progress.pointsFromTarget} points from target zone`;
-            }
-        } else {
-            targetProgress.innerHTML = '<strong>Target Progress:</strong> Unable to calculate';
-        }
-    } else {
-        personalizedContext.style.display = 'none';
-    }
-    
-    // 5. Update Message & Plan
+    // 4. Update Message & Plan
     messageDisplay.textContent = info.text;
     messageDisplay.style.color = info.color;
     laneName.textContent = info.lane;
     laneName.style.color = info.color;
     planDesc.textContent = info.plan;
     
-    // 6. Update Recommendations with kinetic chain coverage
-    // Extract primary lane (first word) for matching, but pass full lane string
-    const primaryLane = info.lane.split(' ')[0].toUpperCase();
-    const recommendations = DataManager.getRecommendedExercises(primaryLane, score);
-    const isBuildPrime = score >= 70;
-    const coverageNote = isBuildPrime 
-        ? 'Full kinetic chain coverage: Quad, Hip, Posterior, Ankle'
-        : 'Gentle coverage: Isometric Quad, Hip Control, Mobility';
+    // 5. Update Recommendations
+    const recommendations = DataManager.getRecommendedExercises(info.lane.split(' ')[0]);
+    recommendationsList.innerHTML = recommendations.map(ex => `
+        <div class="kci-recommendation-tile" onclick="switchView('log'); selectExerciseForLogging('${ex.id}')">
+            <span class="tile-icon">${getExerciseIcon(ex.id)}</span>
+            <span class="tile-name">${ex.name}</span>
+            <span class="plus-log-btn">+</span>
+        </div>
+    `).join('');
     
-    if (recommendations.length > 0) {
-        recommendationsList.innerHTML = `
-            <div style="font-size: 11px; color: var(--gray-600); margin-bottom: 12px; font-style: italic; text-align: center;">
-                ${coverageNote}
-            </div>
-            ${recommendations.map(rec => `
-                <div class="kci-recommendation-tile" onclick="switchView('log'); selectExerciseForLogging('${rec.exercise.id}')">
-                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
-                        <div style="font-size: 10px; text-transform: uppercase; color: var(--gray-600); font-weight: 700; letter-spacing: 0.5px;">
-                            ${rec.categoryLabel}
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span class="tile-icon">${getExerciseIcon(rec.exercise.id)}</span>
-                            <span class="tile-name">${rec.exercise.name}</span>
-                        </div>
-                    </div>
-                    <span class="plus-log-btn">+</span>
-                </div>
-            `).join('')}
-        `;
-    } else {
-        recommendationsList.innerHTML = '<p style="text-align: center; color: var(--gray-600); padding: 20px;">No exercises available for this lane</p>';
-    }
-    
-    // 7. Setup Buttons
+    // 6. Setup Buttons
     document.getElementById('kci-start-workout').onclick = () => {
         if (recommendations.length > 0) {
             switchView('log');
@@ -436,66 +344,16 @@ function renderKCIResult(score) {
         if (typeof renderExerciseTiles === 'function') renderExerciseTiles();
     };
     
-    // 8. Smooth Scroll
+    // 7. Smooth Scroll
     setTimeout(() => {
         container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 300);
 }
 
 function loadTodayCheckIn() {
-    const todayKey = DataManager.getLocalDateKey();
-    const now = new Date();
-    console.log('📅 Loading check-in for today:', todayKey);
-    console.log('🕐 Current time:', now.toISOString());
+    const checkIn = DataManager.getCheckIn(new Date().toISOString().split('T')[0]);
+    if (!checkIn) return;
     
-    // Get the most recent check-in for today (if any)
-    const checkIn = DataManager.getCheckIn(todayKey);
-    const todayCheckIns = DataManager.getCheckInsForDate(todayKey);
-    const checkInCount = todayCheckIns.length;
-    
-    console.log('📋 Check-ins for today:', checkInCount);
-    if (checkIn) {
-        console.log('📋 Most recent check-in:', `Date: ${checkIn.date}, KCI: ${checkIn.kciScore}, Time: ${checkIn.timeOfDay}`);
-    }
-    
-    // Update check-in count indicator if element exists
-    const countIndicator = document.getElementById('checkin-count-indicator');
-    if (countIndicator) {
-        if (checkInCount > 0) {
-            countIndicator.textContent = `${checkInCount} check-in${checkInCount > 1 ? 's' : ''} logged today`;
-            countIndicator.style.display = 'block';
-        } else {
-            countIndicator.style.display = 'none';
-        }
-    }
-    
-    // Always clear form first to ensure clean state
-    document.querySelectorAll('.swelling-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('pain-slider').value = 0;
-    document.getElementById('pain-value').textContent = '0';
-    document.querySelectorAll('.activity-level-btn').forEach(b => b.classList.remove('active'));
-    const lightBtn = document.querySelector('.activity-level-btn[data-level="light"]');
-    if (lightBtn) lightBtn.classList.add('active');
-    document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-    const morningBtn = document.querySelector('.time-btn[data-time="morning"]');
-    if (morningBtn) morningBtn.classList.add('active');
-    document.getElementById('checkin-notes').value = '';
-    
-    AppState.swelling = null;
-    AppState.pain = 0;
-    AppState.activityLevel = 'light';
-    AppState.timeOfDay = 'morning';
-    
-    if (!checkIn || checkIn.date !== todayKey) {
-        // Double-check: if date doesn't match today exactly, don't load it
-        if (checkIn && checkIn.date !== todayKey) {
-            console.warn('⚠️ Rejecting check-in with wrong date:', checkIn.date, 'Expected:', todayKey);
-        }
-        clearKCIResult();
-        return;
-    }
-    
-    // Only populate if we have today's check-in (date matches exactly)
     if (checkIn.swelling) {
         const btn = document.querySelector(`.swelling-btn[data-level="${checkIn.swelling}"]`);
         if (btn) {
@@ -534,74 +392,7 @@ function loadTodayCheckIn() {
 
     if (checkIn.kciScore !== undefined) {
         renderKCIResult(checkIn.kciScore);
-    } else {
-        clearKCIResult();
     }
-}
-
-function clearKCIResult() {
-    const container = document.getElementById('kci-result-container');
-    if (container) container.style.display = 'none';
-}
-
-function resetDailyCheckInUI() {
-    AppState.swelling = null;
-    AppState.pain = 0;
-    AppState.activityLevel = 'light';
-    AppState.timeOfDay = 'morning';
-    AppState.selectedLane = null;
-
-    document.querySelectorAll('.swelling-btn').forEach(b => b.classList.remove('active'));
-
-    document.querySelectorAll('.activity-level-btn').forEach(b => b.classList.remove('active'));
-    const lightBtn = document.querySelector('.activity-level-btn[data-level="light"]');
-    if (lightBtn) lightBtn.classList.add('active');
-
-    document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-    const morningBtn = document.querySelector('.time-btn[data-time="morning"]');
-    if (morningBtn) morningBtn.classList.add('active');
-
-    const painSlider = document.getElementById('pain-slider');
-    const painValue = document.getElementById('pain-value');
-    if (painSlider) painSlider.value = 0;
-    if (painValue) painValue.textContent = '0';
-
-    const notes = document.getElementById('checkin-notes');
-    if (notes) notes.value = '';
-}
-
-// Track the last known date to detect day changes
-let lastKnownDate = DataManager.getLocalDateKey();
-
-function checkForNewDay() {
-    const todayKey = DataManager.getLocalDateKey();
-    
-    if (todayKey !== lastKnownDate) {
-        console.log('🌅 New day detected! Previous:', lastKnownDate, 'Today:', todayKey);
-        lastKnownDate = todayKey;
-        
-        // Clear KCI and reset form for new day
-        clearKCIResult();
-        resetDailyCheckInUI();
-        loadTodayCheckIn(); // This will load today's check-in if it exists, or show empty form
-        updateWeekSummary();
-        updateStreakDisplay();
-        
-        return true; // Day changed
-    }
-    return false; // Same day
-}
-
-function scheduleMidnightReset() {
-    const now = new Date();
-    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 2);
-    const delayMs = nextMidnight.getTime() - now.getTime();
-
-    setTimeout(() => {
-        console.log('⏰ Midnight reset triggered');
-        checkForNewDay();
-        scheduleMidnightReset(); // Schedule next reset
-    }, Math.max(delayMs, 1000));
 }
 
 function updateWeekSummary() {
@@ -609,14 +400,8 @@ function updateWeekSummary() {
     weekStart.setDate(weekStart.getDate() - weekStart.getDay());
     
     const weekData = DataManager.getRecentCheckIns(7);
-    const weekExercises = DataManager.getExerciseLogs().filter(e => {
-        const logDate = parseLocalDateString(e.date);
-        return logDate && logDate >= weekStart;
-    });
-    const weekCustom = DataManager.getCustomWorkouts().filter(w => {
-        const workoutDate = parseLocalDateString(w.date);
-        return workoutDate && workoutDate >= weekStart;
-    });
+    const weekExercises = DataManager.getExerciseLogs().filter(e => new Date(e.date) >= weekStart);
+    const weekCustom = DataManager.getCustomWorkouts().filter(w => new Date(w.date) >= weekStart);
     
     const greenDays = weekData.filter(c => DataManager.getKneeStatusForCheckIn(c) === 'GREEN').length;
     const avgPain = weekData.length > 0 ? 
@@ -747,7 +532,7 @@ const Stopwatch = {
         const badgesContainer = document.getElementById('milestone-badges');
         const badge = document.createElement('div');
         badge.className = 'milestone-badge milestone-new';
-        badge.innerHTML = `<span class="milestone-icon">🎯</span><span class="milestone-text">${milestone}s!</span>`;
+        badge.innerHTML = `<span class="milestone-icon">ðŸŽ¯</span><span class="milestone-text">${milestone}s!</span>`;
         badgesContainer.appendChild(badge);
         
         setTimeout(() => badge.classList.remove('milestone-new'), 500);
@@ -793,30 +578,39 @@ const Stopwatch = {
 // Workouts Module - Exercise & Custom Workout Logging
 
 function setupWorkoutHandlers() {
-    const toggleCustomList = document.getElementById('toggle-custom-list');
-    const customTiles = document.getElementById('custom-workout-tiles');
-    const customToggleIcon = document.getElementById('custom-toggle-icon');
+    const toggleEx = document.getElementById('toggle-exercises');
+    const toggleCu = document.getElementById('toggle-custom');
     
-    if (toggleCustomList && customTiles) {
-        toggleCustomList.setAttribute('aria-expanded', 'false');
-        customTiles.style.display = 'none';
-        
-        toggleCustomList.onclick = (e) => {
-            e.preventDefault();
-            const isHidden = customTiles.style.display === 'none';
-            customTiles.style.display = isHidden ? 'grid' : 'none';
-            if (customToggleIcon) customToggleIcon.textContent = isHidden ? '▲' : '▼';
-            toggleCustomList.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+    if (toggleEx) {
+        const h = () => {
+            toggleEx.classList.add('active');
+            toggleCu.classList.remove('active');
+            document.getElementById('exercise-tiles').style.display = 'grid';
+            document.getElementById('custom-workout-tiles').style.display = 'none';
         };
+        toggleEx.ontouchstart = h;
+        toggleEx.onclick = h;
+    }
+    
+    if (toggleCu) {
+        const h = () => {
+            toggleCu.classList.add('active');
+            toggleEx.classList.remove('active');
+            document.getElementById('exercise-tiles').style.display = 'none';
+            document.getElementById('custom-workout-tiles').style.display = 'grid';
+        };
+        toggleCu.ontouchstart = h;
+        toggleCu.onclick = h;
     }
     
     document.querySelectorAll('.impact-btn').forEach(btn => {
-        btn.onclick = function(e) {
-            e.preventDefault();
+        const h = function() {
             document.querySelectorAll('.impact-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             AppState.kneeImpact = this.dataset.impact;
         };
+        btn.ontouchstart = h;
+        btn.onclick = h;
     });
     
     const rpeSlider = document.getElementById('rpe-slider');
@@ -826,63 +620,16 @@ function setupWorkoutHandlers() {
     if (customIntensity) customIntensity.oninput = (e) => document.getElementById('custom-intensity-value').textContent = e.target.value;
     
     const saveEx = document.getElementById('save-exercise');
-    if (saveEx) { 
-        saveEx.onclick = (e) => {
-            e.preventDefault();
-            saveExerciseLog();
-        };
-    }
-
-    const likeBtn = document.getElementById('exercise-like');
-    const dislikeBtn = document.getElementById('exercise-dislike');
-    if (likeBtn && dislikeBtn) {
-        likeBtn.onclick = (e) => {
-            e.preventDefault();
-            if (!AppState.selectedExercise) return;
-            // Toggle like (if already liked, unlike it)
-            const currentlyLiked = DataManager.isExerciseLiked(AppState.selectedExercise.id);
-            setExerciseLike(AppState.selectedExercise.id, !currentlyLiked);
-            // If liking, remove dislike
-            if (!currentlyLiked) {
-                setExerciseDislike(AppState.selectedExercise.id, false);
-            }
-        };
-        dislikeBtn.onclick = (e) => {
-            e.preventDefault();
-            if (!AppState.selectedExercise) return;
-            // Toggle dislike
-            const currentlyDisliked = DataManager.isExerciseDisliked(AppState.selectedExercise.id);
-            setExerciseDislike(AppState.selectedExercise.id, !currentlyDisliked);
-            // If disliking, remove like
-            if (!currentlyDisliked) {
-                setExerciseLike(AppState.selectedExercise.id, false);
-            }
-        };
-    }
+    if (saveEx) { saveEx.ontouchstart = saveExerciseLog; saveEx.onclick = saveExerciseLog; }
     
     const saveCust = document.getElementById('save-custom-workout');
-    if (saveCust) { 
-        saveCust.onclick = (e) => {
-            e.preventDefault();
-            saveCustomWorkout();
-        };
-    }
+    if (saveCust) { saveCust.ontouchstart = saveCustomWorkout; saveCust.onclick = saveCustomWorkout; }
     
     const closeForm = document.getElementById('close-form');
-    if (closeForm) { 
-        closeForm.onclick = (e) => {
-            e.preventDefault();
-            closeExerciseForm();
-        };
-    }
+    if (closeForm) { closeForm.ontouchstart = closeExerciseForm; closeForm.onclick = closeExerciseForm; }
     
     const closeCust = document.getElementById('close-custom-form');
-    if (closeCust) { 
-        closeCust.onclick = (e) => {
-            e.preventDefault();
-            closeCustomForm();
-        };
-    }
+    if (closeCust) { closeCust.ontouchstart = closeCustomForm; closeCust.onclick = closeCustomForm; }
 
     const toggleTimerBtn = document.getElementById('toggle-form-timer');
     if (toggleTimerBtn) {
@@ -890,7 +637,7 @@ function setupWorkoutHandlers() {
             const timerDiv = document.getElementById('embedded-stopwatch');
             const isVisible = timerDiv.style.display !== 'none';
             timerDiv.style.display = isVisible ? 'none' : 'block';
-            toggleTimerBtn.textContent = isVisible ? '⏱️ Show Timer' : '⏱️ Hide Timer';
+            toggleTimerBtn.textContent = isVisible ? 'â±ï¸ Show Timer' : 'â±ï¸ Hide Timer';
         };
     }
     
@@ -901,7 +648,7 @@ function setupWorkoutHandlers() {
             const icon = document.getElementById('toggle-instructions-icon');
             const isVisible = content.style.display !== 'none';
             content.style.display = isVisible ? 'none' : 'block';
-            icon.textContent = isVisible ? '▶' : '▼';
+            icon.textContent = isVisible ? 'â–¶' : 'â–¼';
         };
     }
 }
@@ -934,8 +681,7 @@ function renderExerciseTiles() {
     }
 
     // Filter exercises into groups
-    const favoriteIds = DataManager.getFavoriteExerciseIds();
-    const dislikedIds = DataManager.getDislikedExerciseIds();
+    const favoriteIds = DataManager.getFavoriteExerciseIds(5);
     
     const sections = groups.map(group => {
         const exercises = EXERCISES.filter(ex => {
@@ -945,18 +691,14 @@ function renderExerciseTiles() {
             return true;
         });
 
-        // Sort: Liked at top (by like order), then neutral by name, then disliked at bottom
+        // Sort: Favorites first, then by name
         exercises.sort((a, b) => {
-            const aLiked = favoriteIds.indexOf(a.id) !== -1;
-            const bLiked = favoriteIds.indexOf(b.id) !== -1;
-            const aDisliked = dislikedIds.indexOf(a.id) !== -1;
-            const bDisliked = dislikedIds.indexOf(b.id) !== -1;
-            if (aLiked && !bLiked) return -1;
-            if (!aLiked && bLiked) return 1;
-            if (aDisliked && !bDisliked) return 1;
-            if (!aDisliked && bDisliked) return -1;
-            if (aLiked && bLiked) return favoriteIds.indexOf(a.id) - favoriteIds.indexOf(b.id);
-            if (aDisliked && bDisliked) return dislikedIds.indexOf(a.id) - dislikedIds.indexOf(b.id);
+            const aFav = favoriteIds.indexOf(a.id);
+            const bFav = favoriteIds.indexOf(b.id);
+            
+            if (aFav !== -1 && bFav !== -1) return aFav - bFav;
+            if (aFav !== -1) return -1;
+            if (bFav !== -1) return 1;
             return a.name.localeCompare(b.name);
         });
 
@@ -991,16 +733,11 @@ function renderExerciseTiles() {
         });
         
         sectionExercises.sort((a, b) => {
-            const aLiked = favoriteIds.indexOf(a.id) !== -1;
-            const bLiked = favoriteIds.indexOf(b.id) !== -1;
-            const aDisliked = dislikedIds.indexOf(a.id) !== -1;
-            const bDisliked = dislikedIds.indexOf(b.id) !== -1;
-            if (aLiked && !bLiked) return -1;
-            if (!aLiked && bLiked) return 1;
-            if (aDisliked && !bDisliked) return 1;
-            if (!aDisliked && bDisliked) return -1;
-            if (aLiked && bLiked) return favoriteIds.indexOf(a.id) - favoriteIds.indexOf(b.id);
-            if (aDisliked && bDisliked) return dislikedIds.indexOf(a.id) - dislikedIds.indexOf(b.id);
+            const aFav = favoriteIds.indexOf(a.id);
+            const bFav = favoriteIds.indexOf(b.id);
+            if (aFav !== -1 && bFav !== -1) return aFav - bFav;
+            if (aFav !== -1) return -1;
+            if (bFav !== -1) return 1;
             return a.name.localeCompare(b.name);
         });
 
@@ -1009,31 +746,23 @@ function renderExerciseTiles() {
             const name = ex.name.replace(' (Isometric)', '').replace(' (Eccentric)', '');
             const isNotRecommended = section.type === 'not-recommended';
             const isFavorite = favoriteIds.includes(ex.id);
-            const isDisliked = DataManager.isExerciseDisliked(ex.id);
-            const likeIcon = isFavorite ? '❤️' : '🤍';
             
             html += `
-                <div id="tile-${ex.id}" class="exercise-tile ${ex.isNew ? 'exercise-tile-new' : ''} ${isNotRecommended ? 'not-recommended' : ''} ${isFavorite ? 'favorite-tile' : ''} ${isDisliked ? 'disliked-tile' : ''}" 
-                     onclick="selectExerciseForLogging('${ex.id}')">
-                    ${ex.isNew ? '<div class="tile-new-strip" aria-label="New exercise">NEW</div>' : ''}
+                <div id="tile-${ex.id}" class="exercise-tile ${isNotRecommended ? 'not-recommended' : ''} ${isFavorite ? 'favorite-tile' : ''}" 
+                     onclick="toggleExerciseDetails('${ex.id}')">
                     <div class="tile-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                         <div style="flex: 1;">
                             <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
                                 <div class="tile-category" style="font-size: 9px; text-transform: uppercase; color: var(--primary); font-weight: 800;">${ex.category}</div>
-                                ${ex.isNew ? '<span class="tile-new-badge">New</span>' : ''}
-                                ${isFavorite ? '<span style="color: #FFD700; font-size: 14px;">⭐</span>' : ''}
+                                ${isFavorite ? '<span style="color: #FFD700; font-size: 14px;">â­</span>' : ''}
                             </div>
                             <div class="tile-name" style="font-size: 14px; font-weight: 700;">${name}</div>
                             <div class="tile-meta" style="font-size: 12px; color: var(--gray-600);">${ex.dosage}</div>
                         </div>
-                        <div style="display: flex; gap: 4px;">
-                            <button class="like-toggle ${isFavorite ? 'liked' : ''}" data-like-btn="true" aria-pressed="${isFavorite}" onclick="event.stopPropagation(); toggleExerciseLike('${ex.id}')">
-                                ${likeIcon}
-                            </button>
-                            <button class="dislike-toggle ${isDisliked ? 'active' : ''}" data-dislike-btn="true" aria-pressed="${isDisliked}" onclick="event.stopPropagation(); toggleExerciseDislike('${ex.id}')">
-                                👎
-                            </button>
-                        </div>
+                        <button class="plus-log-btn" onclick="event.stopPropagation(); selectExerciseForLogging('${ex.id}')" 
+                                style="width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--primary); color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                            +
+                        </button>
                     </div>
                     
                     <div class="tile-details" style="display: none; width: 100%; margin-top: 16px; border-top: 1px solid var(--gray-200); padding-top: 16px;">
@@ -1067,101 +796,6 @@ function renderExerciseTiles() {
     container.innerHTML = html;
 }
 
-function setExerciseLike(exerciseId, liked) {
-    DataManager.setExerciseLike(exerciseId, liked);
-    updateExerciseLikeUI(exerciseId);
-
-    const logSections = document.getElementById('log-sections');
-    if (!logSections || logSections.style.display !== 'none') {
-        renderExerciseTiles();
-    }
-}
-
-function toggleExerciseLike(exerciseId) {
-    const liked = DataManager.toggleExerciseLike(exerciseId);
-    // If liking, remove dislike
-    if (liked) {
-        DataManager.setExerciseDislike(exerciseId, false);
-    }
-    updateExerciseLikeUI(exerciseId);
-
-    const logSections = document.getElementById('log-sections');
-    if (!logSections || logSections.style.display !== 'none') {
-        renderExerciseTiles();
-    }
-
-    return liked;
-}
-
-function setExerciseDislike(exerciseId, disliked) {
-    DataManager.setExerciseDislike(exerciseId, disliked);
-    // If disliking, remove like
-    if (disliked) {
-        DataManager.setExerciseLike(exerciseId, false);
-    }
-    updateExerciseLikeUI(exerciseId);
-
-    const logSections = document.getElementById('log-sections');
-    if (!logSections || logSections.style.display !== 'none') {
-        renderExerciseTiles();
-    }
-}
-
-function toggleExerciseDislike(exerciseId) {
-    const disliked = DataManager.toggleExerciseDislike(exerciseId);
-    // If disliking, remove like
-    if (disliked) {
-        DataManager.setExerciseLike(exerciseId, false);
-    }
-    updateExerciseLikeUI(exerciseId);
-
-    const logSections = document.getElementById('log-sections');
-    if (!logSections || logSections.style.display !== 'none') {
-        renderExerciseTiles();
-    }
-
-    return disliked;
-}
-
-function updateExerciseLikeUI(exerciseId) {
-    const liked = DataManager.isExerciseLiked(exerciseId);
-    const disliked = DataManager.isExerciseDisliked(exerciseId);
-    const tile = document.getElementById(`tile-${exerciseId}`);
-    
-    if (tile) {
-        tile.classList.toggle('favorite-tile', liked);
-        tile.classList.toggle('disliked-tile', disliked);
-        
-        const likeBtn = tile.querySelector('.like-toggle');
-        const dislikeBtn = tile.querySelector('.dislike-toggle');
-        
-        if (likeBtn) {
-            likeBtn.textContent = liked ? '❤️' : '🤍';
-            likeBtn.classList.toggle('liked', liked);
-            likeBtn.setAttribute('aria-pressed', liked ? 'true' : 'false');
-        }
-        
-        if (dislikeBtn) {
-            dislikeBtn.textContent = '👎';
-            dislikeBtn.classList.toggle('active', disliked);
-            dislikeBtn.setAttribute('aria-pressed', disliked ? 'true' : 'false');
-        }
-    }
-
-    if (AppState.selectedExercise && AppState.selectedExercise.id === exerciseId) {
-        const likeBtn = document.getElementById('exercise-like');
-        const dislikeBtn = document.getElementById('exercise-dislike');
-        if (likeBtn) {
-            likeBtn.textContent = liked ? '❤️ Unlike' : '🤍 Like';
-            likeBtn.classList.toggle('active', liked);
-        }
-        if (dislikeBtn) {
-            dislikeBtn.textContent = disliked ? '👎 Disliked' : '👎 Dislike';
-            dislikeBtn.classList.toggle('active', disliked);
-        }
-    }
-}
-
 function toggleExerciseDetails(id) {
     const allTiles = document.querySelectorAll('.exercise-tile');
     const targetTile = document.getElementById(`tile-${id}`);
@@ -1185,19 +819,13 @@ function toggleExerciseDetails(id) {
 function selectExerciseForLogging(id) {
     AppState.selectedExercise = window.getExerciseById(id);
     if (!AppState.selectedExercise) return;
-
-    const logSections = document.getElementById('log-sections');
-    if (logSections) logSections.style.display = 'none';
-
+    
     document.getElementById('exercise-log-form').style.display = 'block';
-    document.getElementById('custom-workout-form').style.display = 'none';
-    document.getElementById('exercise-log-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('exercise-tiles').style.display = 'none';
+    document.getElementById('custom-workout-tiles').style.display = 'none';
     
     const ex = AppState.selectedExercise;
     document.getElementById('selected-exercise-name').textContent = ex.name;
-    
-    // Update like/dislike UI in form
-    updateExerciseLikeUI(id);
     
     // Populate exercise instructions
     if (ex.setup && ex.setup.length > 0) {
@@ -1219,50 +847,10 @@ function selectExerciseForLogging(id) {
         document.getElementById('instructions-tempo').style.display = 'none';
     }
     
-    // Progressions (new detail)
-    const progressionsSection = document.getElementById('instructions-progressions');
-    const progressionsList = document.getElementById('progressions-list');
-    if (ex.progressions && ex.progressions.length > 0 && progressionsSection && progressionsList) {
-        progressionsList.innerHTML = ex.progressions.map(p => `<li>${p}</li>`).join('');
-        progressionsSection.style.display = 'block';
-    } else if (progressionsSection) {
-        progressionsSection.style.display = 'none';
-    }
-    
-    // Regressions (new detail)
-    const regressionsSection = document.getElementById('instructions-regressions');
-    const regressionsList = document.getElementById('regressions-list');
-    if (ex.regressions && ex.regressions.length > 0 && regressionsSection && regressionsList) {
-        regressionsList.innerHTML = ex.regressions.map(r => `<li>${r}</li>`).join('');
-        regressionsSection.style.display = 'block';
-    } else if (regressionsSection) {
-        regressionsSection.style.display = 'none';
-    }
-    
-    // Stop/Modify if (new detail)
-    const stopModifySection = document.getElementById('instructions-stop-modify');
-    const stopModifyText = document.getElementById('stop-modify-text');
-    if (ex.stopModify && stopModifySection && stopModifyText) {
-        stopModifyText.textContent = ex.stopModify;
-        stopModifySection.style.display = 'block';
-    } else if (stopModifySection) {
-        stopModifySection.style.display = 'none';
-    }
-    
-    // Consider (enhancement / slant board)
-    const enhancementSection = document.getElementById('instructions-enhancement');
-    const enhancementText = document.getElementById('enhancement-text');
-    if (ex.enhancement && enhancementSection && enhancementText) {
-        enhancementText.textContent = ex.enhancement;
-        enhancementSection.style.display = 'block';
-    } else if (enhancementSection) {
-        enhancementSection.style.display = 'none';
-    }
-    
     // Start with instructions collapsed on ALL devices
     const instructionsContent = document.getElementById('instructions-content');
     instructionsContent.style.display = 'none';
-    document.getElementById('toggle-instructions-icon').textContent = '▶';
+    document.getElementById('toggle-instructions-icon').textContent = 'â–¶';
     
     // Smart Defaults: Hold Time
     const defaultHold = ex.defaultHoldTime || 0;
@@ -1306,7 +894,6 @@ function selectExerciseForLogging(id) {
     
     renderExerciseTrends(id);
     renderExerciseHint(ex, defaultWeight);
-    updateExerciseLikeUI(id);
 }
 
 function renderExerciseHint(ex, lastWeight) {
@@ -1315,11 +902,11 @@ function renderExerciseHint(ex, lastWeight) {
     
     let hint = '';
     if (ex.trackingFocus === 'hold') {
-        hint = `💡 Typical hold: ${ex.defaultHoldTime || 30}-60s`;
+        hint = `ðŸ’¡ Typical hold: ${ex.defaultHoldTime || 30}-60s`;
     } else if (ex.trackingFocus === 'weight' && lastWeight > 0) {
-        hint = `💡 Last used: ${lastWeight} lbs`;
+        hint = `ðŸ’¡ Last used: ${lastWeight} lbs`;
     } else if (ex.trackingFocus === 'reps') {
-        hint = `💡 Focus on controlled reps`;
+        hint = `ðŸ’¡ Focus on controlled reps`;
     }
     
     hintContainer.textContent = hint;
@@ -1328,25 +915,21 @@ function renderExerciseHint(ex, lastWeight) {
 
 function closeExerciseForm() {
     document.getElementById('exercise-log-form').style.display = 'none';
-    const logSections = document.getElementById('log-sections');
-    if (logSections) logSections.style.display = 'block';
+    document.getElementById('exercise-tiles').style.display = 'grid';
     AppState.selectedExercise = null;
     
     // Reset timer UI if open
     const timerDiv = document.getElementById('embedded-stopwatch');
     if (timerDiv) timerDiv.style.display = 'none';
     const toggleBtn = document.getElementById('toggle-form-timer');
-    if (toggleBtn) toggleBtn.textContent = '⏱️ Show Timer';
+    if (toggleBtn) toggleBtn.textContent = 'â±ï¸ Show Timer';
     if (typeof Stopwatch !== 'undefined') Stopwatch.reset();
 }
 
 function saveExerciseLog() {
-    if (!AppState.selectedExercise) {
-        console.warn('⚠️ Cannot save: No exercise selected');
-        return;
-    }
-    
-    const exerciseData = {
+    if (!AppState.selectedExercise) return;
+
+    var result = DataManager.saveExerciseLog({
         exerciseId: AppState.selectedExercise.id,
         exerciseName: AppState.selectedExercise.name,
         setsCompleted: parseInt(document.getElementById('sets-completed').value),
@@ -1357,54 +940,38 @@ function saveExerciseLog() {
         pain: parseInt(document.getElementById('exercise-pain-slider').value),
         lane: AppState.selectedLane,
         notes: document.getElementById('exercise-notes').value
-    };
-    
-    console.log('💾 Saving exercise log:', exerciseData);
-    const success = DataManager.saveExerciseLog(exerciseData);
-    
-    if (success) {
-        console.log('✅ Exercise log saved successfully');
-        const btn = document.getElementById('save-exercise');
-        btn.textContent = 'Logged!';
-        btn.style.background = '#4CAF50';
-        setTimeout(() => { 
-            btn.textContent = 'Log'; 
-            btn.style.background = ''; 
-            closeExerciseForm(); 
-            renderTodaysSummary(); 
-            updateWeekSummary(); 
-            updateStreakDisplay(); 
-        }, 1000);
-    } else {
-        console.error('❌ Failed to save exercise log');
-        alert('Failed to save exercise. Please try again.');
-    }
+    });
+
+    var btn = document.getElementById('save-exercise');
+    btn.textContent = 'Logged!';
+    btn.style.background = '#4CAF50';
+    setTimeout(function () {
+        btn.textContent = 'Log';
+        btn.style.background = '';
+        closeExerciseForm();
+        renderTodaysSummary();
+        updateWeekSummary();
+        updateStreakDisplay();
+        if (result && result.success && result.celebration && typeof showCelebrationModal === 'function') {
+            showCelebrationModal(result.celebration);
+        }
+    }, 1000);
 }
 
 function selectCustomWorkout(type) {
-    const names = { sports: '🏀 Sports', bike: '🚴 Bike', rowing: '🚣 Rowing', core: '🎯 Core', stretch: '🧘 Stretch', upper: '💪 Upper' };
+    const names = { peloton: 'ðŸš´ Peloton', rowing: 'ðŸš£ Rowing', core: 'ðŸŽ¯ Core', stretch: 'ðŸ§˜ Stretch', upper: 'ðŸ’ª Upper', bike: 'ðŸš´ Bike' };
     AppState.selectedCustomWorkout = type;
-    const logSections = document.getElementById('log-sections');
-    if (logSections) logSections.style.display = 'none';
-    document.getElementById('exercise-log-form').style.display = 'none';
+    document.getElementById('custom-workout-tiles').style.display = 'none';
     document.getElementById('custom-workout-form').style.display = 'block';
     document.getElementById('custom-workout-title').textContent = names[type] || 'Custom';
-    document.getElementById('custom-workout-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    
-    const customTiles = document.getElementById('custom-workout-tiles');
-    if (customTiles) customTiles.style.display = 'none';
-    const customToggleIcon = document.getElementById('custom-toggle-icon');
-    if (customToggleIcon) customToggleIcon.textContent = '▼';
-    const toggleCustomList = document.getElementById('toggle-custom-list');
-    if (toggleCustomList) toggleCustomList.setAttribute('aria-expanded', 'false');
     
     const defaults = { 
-        sports: { duration: 60, intensity: 7, impact: 'high' },
-        bike: { duration: 45, intensity: 5, impact: 'none' },
+        peloton: { duration: 30, intensity: 6, impact: 'none' }, 
         rowing: { duration: 20, intensity: 5, impact: 'none' }, 
         core: { duration: 15, intensity: 6, impact: 'none' }, 
         stretch: { duration: 10, intensity: 3, impact: 'none' },
-        upper: { duration: 30, intensity: 6, impact: 'none' }
+        upper: { duration: 30, intensity: 6, impact: 'none' },
+        bike: { duration: 45, intensity: 5, impact: 'none' }
     };
     const preset = defaults[type] || { duration: 20, intensity: 5, impact: 'none' };
     document.getElementById('custom-duration').value = preset.duration;
@@ -1420,25 +987,14 @@ function selectCustomWorkout(type) {
 
 function closeCustomForm() {
     document.getElementById('custom-workout-form').style.display = 'none';
-    const logSections = document.getElementById('log-sections');
-    if (logSections) logSections.style.display = 'block';
-    
-    const customTiles = document.getElementById('custom-workout-tiles');
-    if (customTiles) customTiles.style.display = 'none';
-    const customToggleIcon = document.getElementById('custom-toggle-icon');
-    if (customToggleIcon) customToggleIcon.textContent = '▼';
-    const toggleCustomList = document.getElementById('toggle-custom-list');
-    if (toggleCustomList) toggleCustomList.setAttribute('aria-expanded', 'false');
+    document.getElementById('custom-workout-tiles').style.display = 'grid';
     AppState.selectedCustomWorkout = null;
 }
 
 function saveCustomWorkout() {
-    if (!AppState.selectedCustomWorkout) {
-        console.warn('⚠️ Cannot save: No custom workout selected');
-        return;
-    }
-    
-    const workoutData = {
+    if (!AppState.selectedCustomWorkout) return;
+
+    var result = DataManager.saveCustomWorkout({
         workoutCategory: AppState.selectedCustomWorkout,
         workoutType: document.getElementById('custom-workout-type').value || AppState.selectedCustomWorkout,
         durationMinutes: parseInt(document.getElementById('custom-duration').value),
@@ -1446,27 +1002,21 @@ function saveCustomWorkout() {
         kneeImpact: AppState.kneeImpact,
         lane: AppState.selectedLane,
         notes: document.getElementById('custom-notes').value
-    };
-    
-    console.log('💾 Saving custom workout:', workoutData);
-    const success = DataManager.saveCustomWorkout(workoutData);
-    
-    if (success) {
-        console.log('✅ Custom workout saved successfully');
-        const btn = document.getElementById('save-custom-workout');
-        btn.textContent = 'Logged!';
-        btn.style.background = '#4CAF50';
-        setTimeout(() => { 
-            btn.textContent = 'Log'; 
-            btn.style.background = ''; 
-            closeCustomForm(); 
-            renderTodaysSummary(); 
-            updateStreakDisplay(); 
-        }, 1000);
-    } else {
-        console.error('❌ Failed to save custom workout');
-        alert('Failed to save workout. Please try again.');
-    }
+    });
+
+    var btn = document.getElementById('save-custom-workout');
+    btn.textContent = 'Logged!';
+    btn.style.background = '#4CAF50';
+    setTimeout(function () {
+        btn.textContent = 'Log';
+        btn.style.background = '';
+        closeCustomForm();
+        renderTodaysSummary();
+        updateStreakDisplay();
+        if (result && result.success && result.celebration && typeof showCelebrationModal === 'function') {
+            showCelebrationModal(result.celebration);
+        }
+    }, 1000);
 }
 
 function renderTodaysSummary() {
@@ -1481,10 +1031,10 @@ function renderTodaysSummary() {
     
     let html = '';
     custom.forEach(w => {
-        const icons = { sports: '🏀', bike: '🚴', rowing: '🚣', core: '🎯', stretch: '🧘', upper: '💪', peloton: '🚴' };
+        const icons = { peloton: 'ðŸš´', rowing: 'ðŸš£', core: 'ðŸŽ¯', stretch: 'ðŸ§˜', upper: 'ðŸ’ª', bike: 'ðŸš´' };
         html += `<div style="padding: 12px; background: #f5f5f5; border-radius: 10px; margin-bottom: 8px;">
-            <div style="font-weight: 700;">${icons[w.workoutCategory] || '🏋️'} ${w.workoutType || w.workoutCategory}</div>
-            <div style="font-size: 13px; color: #666; margin-top: 4px;">${w.durationMinutes}min • ${w.intensity}/10</div>
+            <div style="font-weight: 700;">${icons[w.workoutCategory] || 'ðŸ‹ï¸'} ${w.workoutType || w.workoutCategory}</div>
+            <div style="font-size: 13px; color: #666; margin-top: 4px;">${w.durationMinutes}min â€¢ ${w.intensity}/10</div>
         </div>`;
     });
     exercises.forEach(log => {
@@ -1516,92 +1066,70 @@ function renderExerciseTrends(id) {
             const height = max > 0 ? (val / max) * 100 : 0;
             const improved = i > 0 && val > getValue(recent[i-1]);
             return `<div class="chart-bar" style="height: ${height}%; background: ${improved ? '#4CAF50' : '#2E7D32'};">
-                <span class="chart-value">${val}</span><span class="chart-label">${parseLocalDateString(l.date)?.getDate() || ''}</span></div>`;
+                <span class="chart-value">${val}</span><span class="chart-label">${new Date(l.date).getDate()}</span></div>`;
         }).join('')}</div>`;
 }
 
-function renderExerciseLibrary(filter) {
+function renderExerciseLibrary() {
     const container = document.getElementById('exercise-library');
     if (!container) return;
 
-    // filter: 'all' | 'new' (new = isNew: true only, for testing)
-    const exercisesToShow = filter === 'new' ? EXERCISES.filter(ex => ex.isNew === true) : EXERCISES;
-    const categories = [...new Set(exercisesToShow.map(ex => ex.category))].sort();
+    // Group exercises by category
+    const categories = [...new Set(EXERCISES.map(ex => ex.category))].sort();
     
-    const filterHtml = `
-        <div class="library-filter" style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
-            <button type="button" class="library-filter-btn ${(!filter || filter === 'all') ? 'active' : ''}" data-library-filter="all">All</button>
-            <button type="button" class="library-filter-btn ${filter === 'new' ? 'active' : ''}" data-library-filter="new">New (test batch)</button>
-        </div>
-    `;
-    
-    const contentHtml = categories.length === 0
-        ? '<p style="color: var(--gray-600); padding: 24px;">No exercises in this filter. Remove <code>isNew: true</code> from exercises in exercises.js to "keep" them and they will appear under All.</p>'
-        : categories.map(cat => {
-            const catExercises = exercisesToShow.filter(ex => ex.category === cat);
-            return `
-                <div class="category-section" style="margin-bottom: 24px;">
-                    <h3 style="background: var(--primary); color: white; padding: 8px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 16px;">${cat}</h3>
-                    <div class="exercise-cards-grid">
-                        ${catExercises.map(ex => `
-                            <div class="exercise-card" style="margin-bottom: 12px;">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                                    <h4 style="margin: 0; color: var(--primary);">${ex.name}${ex.isNew ? ' <span class="tile-new-badge">New</span>' : ''}</h4>
-                                    <div style="display: flex; gap: 4px;">
-                                        ${ex.phase.map(p => `<span class="tile-phase-badge badge-${p.toLowerCase()}">${p}</span>`).join('')}
-                                        ${ex.availability === 'GREEN-only' ? '<span class="tile-phase-badge" style="background: #E8F5E9; color: #2E7D32; border: 1px solid #2E7D32;">GREEN ONLY</span>' : ''}
-                                    </div>
-                                </div>
-                                <p style="font-size: 14px; margin-bottom: 8px; line-height: 1.4;">${ex.description}</p>
-                                <div style="font-size: 13px; color: var(--gray-600); margin-bottom: 8px;">
-                                    <strong>Target:</strong> ${ex.targetMuscles}
-                                </div>
-                                <div style="background: #f5f5f5; padding: 8px; border-radius: 6px; font-size: 13px;">
-                                    <strong>Why:</strong> ${ex.why}
+    container.innerHTML = categories.map(cat => {
+        const catExercises = EXERCISES.filter(ex => ex.category === cat);
+        return `
+            <div class="category-section" style="margin-bottom: 24px;">
+                <h3 style="background: var(--primary); color: white; padding: 8px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 16px;">${cat}</h3>
+                <div class="exercise-cards-grid">
+                    ${catExercises.map(ex => `
+                        <div class="exercise-card" style="margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                <h4 style="margin: 0; color: var(--primary);">${ex.name}</h4>
+                                <div style="display: flex; gap: 4px;">
+                                    ${ex.phase.map(p => `<span class="tile-phase-badge badge-${p.toLowerCase()}">${p}</span>`).join('')}
+                                    ${ex.availability === 'GREEN-only' ? '<span class="tile-phase-badge" style="background: #E8F5E9; color: #2E7D32; border: 1px solid #2E7D32;">GREEN ONLY</span>' : ''}
                                 </div>
                             </div>
-                        `).join('')}
-                    </div>
+                            <p style="font-size: 14px; margin-bottom: 8px; line-height: 1.4;">${ex.description}</p>
+                            <div style="font-size: 13px; color: var(--gray-600); margin-bottom: 8px;">
+                                <strong>Target:</strong> ${ex.targetMuscles}
+                            </div>
+                            <div style="background: #f5f5f5; padding: 8px; border-radius: 6px; font-size: 13px;">
+                                <strong>Why:</strong> ${ex.why}
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
-            `;
-        }).join('');
-    
-    container.innerHTML = filterHtml + contentHtml;
-    
-    container.querySelectorAll('.library-filter-btn').forEach(btn => {
-        btn.onclick = function(e) {
-            e.preventDefault();
-            renderExerciseLibrary(this.getAttribute('data-library-filter'));
-        };
-    });
+            </div>
+        `;
+    }).join('');
 }
 // Analytics Module
 
 function setupAnalyticsHandlers() {
     document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.onclick = function(e) {
-            e.preventDefault();
+        const h = function() {
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             AppState.analyticsDays = parseInt(this.dataset.days);
             renderAnalytics(AppState.analyticsDays);
         };
+        btn.ontouchstart = h;
+        btn.onclick = h;
     });
     
     const exportJsonBtn = document.getElementById('export-json');
     if (exportJsonBtn) { 
-        exportJsonBtn.onclick = (e) => {
-            e.preventDefault();
-            DataManager.exportData();
-        };
+        exportJsonBtn.ontouchstart = () => DataManager.exportData(); 
+        exportJsonBtn.onclick = () => DataManager.exportData(); 
     }
     
     const exportPdfBtn = document.getElementById('export-pdf');
     if (exportPdfBtn) { 
-        exportPdfBtn.onclick = (e) => {
-            e.preventDefault();
-            DataManager.exportPDF();
-        };
+        exportPdfBtn.ontouchstart = () => DataManager.exportPDF(); 
+        exportPdfBtn.onclick = () => DataManager.exportPDF(); 
     }
     
     const exerciseSelect = document.getElementById('analytics-exercise-select');
@@ -1622,18 +1150,8 @@ function renderAnalytics(days) {
 }
 
 function renderSummaryStats(days) {
-    const exercises = DataManager.getExerciseLogs().filter(e => {
-        const logDate = parseLocalDateString(e.date);
-        if (!logDate) return false;
-        const daysDiff = (new Date() - logDate) / (1000*60*60*24);
-        return daysDiff <= days;
-    });
-    const custom = DataManager.getCustomWorkouts().filter(w => {
-        const workoutDate = parseLocalDateString(w.date);
-        if (!workoutDate) return false;
-        const daysDiff = (new Date() - workoutDate) / (1000*60*60*24);
-        return daysDiff <= days;
-    });
+    const exercises = DataManager.getExerciseLogs().filter(e => (new Date() - new Date(e.date)) / (1000*60*60*24) <= days);
+    const custom = DataManager.getCustomWorkouts().filter(w => (new Date() - new Date(w.date)) / (1000*60*60*24) <= days);
     const checkIns = DataManager.getRecentCheckIns(days);
     
     const avgPain = checkIns.length > 0 ? (checkIns.reduce((s, c) => s + (c.pain || 0), 0) / checkIns.length).toFixed(1) : 0;
@@ -1677,7 +1195,7 @@ function renderWorkoutFrequency(days) {
     for (let i = days - 1; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        const dateStr = DataManager.getLocalDateKey(d);
+        const dateStr = d.toISOString().split('T')[0];
         daysArray.push({ date: dateStr, count: dateMap[dateStr] || 0 });
     }
     
@@ -1692,7 +1210,7 @@ function renderWorkoutFrequency(days) {
                 return `
                     <div class="chart-bar" style="height: ${height}%; background: ${color}; min-height: 8px;">
                         ${d.count > 0 ? `<span class="chart-value">${d.count}</span>` : ''}
-                        <span class="chart-label">${parseLocalDateString(d.date)?.getDate() || ''}</span>
+                        <span class="chart-label">${new Date(d.date).getDate()}</span>
                     </div>
                 `;
             }).join('')}
@@ -1704,12 +1222,7 @@ function renderExerciseBreakdown(days) {
     const container = document.getElementById('exercise-breakdown');
     if (!container) return;
     
-    const exercises = DataManager.getExerciseLogs().filter(e => {
-        const logDate = parseLocalDateString(e.date);
-        if (!logDate) return false;
-        const daysDiff = (new Date() - logDate) / (1000*60*60*24);
-        return daysDiff <= days;
-    });
+    const exercises = DataManager.getExerciseLogs().filter(e => (new Date() - new Date(e.date)) / (1000*60*60*24) <= days);
     
     if (exercises.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: var(--gray-600); padding: 20px;">None yet</p>';
@@ -1805,7 +1318,7 @@ function renderMetricTrend(sessions, metric, label) {
                     return `
                         <div class="chart-bar" style="height: ${height}%; background: ${color};">
                             <span class="chart-value">${val}</span>
-                            <span class="chart-label">${parseLocalDateString(l.date)?.getDate() || ''}</span>
+                            <span class="chart-label">${new Date(l.date).getDate()}</span>
                         </div>
                     `;
                 }).join('')}
@@ -1827,7 +1340,7 @@ function renderSwellingTrend(days) {
         const height = (val / 3) * 100 || 5;
         const colors = ['#4CAF50', '#FFC107', '#FF9800', '#F44336'];
         return `<div class="chart-bar" style="height: ${height}%; background: ${colors[val]}; min-height: 10px;">
-            <span class="chart-label">${parseLocalDateString(c.date)?.getDate() || ''}</span></div>`;
+            <span class="chart-label">${new Date(c.date).getDate()}</span></div>`;
     }).join('')}</div><div style="text-align: center; margin-top: 16px; font-size: 13px;">&#128994; None | &#128993; Mild | &#128992; Mod | &#128308; Severe</div>`;
 }
 
@@ -1851,31 +1364,9 @@ function renderPainTrend(days) {
 }
 
 function renderHistory(days) {
-    // Get ALL check-ins (not just one per date) and filter by days
-    const allCheckIns = DataManager.getCheckIns();
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    const cutoffDateKey = DataManager.getLocalDateKey(cutoffDate);
-    
-    const checkIns = allCheckIns.filter(c => {
-        const checkInDate = parseLocalDateString(c.date);
-        if (!checkInDate) return false;
-        const checkInDateKey = DataManager.getLocalDateKey(checkInDate);
-        return checkInDateKey >= cutoffDateKey;
-    });
-    
-    const exerciseLogs = DataManager.getExerciseLogs().filter(e => {
-        const logDate = parseLocalDateString(e.date);
-        if (!logDate) return false;
-        const daysDiff = (new Date() - logDate) / (1000*60*60*24);
-        return daysDiff <= days;
-    });
-    const customWorkouts = DataManager.getCustomWorkouts().filter(w => {
-        const workoutDate = parseLocalDateString(w.date);
-        if (!workoutDate) return false;
-        const daysDiff = (new Date() - workoutDate) / (1000*60*60*24);
-        return daysDiff <= days;
-    });
+    const checkIns = DataManager.getRecentCheckIns(days);
+    const exerciseLogs = DataManager.getExerciseLogs().filter(e => (new Date() - new Date(e.date)) / (1000*60*60*24) <= days);
+    const customWorkouts = DataManager.getCustomWorkouts().filter(w => (new Date() - new Date(w.date)) / (1000*60*60*24) <= days);
     
     const list = document.getElementById('history-list');
     if (checkIns.length === 0 && exerciseLogs.length === 0 && customWorkouts.length === 0) { 
@@ -1883,7 +1374,7 @@ function renderHistory(days) {
         return; 
     }
     
-    // Create a combined map of date -> checkins/workouts
+    // Create a combined map of date -> checkin/workouts
     const dates = [...new Set([
         ...checkIns.map(c => c.date),
         ...exerciseLogs.map(e => e.date),
@@ -1891,39 +1382,20 @@ function renderHistory(days) {
     ])].sort().reverse();
 
     list.innerHTML = dates.map(date => {
-        // Get ALL check-ins for this date (sorted by most recent first)
-        const dateCheckIns = DataManager.getCheckInsForDate(date);
+        const checkIn = checkIns.find(c => c.date === date);
         const dayEx = exerciseLogs.filter(e => e.date === date);
         const dayCu = customWorkouts.filter(w => w.date === date);
         
         let html = `<div class="history-item" style="background: white; padding: 18px; border-radius: 12px; margin-bottom: 12px;">
-            <div style="font-weight: 800; font-size: 16px; margin-bottom: 10px;">${formatDateString(date, {weekday: 'short', month: 'short', day: 'numeric'})}</div>`;
+            <div style="font-weight: 800; font-size: 16px; margin-bottom: 10px;">${new Date(date).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'})}</div>`;
         
-        // Display all check-ins for this date
-        if (dateCheckIns.length > 0) {
+        if (checkIn) {
+            const status = DataManager.getKneeStatusForCheckIn(checkIn);
             const statusColors = { GREEN: '#4CAF50', YELLOW: '#FFC107', RED: '#F44336' };
-            const timeLabels = { morning: '🌅 AM', afternoon: '☀️ PM', evening: '🌙 Eve' };
-            
-            dateCheckIns.forEach((checkIn, index) => {
-                const status = DataManager.getKneeStatusForCheckIn(checkIn);
-                const timeLabel = timeLabels[checkIn.timeOfDay] || checkIn.timeOfDay || '';
-                const isLast = index === dateCheckIns.length - 1;
-                
-                html += `<div style="display: flex; justify-content: space-between; align-items: center; padding: ${index === 0 ? '8px 0 8px 0' : '8px 0'}; ${!isLast ? 'border-bottom: 1px solid var(--gray-200); margin-bottom: 4px;' : ''}">
-                    <div style="flex: 1;">
-                        <span style="font-size: 14px; font-weight: 600;">Status: <span style="color: ${statusColors[status]}">${status}</span></span>
-                        ${dateCheckIns.length > 1 ? `<span style="font-size: 11px; color: var(--gray-500); margin-left: 8px;">${timeLabel}</span>` : ''}
-                    </div>
-                    <span style="font-size: 12px; color: var(--gray-600);">${checkIn.swelling} | Pain ${checkIn.pain}/10</span>
-                </div>`;
-            });
-            
-            // Show count if multiple check-ins
-            if (dateCheckIns.length > 1) {
-                html += `<div style="font-size: 11px; color: var(--gray-500); margin-top: 4px; font-style: italic;">
-                    ${dateCheckIns.length} check-ins logged this day
-                </div>`;
-            }
+            html += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--gray-100);">
+                <span style="font-size: 14px; font-weight: 600;">Status: <span style="color: ${statusColors[status]}">${status}</span></span>
+                <span style="font-size: 12px; color: var(--gray-600);">${checkIn.swelling} | Pain ${checkIn.pain}/10</span>
+            </div>`;
         }
 
         if (dayEx.length > 0 || dayCu.length > 0) {
@@ -1936,8 +1408,8 @@ function renderHistory(days) {
             }
             
             html += `<div style="margin-top: 8px; font-size: 13px; color: var(--gray-600);">
-                ${dayEx.map(e => `<div>• ${e.exerciseName.split('(')[0].trim()} (${e.setsCompleted}x${e.repsPerSet})</div>`).join('')}
-                ${dayCu.map(w => `<div>• ${w.workoutType} (${w.durationMinutes}m)</div>`).join('')}
+                ${dayEx.map(e => `<div>â€¢ ${e.exerciseName.split('(')[0].trim()} (${e.setsCompleted}x${e.repsPerSet})</div>`).join('')}
+                ${dayCu.map(w => `<div>â€¢ ${w.workoutType} (${w.durationMinutes}m)</div>`).join('')}
             </div>`;
         }
         
@@ -1958,19 +1430,12 @@ function setupMeasurementHandlers() {
             this.classList.add('active');
             AppState.posture = this.dataset.posture;
         };
-        btn.onclick = (e) => {
-            e.preventDefault();
-            h.call(btn);
-        };
+        btn.ontouchstart = h;
+        btn.onclick = h;
     });
     
     const saveBtn = document.getElementById('save-measurement');
-    if (saveBtn) { 
-        saveBtn.onclick = (e) => {
-            e.preventDefault();
-            saveMeasurement();
-        };
-    }
+    if (saveBtn) { saveBtn.ontouchstart = saveMeasurement; saveBtn.onclick = saveMeasurement; }
 }
 
 function openMeasurementModal() {
@@ -2033,7 +1498,7 @@ function updateMeasurementDisplay() {
     const latest = DataManager.getLatestBodyMeasurement();
     const el = document.getElementById('last-measurement-date');
     if (!el) return;
-    if (latest) el.textContent = `Last: ${formatDateString(latest.date, {month: 'short', day: 'numeric'})}`;
+    if (latest) el.textContent = `Last: ${new Date(latest.date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}`;
     else el.textContent = 'Tap to add';
 }
 
@@ -2064,283 +1529,6 @@ function renderMeasurementSummary() {
     if (m.weight_lb) html += `<div class="measurement-row"><span>Weight</span><span>${m.weight_lb} lbs</span></div>`;
     container.innerHTML = html;
 }
-// Events Module - Significant Event Logging
-
-const EVENT_TYPES = {
-    pain_spike: { label: "Pain Spike", icon: "⚡", color: "#F44336" },
-    instability: { label: "Instability Event", icon: "⚠️", color: "#FF9800" },
-    mechanical: { label: "Mechanical Symptoms", icon: "⚙️", color: "#9C27B0" },
-    swelling_spike: { label: "Swelling Spike", icon: "💧", color: "#2196F3" },
-    post_activity_flare: { label: "Post-Activity Flare", icon: "🔥", color: "#FF5722" },
-    other: { label: "Other", icon: "📝", color: "#607D8B" }
-};
-
-const DURATION_OPTIONS = [
-    "< 1 hour",
-    "1-6 hours",
-    "6-24 hours",
-    "1-2 days",
-    "3-7 days",
-    "> 7 days (ongoing)",
-    "Custom"
-];
-
-function setupEventHandlers() {
-    const saveBtn = document.getElementById('save-event');
-    if (saveBtn) {
-        saveBtn.onclick = (e) => {
-            e.preventDefault();
-            saveEvent();
-        };
-    }
-    
-    const painSlider = document.getElementById('event-pain-slider');
-    if (painSlider) {
-        painSlider.oninput = (e) => {
-            document.getElementById('event-pain-value').textContent = e.target.value;
-        };
-    }
-}
-
-function openEventModal(eventId = null) {
-    const modal = document.getElementById('event-modal');
-    if (!modal) return;
-    
-    modal.style.display = 'flex';
-    
-    if (eventId) {
-        // Edit existing event
-        const event = DataManager.getEventById(eventId);
-        if (event) {
-            document.getElementById('event-id').value = event.id;
-            document.getElementById('event-type').value = event.eventType;
-            document.getElementById('event-date').value = event.date;
-            document.getElementById('event-time').value = event.timestamp.split('T')[1].substring(0, 5);
-            document.getElementById('event-pain-slider').value = event.painLevel;
-            document.getElementById('event-pain-value').textContent = event.painLevel;
-            document.getElementById('event-activity').value = event.activity;
-            document.getElementById('event-duration').value = event.duration;
-            document.getElementById('event-resolution').value = event.resolution;
-            document.getElementById('event-notes').value = event.notes || '';
-            
-            // Red flags
-            if (event.redFlags) {
-                document.getElementById('flag-locking').checked = event.redFlags.locking || false;
-                document.getElementById('flag-cant-bear-weight').checked = event.redFlags.cantBearWeight || false;
-                document.getElementById('flag-severe-swelling').checked = event.redFlags.severeSwelling7Days || false;
-                document.getElementById('flag-giving-way').checked = event.redFlags.suddenGivingWay || false;
-            }
-            
-            document.getElementById('event-modal-title').textContent = 'Edit Significant Event';
-        }
-    } else {
-        // New event - set defaults
-        document.getElementById('event-id').value = '';
-        document.getElementById('event-type').value = 'pain_spike';
-        
-        const now = new Date();
-        document.getElementById('event-date').value = DataManager.getLocalDateKey(now);
-        document.getElementById('event-time').value = now.toTimeString().substring(0, 5);
-        
-        document.getElementById('event-pain-slider').value = 5;
-        document.getElementById('event-pain-value').textContent = '5';
-        document.getElementById('event-activity').value = '';
-        document.getElementById('event-duration').value = '1-6 hours';
-        document.getElementById('event-resolution').value = '';
-        document.getElementById('event-notes').value = '';
-        
-        // Reset red flags
-        document.getElementById('flag-locking').checked = false;
-        document.getElementById('flag-cant-bear-weight').checked = false;
-        document.getElementById('flag-severe-swelling').checked = false;
-        document.getElementById('flag-giving-way').checked = false;
-        
-        document.getElementById('event-modal-title').textContent = '⚠️ Log Significant Event';
-    }
-}
-
-function closeEventModal() {
-    document.getElementById('event-modal').style.display = 'none';
-}
-
-function saveEvent() {
-    const eventId = document.getElementById('event-id').value;
-    const eventType = document.getElementById('event-type').value;
-    const date = document.getElementById('event-date').value;
-    const time = document.getElementById('event-time').value;
-    const painLevel = parseInt(document.getElementById('event-pain-slider').value);
-    const activity = document.getElementById('event-activity').value.trim();
-    const duration = document.getElementById('event-duration').value;
-    const resolution = document.getElementById('event-resolution').value.trim();
-    const notes = document.getElementById('event-notes').value.trim();
-    
-    // Validation
-    if (!eventType) {
-        alert('! Please select an event type');
-        return;
-    }
-    if (!activity) {
-        alert('! Please describe what you were doing');
-        return;
-    }
-    
-    // Red flags
-    const redFlags = {
-        locking: document.getElementById('flag-locking').checked,
-        cantBearWeight: document.getElementById('flag-cant-bear-weight').checked,
-        severeSwelling7Days: document.getElementById('flag-severe-swelling').checked,
-        suddenGivingWay: document.getElementById('flag-giving-way').checked
-    };
-    
-    // Check for red flags and warn user
-    const hasRedFlags = Object.values(redFlags).some(v => v);
-    if (hasRedFlags) {
-        const flagNames = [];
-        if (redFlags.locking) flagNames.push('knee locking');
-        if (redFlags.cantBearWeight) flagNames.push('unable to bear weight');
-        if (redFlags.severeSwelling7Days) flagNames.push('severe swelling >7 days');
-        if (redFlags.suddenGivingWay) flagNames.push('sudden giving way');
-        
-        const warningMsg = `⚠️ RED FLAG SYMPTOMS DETECTED:\n\n${flagNames.join(', ')}\n\nThese symptoms may require immediate medical attention. Consider contacting your healthcare provider.`;
-        alert(warningMsg);
-    }
-    
-    const eventData = {
-        eventType,
-        date,
-        timestamp: `${date}T${time}:00.000Z`,
-        painLevel,
-        activity,
-        duration,
-        resolution,
-        notes,
-        redFlags
-    };
-    
-    let success = false;
-    if (eventId) {
-        // Update existing
-        success = DataManager.updateEvent(eventId, eventData);
-    } else {
-        // Create new
-        success = DataManager.saveSignificantEvent(eventData);
-    }
-    
-    if (success) {
-        alert(eventId ? 'Event updated!' : 'Event logged!');
-        closeEventModal();
-        renderRecentEventsPreview();
-        renderEventsTimeline();
-    } else {
-        alert('! Failed to save event');
-    }
-}
-
-function deleteEventWithConfirm(id) {
-    if (!confirm('Delete this event? This cannot be undone.')) return;
-    
-    if (DataManager.deleteEvent(id)) {
-        alert('Event deleted');
-        renderRecentEventsPreview();
-        renderEventsTimeline();
-    } else {
-        alert('! Failed to delete event');
-    }
-}
-
-function renderRecentEventsPreview() {
-    const container = document.getElementById('recent-events-preview');
-    if (!container) return;
-    
-    const events = DataManager.getSignificantEvents(90);
-    
-    if (events.length === 0) {
-        container.innerHTML = '<p style="color: var(--gray-500); font-size: 12px;">No events logged</p>';
-        return;
-    }
-    
-    const recent = events.slice(0, 3);
-    container.innerHTML = recent.map(e => {
-        const date = new Date(e.date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
-        const type = EVENT_TYPES[e.eventType];
-        return `<div style="font-size: 12px; color: var(--gray-600); margin-bottom: 4px;">
-            ${type.icon} ${date}: ${type.label} (${e.painLevel}/10)
-        </div>`;
-    }).join('');
-}
-
-function renderEventsTimeline() {
-    const container = document.getElementById('events-timeline');
-    if (!container) return;
-    
-    const events = DataManager.getSignificantEvents(90);
-    
-    if (events.length === 0) {
-        container.innerHTML = '<p style="text-align: center; padding: 40px; color: var(--gray-500);">No significant events logged in the last 90 days</p>';
-        return;
-    }
-    
-    container.innerHTML = events.map(e => {
-        const date = formatDateString(e.date, {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'});
-        const type = EVENT_TYPES[e.eventType];
-        
-        // Check for red flags
-        const hasRedFlags = e.redFlags && Object.values(e.redFlags).some(v => v);
-        const redFlagHtml = hasRedFlags ? `
-            <div style="background: #FFEBEE; border-left: 4px solid #F44336; padding: 8px; margin-top: 8px; border-radius: 4px;">
-                <strong style="color: #F44336;">🚨 Red Flags:</strong>
-                <div style="font-size: 12px; margin-top: 4px;">
-                    ${e.redFlags.locking ? '• Knee locking/catching<br>' : ''}
-                    ${e.redFlags.cantBearWeight ? '• Unable to bear weight<br>' : ''}
-                    ${e.redFlags.severeSwelling7Days ? '• Severe swelling >7 days<br>' : ''}
-                    ${e.redFlags.suddenGivingWay ? '• Sudden giving way<br>' : ''}
-                </div>
-            </div>
-        ` : '';
-        
-        return `
-            <div class="event-card" style="background: white; border-left: 4px solid ${type.color}; padding: 16px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                    <div>
-                        <div style="font-size: 18px; font-weight: 700; color: ${type.color};">
-                            ${type.icon} ${type.label}
-                        </div>
-                        <div style="font-size: 13px; color: var(--gray-600); margin-top: 2px;">
-                            ${date}
-                        </div>
-                    </div>
-                    <div style="font-size: 24px; font-weight: 800; color: ${type.color};">
-                        ${e.painLevel}/10
-                    </div>
-                </div>
-                
-                <div style="font-size: 14px; margin-bottom: 8px;">
-                    <strong>Activity:</strong> ${e.activity}
-                </div>
-                <div style="font-size: 14px; margin-bottom: 8px;">
-                    <strong>Duration:</strong> ${e.duration}
-                </div>
-                <div style="font-size: 14px; margin-bottom: 8px;">
-                    <strong>Resolution:</strong> ${e.resolution}
-                </div>
-                ${e.notes ? `<div style="font-size: 13px; color: var(--gray-600); font-style: italic; margin-bottom: 8px;">
-                    "${e.notes}"
-                </div>` : ''}
-                
-                ${redFlagHtml}
-                
-                <div style="display: flex; gap: 8px; margin-top: 12px;">
-                    <button class="secondary-button" onclick="openEventModal('${e.id}')" style="font-size: 12px; padding: 6px 12px;">
-                        Edit
-                    </button>
-                    <button class="secondary-button" onclick="deleteEventWithConfirm('${e.id}')" style="font-size: 12px; padding: 6px 12px; color: #F44336;">
-                        Delete
-                    </button>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
 // App Initialization
 document.addEventListener('DOMContentLoaded', () => {
     
@@ -2360,629 +1548,12 @@ document.addEventListener('DOMContentLoaded', () => {
         populateAnalyticsExerciseSelect();
     }
     
-    // Initialize last known date
-    lastKnownDate = DataManager.getLocalDateKey();
-    
     // Initial rendering
-    const todayKey = DataManager.getLocalDateKey();
-    console.log('🚀 App initialized. Today\'s date key:', todayKey);
-    console.log('📅 Current date:', new Date().toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'}));
-    
-    // Check for new day on startup (in case app was left open overnight)
-    checkForNewDay();
-    
-    // Verify data is loaded
-    const exerciseLogs = DataManager.getExerciseLogs();
-    const customWorkouts = DataManager.getCustomWorkouts();
-    const totalWorkouts = exerciseLogs.length + customWorkouts.length;
-    console.log('📊 Data loaded:', {
-        exerciseLogs: exerciseLogs.length,
-        customWorkouts: customWorkouts.length,
-        totalWorkouts: totalWorkouts
-    });
-    
     updateStreakDisplay();
     updateWeekSummary();
     updateMeasurementDisplay();
     renderRecentEventsPreview();
     renderEventsTimeline();
     loadTodayCheckIn();
-    scheduleMidnightReset();
     
-    // Ensure KCI result is shown if check-in exists for today
-    const checkIn = DataManager.getCheckIn(todayKey);
-    if (checkIn && checkIn.kciScore !== undefined) {
-        renderKCIResult(checkIn.kciScore);
-    } else {
-        clearKCIResult();
-    }
-
-    // Restore from IndexedDB backup if localStorage was wiped (mobile fallback)
-    if (typeof DataManager.restoreFromBackup === 'function') {
-        DataManager.restoreFromBackup()
-            .then(restored => {
-                if (restored) {
-                    // Re-render UI after recovery
-                    updateStreakDisplay();
-                    updateWeekSummary();
-                    updateMeasurementDisplay();
-                    renderRecentEventsPreview();
-                    renderEventsTimeline();
-                    loadTodayCheckIn();
-
-                    if (AppState.currentView === 'log') {
-                        renderTodaysSummary();
-                    }
-                    if (AppState.currentView === 'history') {
-                        renderAnalytics(AppState.analyticsDays);
-                        renderMeasurementSummary();
-                    }
-                }
-            })
-            .finally(() => {
-                if (typeof DataManager.seedBackupFromStorage === 'function') {
-                    DataManager.seedBackupFromStorage();
-                }
-            });
-    } else if (typeof DataManager.seedBackupFromStorage === 'function') {
-        DataManager.seedBackupFromStorage();
-    }
-
-    // Mobile Persistence Hooks
-    // 'pagehide' and 'visibilitychange' are more reliable than 'unload' on mobile
-    window.addEventListener('pagehide', () => {
-        console.log('📱 Page hiding, ensuring data is synced...');
-        // DataManager operations already sync immediately, but this acts as a final safety check
-    });
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') {
-            console.log('📱 App backgrounded, ensuring data is synced...');
-        } else if (document.visibilityState === 'visible') {
-            // Check for new day when app becomes visible (user might have left it open overnight)
-            console.log('📱 App visible, checking for day change...');
-            if (checkForNewDay()) {
-                // If day changed, refresh the current view
-                if (AppState.currentView === 'home') {
-                    switchView('home');
-                }
-            }
-        }
-    });
-    
-    // Personal Capacity Calibration Onboarding
-    setupCalibrationOnboarding();
 });
-
-// Personal Capacity Calibration Onboarding Functions
-let calibrationState = {
-    currentScreen: 1,
-    baseline: { swelling: null, pain: 0, context: '' },
-    redline: { swelling: null, pain: 0, context: '' },
-    target: { swelling: null, pain: 0 },
-    isRecalibration: false
-};
-
-function setupCalibrationOnboarding() {
-    const modal = document.getElementById('calibration-modal');
-    if (!modal) return;
-    
-    // Check if profile exists - if not, show onboarding
-    if (!DataManager.hasKneeProfile()) {
-        console.log('🦵 No knee profile found - showing calibration onboarding');
-        showCalibrationScreen(1);
-        modal.style.display = 'flex';
-    }
-    
-    // Screen 1 handlers
-    setupCalibrationScreen1();
-    setupCalibrationScreen2();
-    setupCalibrationScreen3();
-    setupCalibrationPainButtons();
-    
-    // Skip button
-    const skipBtn = document.getElementById('calibration-skip');
-    if (skipBtn) {
-        skipBtn.onclick = () => {
-            modal.style.display = 'none';
-        };
-    }
-}
-
-function setCalibrationPainValue(containerId, value) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    const val = Math.max(0, Math.min(10, parseInt(value, 10) || 0));
-    const sliderId = container.getAttribute('data-slider');
-    const valueSpanId = container.getAttribute('data-value-span');
-    const stateKey = container.getAttribute('data-state');
-    const slider = document.getElementById(sliderId);
-    const valueSpan = document.getElementById(valueSpanId);
-    if (slider) slider.value = val;
-    if (valueSpan) valueSpan.textContent = val;
-    if (stateKey === 'baseline') calibrationState.baseline.pain = val;
-    else if (stateKey === 'redline') calibrationState.redline.pain = val;
-    else if (stateKey === 'target') calibrationState.target.pain = val;
-    if (stateKey === 'baseline') validateScreen1();
-    else if (stateKey === 'redline') validateScreen2();
-    else if (stateKey === 'target') validateScreen3();
-    container.querySelectorAll('.calibration-pain-num').forEach(btn => {
-        btn.classList.toggle('active', parseInt(btn.getAttribute('data-pain'), 10) === val);
-    });
-}
-
-function setupCalibrationPainButtons() {
-    document.querySelectorAll('.calibration-pain-buttons').forEach(container => {
-        const containerId = container.id;
-        const stateKey = container.getAttribute('data-state');
-        container.querySelectorAll('.calibration-pain-num').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const value = this.getAttribute('data-pain');
-                setCalibrationPainValue(containerId, value);
-            });
-        });
-        const initialVal = stateKey === 'baseline' ? calibrationState.baseline.pain : stateKey === 'redline' ? calibrationState.redline.pain : calibrationState.target.pain;
-        setCalibrationPainValue(containerId, initialVal);
-    });
-}
-
-function setupCalibrationScreen1() {
-    const swellingBtns = document.querySelectorAll('.swelling-btn[data-screen="baseline"]');
-    const nextBtn = document.getElementById('calibration-next-1');
-    
-    swellingBtns.forEach(btn => {
-        btn.onclick = (e) => {
-            e.preventDefault();
-            swellingBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            calibrationState.baseline.swelling = btn.dataset.level;
-            validateScreen1();
-        };
-    });
-    
-    const contextInput = document.getElementById('baseline-context');
-    if (contextInput) {
-        contextInput.oninput = (e) => {
-            calibrationState.baseline.context = e.target.value;
-        };
-    }
-    
-    if (nextBtn) {
-        nextBtn.onclick = (e) => {
-            e.preventDefault();
-            if (calibrationState.baseline.swelling !== null) {
-                showCalibrationScreen(2);
-            }
-        };
-    }
-}
-
-function setupCalibrationScreen2() {
-    const swellingBtns = document.querySelectorAll('.swelling-btn[data-screen="redline"]');
-    const nextBtn = document.getElementById('calibration-next-2');
-    const backBtn = document.getElementById('calibration-back-2');
-    
-    swellingBtns.forEach(btn => {
-        btn.onclick = (e) => {
-            e.preventDefault();
-            swellingBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            calibrationState.redline.swelling = btn.dataset.level;
-            validateScreen2();
-        };
-    });
-    
-    const contextInput = document.getElementById('redline-context');
-    if (contextInput) {
-        contextInput.oninput = (e) => {
-            calibrationState.redline.context = e.target.value;
-        };
-    }
-    
-    if (nextBtn) {
-        nextBtn.onclick = (e) => {
-            e.preventDefault();
-            if (validateScreen2()) {
-                showCalibrationScreen(3);
-            }
-        };
-    }
-    
-    if (backBtn) {
-        backBtn.onclick = (e) => {
-            e.preventDefault();
-            showCalibrationScreen(1);
-        };
-    }
-}
-
-function setupCalibrationScreen3() {
-    const swellingBtns = document.querySelectorAll('.swelling-btn[data-screen="target"]');
-    const completeBtn = document.getElementById('calibration-complete');
-    const backBtn = document.getElementById('calibration-back-3');
-    
-    swellingBtns.forEach(btn => {
-        btn.onclick = (e) => {
-            e.preventDefault();
-            swellingBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            calibrationState.target.swelling = btn.dataset.level;
-            validateScreen3();
-        };
-    });
-    
-    if (completeBtn) {
-        completeBtn.onclick = (e) => {
-            e.preventDefault();
-            if (validateScreen3()) {
-                saveCalibrationProfile();
-            }
-        };
-    }
-    
-    if (backBtn) {
-        backBtn.onclick = (e) => {
-            e.preventDefault();
-            showCalibrationScreen(2);
-        };
-    }
-}
-
-function validateScreen1() {
-    const nextBtn = document.getElementById('calibration-next-1');
-    if (nextBtn) {
-        nextBtn.disabled = calibrationState.baseline.swelling === null;
-    }
-}
-
-function validateScreen2() {
-    const nextBtn = document.getElementById('calibration-next-2');
-    const validationDiv = document.getElementById('calibration-validation');
-    
-    if (calibrationState.redline.swelling === null) {
-        if (nextBtn) nextBtn.disabled = true;
-        return false;
-    }
-    
-    // Validate redline > baseline
-    const swellingValues = { 'none': 0, 'mild': 1, 'moderate': 2, 'severe': 3 };
-    const baselineSwelling = swellingValues[calibrationState.baseline.swelling] || 0;
-    const redlineSwelling = swellingValues[calibrationState.redline.swelling] || 0;
-    const baselinePain = calibrationState.baseline.pain || 0;
-    const redlinePain = calibrationState.redline.pain || 0;
-    
-    const isRedlineHigher = (redlineSwelling > baselineSwelling) || 
-                           (redlineSwelling === baselineSwelling && redlinePain > baselinePain);
-    
-    if (!isRedlineHigher && validationDiv) {
-        validationDiv.style.display = 'block';
-        validationDiv.textContent = '⚠️ Redline should be higher than baseline (more swelling/pain after hard week)';
-        if (nextBtn) nextBtn.disabled = true;
-        return false;
-    }
-    
-    if (validationDiv) validationDiv.style.display = 'none';
-    if (nextBtn) nextBtn.disabled = false;
-    return true;
-}
-
-function validateScreen3() {
-    const completeBtn = document.getElementById('calibration-complete');
-    const validationDiv = document.getElementById('calibration-validation');
-    
-    if (calibrationState.target.swelling === null) {
-        if (completeBtn) completeBtn.disabled = true;
-        return false;
-    }
-    
-    // Validate target ≤ baseline
-    const swellingValues = { 'none': 0, 'mild': 1, 'moderate': 2, 'severe': 3 };
-    const baselineSwelling = swellingValues[calibrationState.baseline.swelling] || 0;
-    const targetSwelling = swellingValues[calibrationState.target.swelling] || 0;
-    const baselinePain = calibrationState.baseline.pain || 0;
-    const targetPain = calibrationState.target.pain || 0;
-    
-    const isTargetLower = (targetSwelling < baselineSwelling) ||
-                         (targetSwelling === baselineSwelling && targetPain <= baselinePain);
-    
-    if (!isTargetLower && validationDiv) {
-        validationDiv.style.display = 'block';
-        validationDiv.textContent = '⚠️ Target should be equal to or better than baseline';
-        if (completeBtn) completeBtn.disabled = true;
-        return false;
-    }
-    
-    if (validationDiv) validationDiv.style.display = 'none';
-    if (completeBtn) completeBtn.disabled = false;
-    return true;
-}
-
-function showCalibrationScreen(screenNum) {
-    calibrationState.currentScreen = screenNum;
-    
-    // Hide all screens
-    document.querySelectorAll('.calibration-screen').forEach(screen => {
-        screen.style.display = 'none';
-    });
-    
-    // Show target screen
-    const targetScreen = document.getElementById(`calibration-screen-${screenNum}`);
-    if (targetScreen) {
-        targetScreen.style.display = 'block';
-    }
-}
-
-function saveCalibrationProfile() {
-    // Ensure we read the latest slider values directly from the DOM,
-    // in case any oninput handler didn't fire for some reason.
-    const baselinePainSlider = document.getElementById('baseline-pain-slider');
-    const redlinePainSlider = document.getElementById('redline-pain-slider');
-    const targetPainSlider = document.getElementById('target-pain-slider');
-
-    if (baselinePainSlider) {
-        calibrationState.baseline.pain = parseInt(baselinePainSlider.value, 10) || 0;
-    }
-    if (redlinePainSlider) {
-        calibrationState.redline.pain = parseInt(redlinePainSlider.value, 10) || 0;
-    }
-    if (targetPainSlider) {
-        calibrationState.target.pain = parseInt(targetPainSlider.value, 10) || 0;
-    }
-
-    const profileData = {
-        baselineSwelling: calibrationState.baseline.swelling,
-        baselinePain: calibrationState.baseline.pain,
-        redlineSwelling: calibrationState.redline.swelling,
-        redlinePain: calibrationState.redline.pain,
-        targetSwelling: calibrationState.target.swelling,
-        targetPain: calibrationState.target.pain,
-        baselineContext: calibrationState.baseline.context,
-        redlineContext: calibrationState.redline.context
-    };
-    
-    const success = DataManager.saveKneeProfile(profileData);
-    
-    if (success) {
-        console.log('✅ Knee profile saved:', profileData);
-        const modal = document.getElementById('calibration-modal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
-        
-        // Check if this is a recalibration (profile already existed)
-        const wasRecalibration = DataManager.hasKneeProfile() && calibrationState.isRecalibration;
-        
-        // Show success message
-        if (wasRecalibration) {
-            alert('✅ Calibration updated! Your knee capacity calculations have been recalibrated.');
-            // Refresh settings view if we're on it
-            if (AppState.currentView === 'settings') {
-                renderSettings();
-            }
-        } else {
-            alert('✅ Personal calibration complete! Your knee capacity will now be personalized to your baseline.');
-        }
-        
-        // Reset calibration state
-        calibrationState = {
-            currentScreen: 1,
-            baseline: { swelling: null, pain: 0, context: '' },
-            redline: { swelling: null, pain: 0, context: '' },
-            target: { swelling: null, pain: 0 },
-            isRecalibration: false
-        };
-    } else {
-        alert('❌ Failed to save profile. Please try again.');
-    }
-}
-
-// Settings View Functions
-function renderSettings() {
-    const statusDiv = document.getElementById('calibration-status');
-    const envelopeDisplay = document.getElementById('calibration-envelope-display');
-    const recalibrateBtn = document.getElementById('recalibrate-btn');
-    const viewEnvelopeBtn = document.getElementById('view-envelope-btn');
-    
-    if (!statusDiv) return;
-    
-    const hasProfile = DataManager.hasKneeProfile();
-    const profile = DataManager.getKneeProfile();
-    
-    if (hasProfile && profile) {
-        // Show calibrated status
-        const swellingLabels = { 0: 'None', 1: 'Mild', 2: 'Moderate', 3: 'Severe' };
-        const calibratedDate = profile.calibratedAt || 'Unknown';
-        
-        statusDiv.innerHTML = `
-            <div style="background: #E8F5E9; padding: 12px; border-radius: 8px; border-left: 4px solid #4CAF50;">
-                <div style="font-weight: 700; color: #2E7D32; margin-bottom: 8px;">✅ Calibrated</div>
-                <div style="font-size: 13px; color: var(--gray-700);">
-                    Calibrated on: ${calibratedDate}<br>
-                    Your knee capacity is personalized to your baseline.
-                </div>
-            </div>
-        `;
-        
-        // Setup recalibrate button
-        if (recalibrateBtn) {
-            recalibrateBtn.onclick = (e) => {
-                e.preventDefault();
-                startRecalibration();
-            };
-        }
-        
-        // Setup view envelope button
-        if (viewEnvelopeBtn) {
-            viewEnvelopeBtn.onclick = (e) => {
-                e.preventDefault();
-                toggleEnvelopeDisplay();
-            };
-        }
-        
-        // Render envelope display
-        renderEnvelopeDisplay(profile, swellingLabels);
-    } else {
-        // Show not calibrated status
-        statusDiv.innerHTML = `
-            <div style="background: #FFF3E0; padding: 12px; border-radius: 8px; border-left: 4px solid #FF9800;">
-                <div style="font-weight: 700; color: #E65100; margin-bottom: 8px;">⚠️ Not Calibrated</div>
-                <div style="font-size: 13px; color: var(--gray-700);">
-                    Your knee capacity uses standard thresholds. Calibrate for personalized tracking.
-                </div>
-            </div>
-        `;
-        
-        if (recalibrateBtn) {
-            recalibrateBtn.textContent = '🎯 Start Calibration';
-            recalibrateBtn.onclick = (e) => {
-                e.preventDefault();
-                startRecalibration();
-            };
-        }
-        
-        if (viewEnvelopeBtn) {
-            viewEnvelopeBtn.style.display = 'none';
-        }
-    }
-}
-
-function renderEnvelopeDisplay(profile, swellingLabels) {
-    const envelopeDisplay = document.getElementById('calibration-envelope-display');
-    if (!envelopeDisplay) return;
-    
-    envelopeDisplay.innerHTML = `
-        <div style="margin-bottom: 16px;">
-            <h4 style="margin: 0 0 12px 0; font-size: 16px; color: var(--gray-900);">Your Knee Envelope</h4>
-            
-            <div style="margin-bottom: 12px;">
-                <strong style="font-size: 13px; color: var(--gray-600);">Baseline (Light-loading week):</strong>
-                <div style="margin-top: 4px; padding-left: 12px; font-size: 14px;">
-                    Swelling: ${swellingLabels[profile.baselineSwelling] || 'Unknown'} | Pain: ${profile.baselinePain}/10
-                    ${profile.baselineContext ? `<br><em style="font-size: 12px; color: var(--gray-600);">${profile.baselineContext}</em>` : ''}
-                </div>
-            </div>
-            
-            <div style="margin-bottom: 12px;">
-                <strong style="font-size: 13px; color: var(--gray-600);">Redline (Hardest realistic week):</strong>
-                <div style="margin-top: 4px; padding-left: 12px; font-size: 14px;">
-                    Swelling: ${swellingLabels[profile.redlineSwelling] || 'Unknown'} | Pain: ${profile.redlinePain}/10
-                    ${profile.redlineContext ? `<br><em style="font-size: 12px; color: var(--gray-600);">${profile.redlineContext}</em>` : ''}
-                </div>
-            </div>
-            
-            <div>
-                <strong style="font-size: 13px; color: var(--gray-600);">Target (Under baseline loading):</strong>
-                <div style="margin-top: 4px; padding-left: 12px; font-size: 14px;">
-                    Swelling: ${swellingLabels[profile.targetSwelling] || 'Unknown'} | Pain: ${profile.targetPain}/10
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function toggleEnvelopeDisplay() {
-    const envelopeDisplay = document.getElementById('calibration-envelope-display');
-    const viewEnvelopeBtn = document.getElementById('view-envelope-btn');
-    
-    if (!envelopeDisplay || !viewEnvelopeBtn) return;
-    
-    if (envelopeDisplay.style.display === 'none' || !envelopeDisplay.style.display) {
-        envelopeDisplay.style.display = 'block';
-        viewEnvelopeBtn.textContent = '👁️ Hide Envelope';
-    } else {
-        envelopeDisplay.style.display = 'none';
-        viewEnvelopeBtn.textContent = '👁️ View Envelope';
-    }
-}
-
-function startRecalibration() {
-    const modal = document.getElementById('calibration-modal');
-    if (!modal) return;
-    
-    const profile = DataManager.getKneeProfile();
-    const isRecalibration = profile !== null;
-    
-    // Mark as recalibration
-    calibrationState.isRecalibration = isRecalibration;
-    
-    // If recalibrating, pre-populate with existing values
-    if (isRecalibration && profile) {
-        const swellingLevels = { 0: 'none', 1: 'mild', 2: 'moderate', 3: 'severe' };
-        
-        calibrationState.baseline = {
-            swelling: swellingLevels[profile.baselineSwelling] || null,
-            pain: profile.baselinePain || 0,
-            context: profile.baselineContext || ''
-        };
-        calibrationState.redline = {
-            swelling: swellingLevels[profile.redlineSwelling] || null,
-            pain: profile.redlinePain || 0,
-            context: profile.redlineContext || ''
-        };
-        calibrationState.target = {
-            swelling: swellingLevels[profile.targetSwelling] || null,
-            pain: profile.targetPain || 0
-        };
-        
-        // Pre-populate form fields
-        setTimeout(() => {
-            // Baseline
-            if (calibrationState.baseline.swelling) {
-                const baselineBtn = document.querySelector(`.swelling-btn[data-level="${calibrationState.baseline.swelling}"][data-screen="baseline"]`);
-                if (baselineBtn) {
-                    baselineBtn.click();
-                }
-            }
-            setCalibrationPainValue('baseline-pain-buttons', calibrationState.baseline.pain);
-            const baselineContext = document.getElementById('baseline-context');
-            if (baselineContext) {
-                baselineContext.value = calibrationState.baseline.context;
-            }
-            
-            // Redline
-            if (calibrationState.redline.swelling) {
-                const redlineBtn = document.querySelector(`.swelling-btn[data-level="${calibrationState.redline.swelling}"][data-screen="redline"]`);
-                if (redlineBtn) {
-                    redlineBtn.click();
-                }
-            }
-            setCalibrationPainValue('redline-pain-buttons', calibrationState.redline.pain);
-            const redlineContext = document.getElementById('redline-context');
-            if (redlineContext) {
-                redlineContext.value = calibrationState.redline.context;
-            }
-            
-            // Target
-            if (calibrationState.target.swelling) {
-                const targetBtn = document.querySelector(`.swelling-btn[data-level="${calibrationState.target.swelling}"][data-screen="target"]`);
-                if (targetBtn) {
-                    targetBtn.click();
-                }
-            }
-            setCalibrationPainValue('target-pain-buttons', calibrationState.target.pain);
-            
-            // Enable buttons since values are pre-filled
-            validateScreen1();
-            if (calibrationState.redline.swelling) {
-                validateScreen2();
-            }
-            if (calibrationState.target.swelling) {
-                validateScreen3();
-            }
-        }, 100);
-    } else {
-        // Reset state for new calibration
-        calibrationState = {
-            currentScreen: 1,
-            baseline: { swelling: null, pain: 0, context: '' },
-            redline: { swelling: null, pain: 0, context: '' },
-            target: { swelling: null, pain: 0 },
-            isRecalibration: false
-        };
-    }
-    
-    // Show modal starting at screen 1
-    showCalibrationScreen(1);
-    modal.style.display = 'flex';
-}

@@ -83,7 +83,9 @@ function renderKCIResult(score) {
     
     // 1. Show container
     container.style.display = 'block';
-    
+
+    if (typeof renderStreakProgress === 'function') renderStreakProgress('kci-streak-progress');
+
     // 2. Animate score count up
     let current = 0;
     const duration = 1000; // 1 second

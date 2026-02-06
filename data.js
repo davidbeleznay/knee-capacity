@@ -184,8 +184,20 @@ const DataManager = {
 
         const streak = localStorage.getItem('streak');
         const longestStreak = localStorage.getItem('longestStreak');
+        const lastStreakDate = localStorage.getItem('lastStreakDate');
+        const graceTokens = localStorage.getItem('graceTokens');
+        const graceTokenCap = localStorage.getItem('graceTokenCap');
+        const milestoneBadgesAwarded = localStorage.getItem('milestoneBadgesAwarded');
         if (streak !== null) this.backup.set('streak', streak);
         if (longestStreak !== null) this.backup.set('longestStreak', longestStreak);
+        if (lastStreakDate !== null) this.backup.set('lastStreakDate', lastStreakDate);
+        if (graceTokens !== null) this.backup.set('graceTokens', graceTokens);
+        if (graceTokenCap !== null) this.backup.set('graceTokenCap', graceTokenCap);
+        if (milestoneBadgesAwarded !== null) {
+            try {
+                this.backup.set('milestoneBadgesAwarded', JSON.parse(milestoneBadgesAwarded));
+            } catch (_) {}
+        }
     },
 
     restoreFromBackup() {
@@ -219,6 +231,31 @@ const DataManager = {
                 if (key === 'longestStreak' && localStorage.getItem('longestStreak') === null && value !== null) {
                     localStorage.setItem('longestStreak', value);
                     restored = true;
+                }
+
+                if (key === 'lastStreakDate' && localStorage.getItem('lastStreakDate') === null && value != null) {
+                    localStorage.setItem('lastStreakDate', String(value));
+                    restored = true;
+                }
+
+                if (key === 'graceTokens' && localStorage.getItem('graceTokens') === null && value != null) {
+                    localStorage.setItem('graceTokens', String(value));
+                    restored = true;
+                }
+
+                if (key === 'graceTokenCap' && localStorage.getItem('graceTokenCap') === null && value != null) {
+                    localStorage.setItem('graceTokenCap', String(value));
+                    restored = true;
+                }
+
+                if (key === 'milestoneBadgesAwarded' && localStorage.getItem('milestoneBadgesAwarded') === null && value != null) {
+                    try {
+                        const arr = Array.isArray(value) ? value : JSON.parse(String(value));
+                        if (Array.isArray(arr)) {
+                            localStorage.setItem('milestoneBadgesAwarded', JSON.stringify(arr));
+                            restored = true;
+                        }
+                    } catch (_) {}
                 }
             });
 
@@ -422,6 +459,14 @@ const DataManager = {
         if (success) this.updateStreak();
         return success;
     },
+
+    /** Returns { success: boolean, celebration?: object } for UI (e.g. modal). */
+    _saveAndCompleteDay(saveFn) {
+        const success = saveFn();
+        if (!success) return { success: false };
+        const result = this.completeDailyCheckIn(new Date());
+        return { success: true, celebration: result.celebration || null };
+    },
     
     getSessions() {
         return this.storage.get('sessions');
@@ -429,17 +474,18 @@ const DataManager = {
     
     // Exercise Logs
     saveExerciseLog(exerciseData) {
-        const logs = this.getExerciseLogs();
-        const newLog = {
-            ...exerciseData,
-            id: Date.now().toString(),
-            timestamp: new Date().toISOString(),
-            date: this.getLocalDateKey()
-        };
-        logs.push(newLog);
-        const success = this.storage.set('exerciseLogs', logs);
-        if (success) this.updateStreak();
-        return success;
+        const self = this;
+        return this._saveAndCompleteDay(function save() {
+            const logs = self.getExerciseLogs();
+            const newLog = {
+                ...exerciseData,
+                id: Date.now().toString(),
+                timestamp: new Date().toISOString(),
+                date: self.getLocalDateKey()
+            };
+            logs.push(newLog);
+            return self.storage.set('exerciseLogs', logs);
+        });
     },
     
     getExerciseLogs() {
@@ -466,16 +512,17 @@ const DataManager = {
     
     // Custom Workouts
     saveCustomWorkout(workoutData) {
-        const workouts = this.getCustomWorkouts();
-        workouts.push({
-            ...workoutData,
-            id: Date.now().toString(),
-            timestamp: new Date().toISOString(),
-            date: this.getLocalDateKey()
+        const self = this;
+        return this._saveAndCompleteDay(function save() {
+            const workouts = self.getCustomWorkouts();
+            workouts.push({
+                ...workoutData,
+                id: Date.now().toString(),
+                timestamp: new Date().toISOString(),
+                date: self.getLocalDateKey()
+            });
+            return self.storage.set('customWorkouts', workouts);
         });
-        const success = this.storage.set('customWorkouts', workouts);
-        if (success) this.updateStreak();
-        return success;
     },
     
     getCustomWorkouts() {
@@ -675,7 +722,134 @@ const DataManager = {
     },
     
     getCurrentStreak() {
-        return this.updateStreak(); // Always recalculate to ensure accuracy
+        // Use stored streak when lastStreakDate is set (completeDailyCheckIn flow); else recalculate from workouts
+        const lastStreakDate = localStorage.getItem('lastStreakDate');
+        if (lastStreakDate) return parseInt(localStorage.getItem('streak') || '0', 10);
+        return this.updateStreak();
+    },
+
+    /**
+     * Evaluates streak state for a given date. Does NOT increment the streak; only handles
+     * missed-day logic and state cleanup. Call this before counting today (e.g. before
+     * incrementing after a workout).
+     * @param {Date} today - The date to evaluate for (typically "today" in local time).
+     * @returns {{ status: 'already_counted'|'streak_preserved'|'grace_token_used'|'streak_reset' }}
+     */
+    evaluateStreakForDate(today) {
+        const todayKey = this.getLocalDateKey(today);
+        const yesterdayDate = new Date(today);
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterdayKey = this.getLocalDateKey(yesterdayDate);
+
+        const lastStreakDate = localStorage.getItem('lastStreakDate') || null;
+        let graceTokens = parseInt(localStorage.getItem('graceTokens') || '0', 10);
+
+        if (lastStreakDate === todayKey) {
+            return { status: 'already_counted' };
+        }
+
+        if (lastStreakDate === yesterdayKey || lastStreakDate === null) {
+            return { status: 'streak_preserved' };
+        }
+
+        // More than one day missed (last streak day is before yesterday)
+        if (lastStreakDate < yesterdayKey) {
+            if (graceTokens > 0) {
+                graceTokens -= 1;
+                localStorage.setItem('graceTokens', String(graceTokens));
+                localStorage.setItem('lastStreakDate', yesterdayKey);
+                if (this.backup) {
+                    this.backup.set('graceTokens', String(graceTokens));
+                    this.backup.set('lastStreakDate', yesterdayKey);
+                }
+                return { status: 'grace_token_used' };
+            }
+            localStorage.setItem('streak', '0');
+            localStorage.removeItem('lastStreakDate');
+            if (this.backup) {
+                this.backup.set('streak', '0');
+                this.backup.set('lastStreakDate', null);
+            }
+            return { status: 'streak_reset' };
+        }
+
+        return { status: 'streak_preserved' };
+    },
+
+    /**
+     * Marks the given day as successfully completed: increments streak, updates last streak date,
+     * checks for newly reached milestones, awards badges and grace tokens once, and returns a
+     * celebration payload if a milestone was hit. Deterministic for a given (today, localStorage state).
+     * @param {Date} today - The date that was completed (local time).
+     * @returns {{ alreadyCounted: boolean, celebration: { day: number, title: string, subtitle: string, badges: string[], graceTokensAwarded: number } | null }}
+     */
+    completeDailyCheckIn(today) {
+        const todayKey = this.getLocalDateKey(today);
+        const evaluation = this.evaluateStreakForDate(today);
+
+        if (evaluation.status === 'already_counted') {
+            return { alreadyCounted: true, celebration: null };
+        }
+
+        const currentStreak = parseInt(localStorage.getItem('streak') || '0', 10);
+        const newStreak = evaluation.status === 'streak_reset' ? 1 : currentStreak + 1;
+
+        localStorage.setItem('streak', String(newStreak));
+        localStorage.setItem('lastStreakDate', todayKey);
+        if (this.backup) {
+            this.backup.set('streak', String(newStreak));
+            this.backup.set('lastStreakDate', todayKey);
+        }
+
+        const longest = parseInt(localStorage.getItem('longestStreak') || '0', 10);
+        if (newStreak > longest) {
+            localStorage.setItem('longestStreak', String(newStreak));
+            if (this.backup) this.backup.set('longestStreak', String(newStreak));
+        }
+
+        const getMilestoneByDay = typeof window !== 'undefined' && window.getMilestoneByDay ? window.getMilestoneByDay : () => undefined;
+        const milestone = getMilestoneByDay(newStreak);
+        let awarded = [];
+        try {
+            const raw = localStorage.getItem('milestoneBadgesAwarded');
+            awarded = raw ? JSON.parse(raw) : [];
+        } catch (_) {
+            awarded = [];
+        }
+        const alreadyAwarded = Array.isArray(awarded) && awarded.includes(newStreak);
+
+        if (!milestone || alreadyAwarded) {
+            return { alreadyCounted: false, celebration: null };
+        }
+
+        awarded = [...awarded, newStreak];
+        localStorage.setItem('milestoneBadgesAwarded', JSON.stringify(awarded));
+        if (this.backup) this.backup.set('milestoneBadgesAwarded', awarded);
+
+        const rewards = milestone.rewards || {};
+        const badges = rewards.badges || [];
+        const addTokens = rewards.graceTokens != null ? rewards.graceTokens : 0;
+        let cap = parseInt(localStorage.getItem('graceTokenCap') || '0', 10);
+        if (rewards.graceTokenCap != null) {
+            cap = Math.max(cap, rewards.graceTokenCap);
+            localStorage.setItem('graceTokenCap', String(cap));
+            if (this.backup) this.backup.set('graceTokenCap', String(cap));
+        }
+        let graceTokens = parseInt(localStorage.getItem('graceTokens') || '0', 10);
+        const graceTokensAwarded = addTokens;
+        graceTokens = cap > 0 ? Math.min(graceTokens + addTokens, cap) : graceTokens + addTokens;
+        localStorage.setItem('graceTokens', String(graceTokens));
+        if (this.backup) this.backup.set('graceTokens', String(graceTokens));
+
+        const celebration = {
+            day: newStreak,
+            title: (milestone.celebration && milestone.celebration.title) || '',
+            subtitle: (milestone.celebration && milestone.celebration.subtitle) || '',
+            badges,
+            graceTokensAwarded
+        };
+
+        return { alreadyCounted: false, celebration };
     },
 
     getBadges() {
