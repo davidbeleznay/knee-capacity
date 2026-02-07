@@ -79,8 +79,17 @@ function renderStreakProgress(containerId) {
     var el = document.getElementById(containerId);
     if (!el) return;
     var p = getStreakProgress();
-    if (p.nextMilestoneDay != null) {
-        el.textContent = 'Day ' + p.currentStreak + ' â†’ Next: Day ' + p.nextMilestoneDay + ' (' + p.daysRemaining + ' left, ' + p.percentProgress + '%)';
+    var next = typeof window.getNextMilestone === 'function' ? window.getNextMilestone(p.currentStreak) : null;
+    var nextLabel = next && next.celebration && next.celebration.title ? next.celebration.title : 'Day ' + p.nextMilestoneDay;
+
+    if (p.nextMilestoneDay != null && p.percentProgress != null) {
+        el.innerHTML = [
+            '<div class="next-milestone-wrap">',
+            '<div class="next-milestone-label">Next: Day ' + p.nextMilestoneDay + ' â€” ' + nextLabel + '</div>',
+            '<div class="next-milestone-bar"><div class="next-milestone-fill" style="width:' + p.percentProgress + '%"></div></div>',
+            '<div class="next-milestone-meta">' + p.daysRemaining + ' day' + (p.daysRemaining === 1 ? '' : 's') + ' left Â· ' + p.percentProgress + '%</div>',
+            '</div>'
+        ].join('');
         el.style.display = '';
     } else if (p.currentStreak > 0) {
         el.textContent = 'Day ' + p.currentStreak + ' (max milestone reached)';

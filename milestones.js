@@ -29,7 +29,7 @@ const STREAK_MILESTONES = [
       graceTokens: 1
     },
     celebration: {
-      title: 'Anchor',
+      title: 'One Week',
       subtitle: 'One week strong. You’ve unlocked 1 grace token.'
     }
   },
@@ -53,7 +53,7 @@ const STREAK_MILESTONES = [
       graceTokens: undefined
     },
     celebration: {
-      title: 'Two weeks',
+      title: 'Two Weeks',
       subtitle: 'A full two weeks of showing up.'
     }
   },
@@ -65,7 +65,7 @@ const STREAK_MILESTONES = [
       graceTokens: undefined
     },
     celebration: {
-      title: 'Habit groove',
+      title: 'Three Weeks',
       subtitle: '21 days – you’re in the groove.'
     }
   },
@@ -77,10 +77,13 @@ const STREAK_MILESTONES = [
       graceTokens: undefined
     },
     celebration: {
-      title: 'Month one',
+      title: 'One Month',
       subtitle: 'Your first 30-day streak. Huge.'
     }
-  }
+  },
+  { day: 50, rewards: { badges: ['fifty'] }, celebration: { title: '50 Days', subtitle: 'Fifty days of consistency.' } },
+  { day: 75, rewards: { badges: ['seventy_five'] }, celebration: { title: '75 Days', subtitle: 'Seventy-five days strong.' } },
+  { day: 100, rewards: { badges: ['hundred'] }, celebration: { title: '100 Days', subtitle: 'A hundred days. Legendary.' } }
 ];
 
 /**

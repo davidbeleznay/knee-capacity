@@ -1229,6 +1229,36 @@ details[open] {
     white-space: nowrap;
 }
 
+/* Next Milestone progress (streak card) */
+.streak-card-large .next-milestone-wrap {
+    margin-top: 12px;
+    text-align: left;
+}
+.streak-card-large .next-milestone-label {
+    font-size: 12px;
+    font-weight: 700;
+    opacity: 0.95;
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+}
+.streak-card-large .next-milestone-bar {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.35);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+.streak-card-large .next-milestone-fill {
+    height: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+.streak-card-large .next-milestone-meta {
+    font-size: 11px;
+    opacity: 0.9;
+}
+
 .exercise-cards-grid {
     display: grid;
     grid-template-columns: 1fr;
