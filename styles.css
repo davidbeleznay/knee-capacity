@@ -24,6 +24,7 @@ body {
     color: var(--gray-900);
     padding-bottom: 80px;
     line-height: 1.6;
+    overflow-x: hidden;
 }
 
 header {
@@ -55,10 +56,11 @@ header h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
 
 main {
     padding: 16px;
-    max-width: 600px;
+    max-width: min(600px, 100%);
     margin: 0 auto;
     width: 100%;
     box-sizing: border-box;
+    overflow-x: hidden;
 }
 
 .view { display: none; }
@@ -452,15 +454,17 @@ textarea:focus {
 /* Exercise Tiles */
 .exercise-tiles {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 20px;
+    min-width: 0;
 }
 
 #log-sections {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    min-width: 0;
 }
 
 #log-sections .card {
@@ -579,9 +583,11 @@ textarea:focus {
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     min-height: 130px;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
+    overflow: hidden;
 }
 
 .exercise-tile:hover {
@@ -646,6 +652,16 @@ textarea:focus {
 
 .tile-header {
     width: 100%;
+    min-width: 0;
+}
+.tile-header > div {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+.tile-name, .tile-category, .tile-meta {
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .tile-details {
@@ -807,26 +823,6 @@ textarea:focus {
 }
 
 /* Mobile Viewport Optimizations */
-@media (max-width: 375px) {
-    .exercise-tiles {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
-    }
-    
-    .exercise-tile {
-        padding: 12px;
-        min-height: 110px;
-    }
-    
-    .tile-icon {
-        font-size: 28px;
-    }
-    
-    .tile-name {
-        font-size: 13px;
-    }
-}
-
 /* Log Form */
 .log-form {
     animation: slideUp 0.3s ease;
@@ -1311,6 +1307,53 @@ details[open] {
     }
     #exercise-log-form .instructions-content {
         padding: 0 12px 16px 12px;
+    }
+}
+
+/* Log view: no horizontal scroll at 375px (iPhone SE) */
+@media (max-width: 375px) {
+    #log-view .card,
+    #log-sections .card {
+        padding: 12px;
+    }
+    #log-view h2 {
+        font-size: 20px;
+    }
+    .exercise-tiles {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 8px;
+    }
+    .exercise-tile {
+        padding: 10px;
+        min-height: 100px;
+    }
+    .tile-name {
+        font-size: 12px;
+    }
+    .tile-meta {
+        font-size: 11px;
+    }
+    .tile-icon {
+        font-size: 28px;
+    }
+    .plus-log-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 20px;
+    }
+    /* Impact buttons (custom workout form): wrap, fit width */
+    #log-view .impact-btn {
+        flex: 1 1 calc(50% - 6px);
+        min-width: 0;
+        padding: 8px 4px;
+        font-size: 12px;
+    }
+    #log-view .like-buttons {
+        flex-wrap: wrap;
+    }
+    #log-view .like-button {
+        padding: 6px 10px;
+        font-size: 13px;
     }
 }
 
