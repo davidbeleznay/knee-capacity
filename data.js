@@ -785,13 +785,10 @@ const DataManager = {
 
     getCurrentStreak() {
         const lastStreakDate = localStorage.getItem('lastStreakDate');
-        const stored = parseInt(localStorage.getItem('streak') || '0', 10);
-        if (lastStreakDate) return stored;
-        // No lastStreakDate: preserve existing positive streak (avoid recompute overwriting it)
-        if (stored > 0) return stored;
+        if (lastStreakDate) return parseInt(localStorage.getItem('streak') || '0', 10);
         const result = this.updateStreak();
         if (result.status === 'computed') return result.streak;
-        return stored;
+        return parseInt(localStorage.getItem('streak') || '0', 10);
     },
 
     /**
