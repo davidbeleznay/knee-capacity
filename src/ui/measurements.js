@@ -106,3 +106,12 @@ function renderMeasurementSummary() {
     if (m.weight_lb) html += `<div class="measurement-row"><span>Weight</span><span>${m.weight_lb} lbs</span></div>`;
     container.innerHTML = html;
 }
+
+// Expose for cross-file calls (router.js, init.js)
+if (typeof window !== 'undefined') {
+    window.setupMeasurementHandlers = setupMeasurementHandlers;
+    window.updateMeasurementDisplay = updateMeasurementDisplay;
+    window.renderMeasurementSummary = renderMeasurementSummary;
+    window.openMeasurementModal = openMeasurementModal;
+    window.closeMeasurementModal = closeMeasurementModal;
+}

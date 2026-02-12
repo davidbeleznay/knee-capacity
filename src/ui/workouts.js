@@ -547,3 +547,16 @@ function renderExerciseLibrary() {
         `;
     }).join('');
 }
+
+// Expose for cross-file calls (router.js, init.js)
+if (typeof window !== 'undefined') {
+    window.setupWorkoutHandlers = setupWorkoutHandlers;
+    window.renderExerciseTiles = renderExerciseTiles;
+    window.renderTodaysSummary = renderTodaysSummary;
+    window.renderExerciseLibrary = renderExerciseLibrary;
+    window.toggleExerciseDetails = toggleExerciseDetails;
+    window.selectExerciseForLogging = selectExerciseForLogging;
+    window.closeExerciseForm = closeExerciseForm;
+    window.selectCustomWorkout = selectCustomWorkout;
+    window.closeCustomForm = closeCustomForm;
+}

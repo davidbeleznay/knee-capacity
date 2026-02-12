@@ -274,5 +274,12 @@ function renderEventsTimeline() {
     }).join('');
 }
 
-// Expose for init.js (global script order)
-if (typeof window !== 'undefined') window.setupEventHandlers = setupEventHandlers;
+// Expose for cross-file calls (router.js, init.js)
+if (typeof window !== 'undefined') {
+    window.setupEventHandlers = setupEventHandlers;
+    window.renderRecentEventsPreview = renderRecentEventsPreview;
+    window.renderEventsTimeline = renderEventsTimeline;
+    window.openEventModal = openEventModal;
+    window.closeEventModal = closeEventModal;
+    window.deleteEventWithConfirm = deleteEventWithConfirm;
+}

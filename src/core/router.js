@@ -12,19 +12,19 @@ function switchView(viewName) {
     // Trigger view-specific rendering (catch so one view cannot break the app)
     try {
         if (viewName === 'home') {
-            updateKneeStatusCard();
-            updateWeekSummary();
+            if (typeof window.updateKneeStatusCard === 'function') window.updateKneeStatusCard();
+            if (typeof window.updateWeekSummary === 'function') window.updateWeekSummary();
         }
         if (viewName === 'log') {
-            if (typeof renderExerciseTiles === 'function') renderExerciseTiles();
-            if (typeof renderTodaysSummary === 'function') renderTodaysSummary();
+            if (typeof window.renderExerciseTiles === 'function') window.renderExerciseTiles();
+            if (typeof window.renderTodaysSummary === 'function') window.renderTodaysSummary();
         }
         if (viewName === 'history') {
-            if (typeof renderAnalytics === 'function') renderAnalytics(AppState.analyticsDays);
-            if (typeof renderMeasurementSummary === 'function') renderMeasurementSummary();
+            if (typeof window.renderAnalytics === 'function') window.renderAnalytics(AppState.analyticsDays);
+            if (typeof window.renderMeasurementSummary === 'function') window.renderMeasurementSummary();
         }
         if (viewName === 'exercises') {
-            if (typeof renderExerciseLibrary === 'function') renderExerciseLibrary('all');
+            if (typeof window.renderExerciseLibrary === 'function') window.renderExerciseLibrary('all');
         }
     } catch (e) {
         console.error('[switchView] render error for view:', viewName, e.message, e);
@@ -37,4 +37,10 @@ function setupNavigation() {
         btn.ontouchstart = handler;
         btn.onclick = handler;
     });
+}
+
+// Expose for cross-file calls
+if (typeof window !== 'undefined') {
+    window.switchView = switchView;
+    window.setupNavigation = setupNavigation;
 }

@@ -232,3 +232,35 @@ function updateWeekSummary() {
         </div>
     `;
 }
+
+function updateKneeStatusCard() {
+    const statusInfo = DataManager.getKneeStatusMessage();
+    const status = DataManager.getKneeStatus();
+    AppState.kneeStatus = status;
+    
+    const card = document.getElementById('knee-status-card');
+    if (!card) return;
+    card.className = `status-card status-${status} text-center`;
+    card.innerHTML = `
+        <div class="status-icon">${statusInfo.icon}</div>
+        <h2>${statusInfo.title}</h2>
+        <p style="font-size: 16px; margin: 12px 0;">${statusInfo.message}</p>
+        <div style="background: rgba(0,0,0,0.05); padding: 12px; border-radius: 10px; margin-top: 12px;">
+            <strong>Plan:</strong> ${statusInfo.action}
+        </div>
+    `;
+    
+    const modeBadge = document.getElementById('current-mode-badge');
+    if (modeBadge) {
+        modeBadge.className = `mode-badge mode-${status}`;
+        modeBadge.textContent = status.toUpperCase();
+    }
+}
+
+// Expose for cross-file calls (router.js, init.js)
+if (typeof window !== 'undefined') {
+    window.setupCheckInHandlers = setupCheckInHandlers;
+    window.loadTodayCheckIn = loadTodayCheckIn;
+    window.updateWeekSummary = updateWeekSummary;
+    window.updateKneeStatusCard = updateKneeStatusCard;
+}

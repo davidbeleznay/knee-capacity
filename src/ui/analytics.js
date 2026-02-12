@@ -310,6 +310,10 @@ function renderHistory(days) {
     }).join('');
 }
 
-// "Exports" for the concatenated bundle model (optional, but useful for debugging / inline handlers)
-window.populateAnalyticsExerciseSelect = populateAnalyticsExerciseSelect;
+// Expose for cross-file calls (router.js, init.js)
+if (typeof window !== 'undefined') {
+    window.setupAnalyticsHandlers = setupAnalyticsHandlers;
+    window.renderAnalytics = renderAnalytics;
+    window.populateAnalyticsExerciseSelect = populateAnalyticsExerciseSelect;
+}
 window.renderIndividualExerciseAnalytics = renderIndividualExerciseAnalytics;

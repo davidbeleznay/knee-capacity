@@ -155,3 +155,13 @@ function showCelebrationModal(celebration) {
         });
     }
 }
+
+// Expose for cross-file calls (router.js, init.js)
+if (typeof window !== 'undefined') {
+    window.getExerciseIcon = getExerciseIcon;
+    window.adjustValue = adjustValue;
+    window.updateStreakDisplay = updateStreakDisplay;
+    window.renderStreakProgress = renderStreakProgress;
+    window.showPersistenceWarning = showPersistenceWarning;
+    window.showCelebrationModal = showCelebrationModal;
+}

@@ -40,6 +40,21 @@ const DataManager = {
                 console.error(`Storage Error (get ${key}):`, e);
                 return { status: 'error', raw: raw !== null && raw !== undefined ? raw : undefined };
             }
+        },
+        /**
+         * Read a plain string key (no JSON parse). Use for streak, lastStreakDate, graceTokens, etc.
+         * @param {string} key
+         * @returns {{ status: 'missing' | 'ok' | 'error', value?: string }}
+         */
+        getString(key) {
+            try {
+                const raw = localStorage.getItem(key);
+                if (raw === null) return { status: 'missing' };
+                return { status: 'ok', value: raw };
+            } catch (e) {
+                console.error(`Storage Error (getString ${key}):`, e);
+                return { status: 'error' };
+            }
         }
     },
 
@@ -134,7 +149,7 @@ const DataManager = {
             ];
             
             stores.forEach(store => {
-                if (localStorage.getItem(store) === null) {
+                if (this.storage.get(store).status === 'missing') {
                     // Do not create exerciseLogs until first log is saved; treat missing as uninitialized
                     if (store === 'exerciseLogs') return;
                     this.storage.set(store, []);
@@ -142,12 +157,12 @@ const DataManager = {
             });
             
             // Initialize kneeProfile storage (object, not array)
-            if (localStorage.getItem('kneeProfile') === null) {
+            if (this.storage.get('kneeProfile').status === 'missing') {
                 // Don't initialize - let it be null until user completes onboarding
             }
 
-            if (localStorage.getItem('streak') === null) localStorage.setItem('streak', '0');
-            if (localStorage.getItem('longestStreak') === null) localStorage.setItem('longestStreak', '0');
+            if (this.storage.getString('streak').status === 'missing') localStorage.setItem('streak', '0');
+            if (this.storage.getString('longestStreak').status === 'missing') localStorage.setItem('longestStreak', '0');
 
             this.requestPersistentStorage();
             
@@ -181,12 +196,15 @@ const DataManager = {
         const streakParts = [];
         let streakStatus = 'ok';
         streakKeys.forEach(k => {
-            const raw = localStorage.getItem(k);
-            if (raw === null) {
+            const result = this.storage.getString(k);
+            if (result.status === 'missing') {
                 streakParts.push(k + '=missing');
                 if (k === 'streak' || k === 'longestStreak') streakStatus = 'missing';
+            } else if (result.status === 'ok') {
+                streakParts.push(k + '=' + result.value);
             } else {
-                streakParts.push(k + '=' + raw);
+                streakParts.push(k + '=error');
+                streakStatus = 'error';
             }
         });
         lines.push('streak: ' + streakStatus + ' ' + streakParts.join(', '));
@@ -226,22 +244,23 @@ const DataManager = {
             this.backup.set('kneeProfile', kneeProfile);
         }
 
-        const streak = localStorage.getItem('streak');
-        const longestStreak = localStorage.getItem('longestStreak');
-        const lastStreakDate = localStorage.getItem('lastStreakDate');
-        const graceTokens = localStorage.getItem('graceTokens');
-        const graceTokenCap = localStorage.getItem('graceTokenCap');
-        const milestoneBadgesAwarded = localStorage.getItem('milestoneBadgesAwarded');
-        if (streak !== null) this.backup.set('streak', streak);
-        if (longestStreak !== null) this.backup.set('longestStreak', longestStreak);
-        if (lastStreakDate !== null) this.backup.set('lastStreakDate', lastStreakDate);
-        if (graceTokens !== null) this.backup.set('graceTokens', graceTokens);
-        if (graceTokenCap !== null) this.backup.set('graceTokenCap', graceTokenCap);
-        if (milestoneBadgesAwarded !== null) {
-            try {
-                this.backup.set('milestoneBadgesAwarded', JSON.parse(milestoneBadgesAwarded));
-            } catch (_) {}
-        }
+        const streakResult = this.storage.getString('streak');
+        if (streakResult.status === 'ok') this.backup.set('streak', streakResult.value);
+
+        const longestResult = this.storage.getString('longestStreak');
+        if (longestResult.status === 'ok') this.backup.set('longestStreak', longestResult.value);
+
+        const lastDateResult = this.storage.getString('lastStreakDate');
+        if (lastDateResult.status === 'ok') this.backup.set('lastStreakDate', lastDateResult.value);
+
+        const graceResult = this.storage.getString('graceTokens');
+        if (graceResult.status === 'ok') this.backup.set('graceTokens', graceResult.value);
+
+        const capResult = this.storage.getString('graceTokenCap');
+        if (capResult.status === 'ok') this.backup.set('graceTokenCap', capResult.value);
+
+        const badgesResult = this.storage.get('milestoneBadgesAwarded');
+        if (badgesResult.status === 'ok') this.backup.set('milestoneBadgesAwarded', badgesResult.value);
     },
 
     restoreFromBackup() {
@@ -268,32 +287,32 @@ const DataManager = {
                     }
                 }
 
-                if (key === 'streak' && localStorage.getItem('streak') === null && value !== null) {
+                if (key === 'streak' && this.storage.getString('streak').status === 'missing' && value !== null) {
                     localStorage.setItem('streak', value);
                     restored = true;
                 }
 
-                if (key === 'longestStreak' && localStorage.getItem('longestStreak') === null && value !== null) {
+                if (key === 'longestStreak' && this.storage.getString('longestStreak').status === 'missing' && value !== null) {
                     localStorage.setItem('longestStreak', value);
                     restored = true;
                 }
 
-                if (key === 'lastStreakDate' && localStorage.getItem('lastStreakDate') === null && value != null) {
+                if (key === 'lastStreakDate' && this.storage.getString('lastStreakDate').status === 'missing' && value != null) {
                     localStorage.setItem('lastStreakDate', String(value));
                     restored = true;
                 }
 
-                if (key === 'graceTokens' && localStorage.getItem('graceTokens') === null && value != null) {
+                if (key === 'graceTokens' && this.storage.getString('graceTokens').status === 'missing' && value != null) {
                     localStorage.setItem('graceTokens', String(value));
                     restored = true;
                 }
 
-                if (key === 'graceTokenCap' && localStorage.getItem('graceTokenCap') === null && value != null) {
+                if (key === 'graceTokenCap' && this.storage.getString('graceTokenCap').status === 'missing' && value != null) {
                     localStorage.setItem('graceTokenCap', String(value));
                     restored = true;
                 }
 
-                if (key === 'milestoneBadgesAwarded' && localStorage.getItem('milestoneBadgesAwarded') === null && value != null) {
+                if (key === 'milestoneBadgesAwarded' && this.storage.get('milestoneBadgesAwarded').status === 'missing' && value != null) {
                     try {
                         const arr = Array.isArray(value) ? value : JSON.parse(String(value));
                         if (Array.isArray(arr)) {
@@ -441,7 +460,9 @@ const DataManager = {
     
     getBodyMeasurements() {
         const r = this.storage.get('bodyMeasurements');
-        return r.status === 'ok' ? r.value : [];
+        if (r.status === 'ok') return r.value;
+        // missing or error: return safe default, do not persist
+        return [];
     },
     
     getLatestBodyMeasurement() {
@@ -516,7 +537,9 @@ const DataManager = {
     
     getSessions() {
         const r = this.storage.get('sessions');
-        return r.status === 'ok' ? r.value : [];
+        if (r.status === 'ok') return r.value;
+        // missing or error: return safe default
+        return [];
     },
     
     // Exercise Logs (in-memory cache when persistence fails so UI still shows the new log)
@@ -548,7 +571,9 @@ const DataManager = {
     getExerciseLogs() {
         if (this._exerciseLogsPendingCache !== null) return this._exerciseLogsPendingCache;
         const r = this.storage.get('exerciseLogs');
-        return r.status === 'ok' ? r.value : [];
+        if (r.status === 'ok') return r.value;
+        // missing or error: return safe default, do not persist
+        return [];
     },
     
     getExerciseLogsByDate(date) {
@@ -586,7 +611,9 @@ const DataManager = {
     
     getCustomWorkouts() {
         const r = this.storage.get('customWorkouts');
-        return r.status === 'ok' ? r.value : [];
+        if (r.status === 'ok') return r.value;
+        // missing or error: return safe default
+        return [];
     },
     
     getCustomWorkoutsByDate(date) {
@@ -672,7 +699,9 @@ const DataManager = {
     
     getCheckIns() {
         const r = this.storage.get('checkIns');
-        return r.status === 'ok' ? r.value : [];
+        if (r.status === 'ok') return r.value;
+        // missing or error: return safe default
+        return [];
     },
     
     getCheckIn(date) {
@@ -773,7 +802,8 @@ const DataManager = {
             }
         }
 
-        const longest = parseInt(localStorage.getItem('longestStreak') || '0');
+        const longestResult = this.storage.getString('longestStreak');
+        const longest = parseInt(longestResult.status === 'ok' ? longestResult.value : '0', 10);
         if (streak > longest) {
             localStorage.setItem('longestStreak', streak.toString());
             this.backup.set('longestStreak', streak.toString());
@@ -784,11 +814,15 @@ const DataManager = {
     },
 
     getCurrentStreak() {
-        const lastStreakDate = localStorage.getItem('lastStreakDate');
-        if (lastStreakDate) return parseInt(localStorage.getItem('streak') || '0', 10);
+        const lastDateResult = this.storage.getString('lastStreakDate');
+        if (lastDateResult.status === 'ok') {
+            const streakResult = this.storage.getString('streak');
+            return parseInt(streakResult.status === 'ok' ? streakResult.value : '0', 10);
+        }
         const result = this.updateStreak();
         if (result.status === 'computed') return result.streak;
-        return parseInt(localStorage.getItem('streak') || '0', 10);
+        const streakResult = this.storage.getString('streak');
+        return parseInt(streakResult.status === 'ok' ? streakResult.value : '0', 10);
     },
 
     /**
@@ -804,8 +838,10 @@ const DataManager = {
         yesterdayDate.setDate(yesterdayDate.getDate() - 1);
         const yesterdayKey = this.getLocalDateKey(yesterdayDate);
 
-        const lastStreakDate = localStorage.getItem('lastStreakDate') || null;
-        let graceTokens = parseInt(localStorage.getItem('graceTokens') || '0', 10);
+        const lastDateResult = this.storage.getString('lastStreakDate');
+        const lastStreakDate = lastDateResult.status === 'ok' ? lastDateResult.value : null;
+        const graceResult = this.storage.getString('graceTokens');
+        let graceTokens = parseInt(graceResult.status === 'ok' ? graceResult.value : '0', 10);
 
         if (lastStreakDate === todayKey) {
             return { status: 'already_counted' };
@@ -854,7 +890,8 @@ const DataManager = {
             return { alreadyCounted: true, celebration: null };
         }
 
-        const currentStreak = parseInt(localStorage.getItem('streak') || '0', 10);
+        const streakResult = this.storage.getString('streak');
+        const currentStreak = parseInt(streakResult.status === 'ok' ? streakResult.value : '0', 10);
         const newStreak = evaluation.status === 'streak_reset' ? 1 : currentStreak + 1;
 
         localStorage.setItem('streak', String(newStreak));
@@ -864,7 +901,8 @@ const DataManager = {
             this.backup.set('lastStreakDate', todayKey);
         }
 
-        const longest = parseInt(localStorage.getItem('longestStreak') || '0', 10);
+        const longestResult = this.storage.getString('longestStreak');
+        const longest = parseInt(longestResult.status === 'ok' ? longestResult.value : '0', 10);
         if (newStreak > longest) {
             localStorage.setItem('longestStreak', String(newStreak));
             if (this.backup) this.backup.set('longestStreak', String(newStreak));
@@ -872,14 +910,13 @@ const DataManager = {
 
         const getMilestoneByDay = typeof window !== 'undefined' && window.getMilestoneByDay ? window.getMilestoneByDay : () => undefined;
         const milestone = getMilestoneByDay(newStreak);
+        const awardedResult = this.storage.get('milestoneBadgesAwarded');
         let awarded = [];
-        try {
-            const raw = localStorage.getItem('milestoneBadgesAwarded');
-            awarded = raw ? JSON.parse(raw) : [];
-        } catch (_) {
-            awarded = [];
+        if (awardedResult.status === 'ok' && Array.isArray(awardedResult.value)) {
+            awarded = awardedResult.value;
         }
-        const alreadyAwarded = Array.isArray(awarded) && awarded.includes(newStreak);
+        // missing or error: start fresh
+        const alreadyAwarded = awarded.includes(newStreak);
 
         if (!milestone || alreadyAwarded) {
             return { alreadyCounted: false, celebration: null };
@@ -892,13 +929,15 @@ const DataManager = {
         const rewards = milestone.rewards || {};
         const badges = rewards.badges || [];
         const addTokens = rewards.graceTokens != null ? rewards.graceTokens : 0;
-        let cap = parseInt(localStorage.getItem('graceTokenCap') || '0', 10);
+        const capResult = this.storage.getString('graceTokenCap');
+        let cap = parseInt(capResult.status === 'ok' ? capResult.value : '0', 10);
         if (rewards.graceTokenCap != null) {
             cap = Math.max(cap, rewards.graceTokenCap);
             localStorage.setItem('graceTokenCap', String(cap));
             if (this.backup) this.backup.set('graceTokenCap', String(cap));
         }
-        let graceTokens = parseInt(localStorage.getItem('graceTokens') || '0', 10);
+        const graceTokensResult = this.storage.getString('graceTokens');
+        let graceTokens = parseInt(graceTokensResult.status === 'ok' ? graceTokensResult.value : '0', 10);
         const graceTokensAwarded = addTokens;
         graceTokens = cap > 0 ? Math.min(graceTokens + addTokens, cap) : graceTokens + addTokens;
         localStorage.setItem('graceTokens', String(graceTokens));
@@ -1248,7 +1287,13 @@ const DataManager = {
     
     getSignificantEvents(days = 90) {
         const r = this.storage.get('significantEvents');
-        const events = r.status === 'ok' ? r.value : [];
+        let events;
+        if (r.status === 'ok') {
+            events = r.value;
+        } else {
+            // missing or error: return safe default
+            events = [];
+        }
         if (!days) return events;
         
         const cutoff = new Date();
@@ -1681,7 +1726,9 @@ const DataManager = {
 
     getLikedExerciseIds() {
         const r = this.storage.get('likedExercises');
-        return r.status === 'ok' ? r.value : [];
+        if (r.status === 'ok') return r.value;
+        // missing or error: return safe default
+        return [];
     },
 
     isExerciseLiked(exerciseId) {
@@ -1713,7 +1760,9 @@ const DataManager = {
     // Dislike functionality
     getDislikedExerciseIds() {
         const r = this.storage.get('dislikedExercises');
-        return r.status === 'ok' ? r.value : [];
+        if (r.status === 'ok') return r.value;
+        // missing or error: return safe default
+        return [];
     },
     
     isExerciseDisliked(exerciseId) {
@@ -1745,7 +1794,9 @@ const DataManager = {
     // Personal Knee Profile (Capacity Calibration)
     getKneeProfile() {
         const r = this.storage.get('kneeProfile');
-        return r.status === 'ok' ? r.value : null;
+        if (r.status === 'ok') return r.value;
+        // missing or error: no profile available
+        return null;
     },
     
     hasKneeProfile() {
