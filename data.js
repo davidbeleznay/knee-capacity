@@ -141,33 +141,13 @@ const DataManager = {
                 return;
             }
             
-            // Initialize all data stores with robust wrapper
-            const stores = [
-                'sessions', 'checkIns', 'exerciseLogs', 
-                'customWorkouts', 'bodyMeasurements', 
-                'significantEvents', 'likedExercises', 'dislikedExercises'
-            ];
-            
-            stores.forEach(store => {
-                if (this.storage.get(store).status === 'missing') {
-                    // Do not create exerciseLogs until first log is saved; treat missing as uninitialized
-                    if (store === 'exerciseLogs') return;
-                    this.storage.set(store, []);
-                }
-            });
-            
-            // Initialize kneeProfile storage (object, not array)
-            if (this.storage.get('kneeProfile').status === 'missing') {
-                // Don't initialize - let it be null until user completes onboarding
-            }
-
-            if (this.storage.getString('streak').status === 'missing') localStorage.setItem('streak', '0');
-            if (this.storage.getString('longestStreak').status === 'missing') localStorage.setItem('longestStreak', '0');
+            // REMOVED: Destructive init writes (Task 1.3)
+            // Missing keys stay missing until user creates real data.
+            // Getters return safe defaults for rendering but do NOT persist them.
 
             this.requestPersistentStorage();
             
-            // Add baseline measurement if none exist
-            this.initializeBaselineMeasurement();
+            // REMOVED: initializeBaselineMeasurement() - no fake baseline data (Task 1.3)
             this.normalizeCheckIns();
             console.log('✅ DataManager initialized');
             this.runStorageDiagnostic();
@@ -423,28 +403,10 @@ const DataManager = {
     },
     
     // Body Measurements
+    // REMOVED: initializeBaselineMeasurement() - no auto-created fake data (Task 1.3)
+    // User must create their own first measurement.
     initializeBaselineMeasurement() {
-        const measurements = this.getBodyMeasurements();
-        if (measurements.length === 0) {
-            const baseline = {
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString(),
-                date: this.getLocalDateKey(),
-                measurements: {
-                    knee_top_cm: { right: 38.5, left: 37.5, method: '2cm above patella' },
-                    thigh_cm: { right: 50, left: 49, method: 'mid-thigh' },
-                    calf_cm: { right: 38, left: 38, method: 'widest point' },
-                    waist_cm: 92,
-                    weight_lb: 192,
-                    height_cm: 189
-                },
-                posture: 'relaxed/unflexed',
-                notes: 'Baseline - measured at top of knee where effusion shows',
-                type: 'weekly'
-            };
-            
-            this.storage.set('bodyMeasurements', [baseline]);
-        }
+        // No-op: removed destructive init write
     },
     
     saveBodyMeasurement(data) {
@@ -523,7 +485,8 @@ const DataManager = {
             timestamp: new Date().toISOString()
         });
         const success = this.storage.set('sessions', sessions);
-        if (success) this.updateStreak();
+        // REMOVED: automatic updateStreak() call (Task 1.4)
+        // Streak updates happen via completeDailyCheckIn() when user completes an activity
         return success;
     },
 
@@ -754,14 +717,23 @@ const DataManager = {
      * is present (status 'ok') and has at least one log; never writes streak=0 due to missing/errored logs.
      * @returns {{ status: 'computed', streak: number } | { status: 'skipped', reason: 'missing'|'error'|'empty' }}
      */
+    /**
+     * DEPRECATED: Legacy streak recomputation from exercise logs.
+     * WARNING: This function should NOT be called automatically on startup.
+     * Streak updates should happen via completeDailyCheckIn() after user activity.
+     * This function only runs if exerciseLogs status is "ok" with length > 0.
+     */
     updateStreak() {
         const logsResult = this.storage.get('exerciseLogs');
         if (logsResult.status !== 'ok') {
+            console.warn('⚠️ updateStreak() skipped: exerciseLogs status is', logsResult.status);
             return { status: 'skipped', reason: logsResult.status };
         }
         if (!Array.isArray(logsResult.value) || logsResult.value.length === 0) {
+            console.warn('⚠️ updateStreak() skipped: exerciseLogs is empty');
             return { status: 'skipped', reason: 'empty' };
         }
+        console.log('🔄 updateStreak() running with', logsResult.value.length, 'exercise logs');
         const exerciseLogs = logsResult.value;
         const customWorkouts = this.getCustomWorkouts();
         const allWorkouts = [...exerciseLogs, ...customWorkouts];
@@ -814,15 +786,29 @@ const DataManager = {
     },
 
     getCurrentStreak() {
-        const lastDateResult = this.storage.getString('lastStreakDate');
-        if (lastDateResult.status === 'ok') {
-            const streakResult = this.storage.getString('streak');
-            return parseInt(streakResult.status === 'ok' ? streakResult.value : '0', 10);
-        }
-        const result = this.updateStreak();
-        if (result.status === 'computed') return result.streak;
         const streakResult = this.storage.getString('streak');
-        return parseInt(streakResult.status === 'ok' ? streakResult.value : '0', 10);
+        const lastDateResult = this.storage.getString('lastStreakDate');
+        
+        // Case 1: Both exist - use stored streak (authoritative)
+        if (streakResult.status === 'ok' && lastDateResult.status === 'ok') {
+            return parseInt(streakResult.value, 10);
+        }
+        
+        // Case 2: streak exists but lastStreakDate missing - preserve streak, warn
+        if (streakResult.status === 'ok' && lastDateResult.status !== 'ok') {
+            console.warn('⚠️ Streak state incomplete: streak exists but lastStreakDate missing. Preserving streak.');
+            return parseInt(streakResult.value, 10);
+        }
+        
+        // Case 3: lastStreakDate exists but streak missing - warn, return 0
+        if (streakResult.status !== 'ok' && lastDateResult.status === 'ok') {
+            console.warn('⚠️ Streak state incomplete: lastStreakDate exists but streak missing. Showing 0.');
+            return 0;
+        }
+        
+        // Case 4: Both missing - return 0, do NOT write anything
+        // This is a new user or cleared storage - let them start fresh when they complete an activity
+        return 0;
     },
 
     /**
