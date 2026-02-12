@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupWorkoutHandlers();
     setupAnalyticsHandlers();
     setupMeasurementHandlers();
-    setupEventHandlers();
+    if (typeof window.setupEventHandlers === 'function') window.setupEventHandlers();
     setupNavigation();
     Stopwatch.init();
     if (typeof populateAnalyticsExerciseSelect === 'function') {

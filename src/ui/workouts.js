@@ -227,18 +227,21 @@ function renderExerciseTiles() {
 function toggleExerciseDetails(id) {
     const allTiles = document.querySelectorAll('.exercise-tile');
     const targetTile = document.getElementById(`tile-${id}`);
-    const targetDetails = targetTile.querySelector('.tile-details');
-    const isExpanding = targetDetails.style.display === 'none';
+    const targetDetails = targetTile ? targetTile.querySelector('.tile-details') : null;
+    if (!targetTile || !targetDetails) return;
+    const isExpanding = (targetDetails.style && targetDetails.style.display === 'none');
 
-    // Accordion: Collapse all others
+    // Accordion: Collapse all others (only tiles with .tile-details)
     allTiles.forEach(tile => {
+        if (!tile) return;
         tile.classList.remove('expanded');
-        tile.querySelector('.tile-details').style.display = 'none';
+        const details = tile.querySelector('.tile-details');
+        if (details && details.style) details.style.display = 'none';
     });
 
     if (isExpanding) {
         targetTile.classList.add('expanded');
-        targetDetails.style.display = 'block';
+        if (targetDetails.style) targetDetails.style.display = 'block';
         // Scroll into view if needed
         targetTile.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }

@@ -273,3 +273,6 @@ function renderEventsTimeline() {
         `;
     }).join('');
 }
+
+// Expose for init.js (global script order)
+if (typeof window !== 'undefined') window.setupEventHandlers = setupEventHandlers;
