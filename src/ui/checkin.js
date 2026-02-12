@@ -125,14 +125,16 @@ function renderKCIResult(score) {
     planDesc.textContent = info.plan;
     
     // 5. Update Recommendations
-    const recommendations = DataManager.getRecommendedExercises(info.lane.split(' ')[0]);
-    recommendationsList.innerHTML = recommendations.map(ex => `
-        <div class="kci-recommendation-tile" onclick="switchView('log'); selectExerciseForLogging('${ex.id}')">
-            <span class="tile-icon">${getExerciseIcon(ex.id)}</span>
-            <span class="tile-name">${ex.name}</span>
-            <span class="plus-log-btn">+</span>
-        </div>
-    `).join('');
+    const recommendations = DataManager.getRecommendedExercises(info.lane.split(' ')[0]) || [];
+    recommendationsList.innerHTML = recommendations.length > 0 
+        ? recommendations.map(ex => `
+            <div class="kci-recommendation-tile" onclick="switchView('log'); selectExerciseForLogging('${ex.id}')">
+                <span class="tile-icon">${getExerciseIcon(ex.id)}</span>
+                <span class="tile-name">${ex.name}</span>
+                <span class="plus-log-btn">+</span>
+            </div>
+        `).join('')
+        : '<p style="text-align: center; color: var(--gray-500); padding: 20px;">No exercises available</p>';
     
     // 6. Setup Buttons
     document.getElementById('kci-start-workout').onclick = () => {
@@ -200,18 +202,21 @@ function loadTodayCheckIn() {
 }
 
 function updateWeekSummary() {
+    const container = document.getElementById('week-summary');
+    if (!container) return;
+    
     const weekStart = new Date();
     weekStart.setDate(weekStart.getDate() - weekStart.getDay());
     
-    const weekData = DataManager.getRecentCheckIns(7);
-    const weekExercises = DataManager.getExerciseLogs().filter(e => new Date(e.date) >= weekStart);
-    const weekCustom = DataManager.getCustomWorkouts().filter(w => new Date(w.date) >= weekStart);
+    const weekData = DataManager.getRecentCheckIns(7) || [];
+    const weekExercises = (DataManager.getExerciseLogs() || []).filter(e => e && e.date && new Date(e.date) >= weekStart);
+    const weekCustom = (DataManager.getCustomWorkouts() || []).filter(w => w && w.date && new Date(w.date) >= weekStart);
     
     const greenDays = weekData.filter(c => DataManager.getKneeStatusForCheckIn(c) === 'GREEN').length;
     const avgPain = weekData.length > 0 ? 
         (weekData.reduce((s, c) => s + (c.pain || 0), 0) / weekData.length).toFixed(1) : 0;
     
-    document.getElementById('week-summary').innerHTML = `
+    container.innerHTML = `
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
             <div style="text-align: center; padding: 12px; background: var(--gray-50); border-radius: 10px;">
                 <div style="font-size: 24px; font-weight: 800; color: var(--primary);">${greenDays}</div>

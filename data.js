@@ -9,15 +9,31 @@ const DataManager = {
             try {
                 const serializedValue = JSON.stringify(value);
                 localStorage.setItem(key, serializedValue);
-                // Mobile browsers sometimes delay writing to disk. 
-                // Accessing the item immediately can help force a sync in some environments.
-                localStorage.getItem(key); 
+                
+                // Verify write by reading back (Task 1.6)
+                const readBack = localStorage.getItem(key);
+                if (readBack === null) {
+                    console.error(`Storage Verify Failed (set ${key}): write succeeded but read returned null`);
+                    return false;
+                }
+                // Verify the data is parseable and matches expected length for arrays
+                try {
+                    const parsed = JSON.parse(readBack);
+                    if (Array.isArray(value) && Array.isArray(parsed) && parsed.length !== value.length) {
+                        console.error(`Storage Verify Failed (set ${key}): array length mismatch (wrote ${value.length}, read ${parsed.length})`);
+                        return false;
+                    }
+                } catch (parseErr) {
+                    console.error(`Storage Verify Failed (set ${key}): read value not parseable`, parseErr);
+                    return false;
+                }
+                
                 localSuccess = true;
             } catch (e) {
                 console.error(`Storage Error (set ${key}):`, e);
             }
             
-            // Seed backup only after a successful localStorage write.
+            // Seed backup only after a verified successful localStorage write.
             if (localSuccess && typeof DataManager !== 'undefined' && DataManager.backup) {
                 DataManager.backup.set(key, value);
             }
@@ -147,6 +163,18 @@ const DataManager = {
 
             this.requestPersistentStorage();
             
+            // Task 1.6: Restore from backup if primary keys are missing
+            // This runs async but we don't block on it - backup restore is opportunistic
+            this.restoreFromBackup().then(restored => {
+                if (restored) {
+                    console.log('📥 Restored missing data from IndexedDB backup');
+                    // Re-run normalizeCheckIns after restore in case checkIns were restored
+                    this.normalizeCheckIns();
+                }
+            }).catch(err => {
+                console.warn('⚠️ Backup restore failed (non-critical):', err);
+            });
+            
             // REMOVED: initializeBaselineMeasurement() - no fake baseline data (Task 1.3)
             this.normalizeCheckIns();
             console.log('✅ DataManager initialized');
@@ -156,39 +184,145 @@ const DataManager = {
         }
     },
 
-    /** Dev-only: log storage and streak state to console. No UI. */
+    /** 
+     * Dev-only: comprehensive storage health check on startup.
+     * Logs a table showing status, count, and backup status for all data keys.
+     * Guarded by DEV flag - set window.KNEE_CAPACITY_DEV = true to enable.
+     */
     runStorageDiagnostic() {
-        const lines = [];
-        const key = '__storage_test_' + Date.now();
+        // DEV guard: only run if DEV flag is set, hostname is localhost, or file:// protocol
+        const isDev = (typeof window !== 'undefined' && window.KNEE_CAPACITY_DEV) ||
+                      (typeof location !== 'undefined' && (
+                          location.hostname === 'localhost' || 
+                          location.hostname === '127.0.0.1' ||
+                          location.protocol === 'file:'
+                      ));
+        if (!isDev) return;
+
+        const self = this;
+        console.log('\n📊 [Storage Health Check] ─────────────────────────────────');
+        
+        // 1. Test storage availability
+        const testKey = '__storage_test_' + Date.now();
+        let storageAvailable = false;
         try {
-            localStorage.setItem(key, '1');
-            const read = localStorage.getItem(key);
-            localStorage.removeItem(key);
-            lines.push('storage: ' + (read === '1' ? 'ok (write test passed)' : 'error (write test failed)'));
+            localStorage.setItem(testKey, 'test');
+            const readBack = localStorage.getItem(testKey);
+            localStorage.removeItem(testKey);
+            storageAvailable = (readBack === 'test');
         } catch (e) {
-            lines.push('storage: error (' + (e && e.message) + ')');
+            storageAvailable = false;
         }
-        const logsResult = this.storage.get('exerciseLogs');
-        const logsStatus = logsResult.status;
-        const logsCount = logsStatus === 'ok' && Array.isArray(logsResult.value) ? logsResult.value.length : 0;
-        lines.push('exerciseLogs: ' + logsStatus + (logsStatus === 'ok' ? ' count=' + logsCount : ''));
-        const streakKeys = ['streak', 'longestStreak', 'lastStreakDate', 'graceTokens', 'graceTokenCap'];
-        const streakParts = [];
-        let streakStatus = 'ok';
-        streakKeys.forEach(k => {
-            const result = this.storage.getString(k);
-            if (result.status === 'missing') {
-                streakParts.push(k + '=missing');
-                if (k === 'streak' || k === 'longestStreak') streakStatus = 'missing';
-            } else if (result.status === 'ok') {
-                streakParts.push(k + '=' + result.value);
-            } else {
-                streakParts.push(k + '=error');
-                streakStatus = 'error';
-            }
+        console.log('Storage Available:', storageAvailable ? '✅ YES' : '❌ NO');
+        
+        // 2. Check all array-based data keys
+        const arrayKeys = [
+            { key: 'exerciseLogs', label: 'Exercise Logs' },
+            { key: 'checkIns', label: 'Check-Ins' },
+            { key: 'bodyMeasurements', label: 'Body Measurements' },
+            { key: 'sessions', label: 'Sessions' },
+            { key: 'customWorkouts', label: 'Custom Workouts' },
+            { key: 'significantEvents', label: 'Significant Events' },
+            { key: 'likedExercises', label: 'Liked Exercises' },
+            { key: 'dislikedExercises', label: 'Disliked Exercises' },
+            { key: 'milestoneBadgesAwarded', label: 'Milestone Badges' }
+        ];
+        
+        // 3. Check string-based streak keys
+        const stringKeys = [
+            { key: 'streak', label: 'Streak' },
+            { key: 'longestStreak', label: 'Longest Streak' },
+            { key: 'lastStreakDate', label: 'Last Streak Date' },
+            { key: 'graceTokens', label: 'Grace Tokens' },
+            { key: 'graceTokenCap', label: 'Grace Token Cap' }
+        ];
+        
+        // Build table data
+        const tableData = [];
+        
+        // Array keys
+        arrayKeys.forEach(({ key, label }) => {
+            const result = self.storage.get(key);
+            const status = result.status;
+            const count = (status === 'ok' && Array.isArray(result.value)) ? result.value.length : '-';
+            tableData.push({
+                Key: label,
+                Status: status === 'ok' ? '✅ ok' : status === 'missing' ? '⚪ missing' : '❌ error',
+                Count: count,
+                BackupStatus: '...' // Will be updated async
+            });
         });
-        lines.push('streak: ' + streakStatus + ' ' + streakParts.join(', '));
-        console.log('[DataManager diagnostic]\n' + lines.join('\n'));
+        
+        // String keys
+        stringKeys.forEach(({ key, label }) => {
+            const result = self.storage.getString(key);
+            const status = result.status;
+            const value = status === 'ok' ? result.value : '-';
+            tableData.push({
+                Key: label,
+                Status: status === 'ok' ? '✅ ok' : status === 'missing' ? '⚪ missing' : '❌ error',
+                Count: value,
+                BackupStatus: '...'
+            });
+        });
+        
+        // kneeProfile (object)
+        const profileResult = self.storage.get('kneeProfile');
+        tableData.push({
+            Key: 'Knee Profile',
+            Status: profileResult.status === 'ok' ? '✅ ok' : profileResult.status === 'missing' ? '⚪ missing' : '❌ error',
+            Count: profileResult.status === 'ok' ? 'set' : '-',
+            BackupStatus: '...'
+        });
+        
+        // Log initial table (backup status pending)
+        console.table(tableData);
+        
+        // Summary
+        const errorCount = tableData.filter(r => r.Status.includes('error')).length;
+        const missingCount = tableData.filter(r => r.Status.includes('missing')).length;
+        const okCount = tableData.filter(r => r.Status.includes('ok')).length;
+        
+        if (errorCount > 0) {
+            console.warn(`⚠️ Storage Issues: ${errorCount} error(s), ${missingCount} missing, ${okCount} ok`);
+        } else if (missingCount > 0) {
+            console.log(`📋 Storage Summary: ${missingCount} missing (normal for new user), ${okCount} ok`);
+        } else {
+            console.log(`✅ Storage Summary: All ${okCount} keys OK`);
+        }
+        
+        // 4. Check backup status async
+        if (this.backup && this.backup.isAvailable()) {
+            this.backup.getAll().then(records => {
+                const backupMap = {};
+                (records || []).forEach(r => {
+                    if (r && r.key) {
+                        const isArray = Array.isArray(r.value);
+                        const count = isArray ? r.value.length : (r.value != null ? 'set' : '-');
+                        backupMap[r.key] = { status: 'ok', count };
+                    }
+                });
+                
+                console.log('\n📦 [Backup Status] ────────────────────────────────────────');
+                const backupTableData = [];
+                
+                [...arrayKeys, ...stringKeys, { key: 'kneeProfile', label: 'Knee Profile' }].forEach(({ key, label }) => {
+                    const backup = backupMap[key];
+                    backupTableData.push({
+                        Key: label,
+                        BackupStatus: backup ? '✅ ok' : '⚪ missing',
+                        BackupCount: backup ? backup.count : '-'
+                    });
+                });
+                
+                console.table(backupTableData);
+                console.log('───────────────────────────────────────────────────────────\n');
+            }).catch(err => {
+                console.warn('⚠️ Could not check backup status:', err);
+            });
+        } else {
+            console.log('⚠️ IndexedDB backup not available');
+        }
     },
 
     requestPersistentStorage() {
@@ -402,25 +536,35 @@ const DataManager = {
         }
     },
     
-    // Body Measurements
+    // Body Measurements (in-memory cache when persistence fails)
     // REMOVED: initializeBaselineMeasurement() - no auto-created fake data (Task 1.3)
     // User must create their own first measurement.
+    _bodyMeasurementsPendingCache: null,
+
     initializeBaselineMeasurement() {
         // No-op: removed destructive init write
     },
     
     saveBodyMeasurement(data) {
-        const measurements = this.getBodyMeasurements();
+        const measurements = this.getBodyMeasurements().slice();
         measurements.push({
             ...data,
             id: Date.now().toString(),
             timestamp: new Date().toISOString(),
             date: this.getLocalDateKey()
         });
-        return this.storage.set('bodyMeasurements', measurements);
+        const success = this.storage.set('bodyMeasurements', measurements);
+        if (!success) {
+            this._bodyMeasurementsPendingCache = measurements;
+            console.warn('[DataManager] saveBodyMeasurement: persistence failed; measurement kept in memory.');
+        } else {
+            this._bodyMeasurementsPendingCache = null;
+        }
+        return success;
     },
     
     getBodyMeasurements() {
+        if (this._bodyMeasurementsPendingCache !== null) return this._bodyMeasurementsPendingCache;
         const r = this.storage.get('bodyMeasurements');
         if (r.status === 'ok') return r.value;
         // missing or error: return safe default, do not persist
@@ -557,22 +701,33 @@ const DataManager = {
             .sort((a, b) => new Date(b.date) - new Date(a.date));
     },
     
-    // Custom Workouts
+    // Custom Workouts (in-memory cache when persistence fails)
+    _customWorkoutsPendingCache: null,
+
     saveCustomWorkout(workoutData) {
         const self = this;
-        return this._saveAndCompleteDay(function save() {
-            const workouts = self.getCustomWorkouts();
-            workouts.push({
-                ...workoutData,
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString(),
-                date: self.getLocalDateKey()
-            });
-            return self.storage.set('customWorkouts', workouts);
-        });
+        const workouts = this.getCustomWorkouts().slice();
+        const newWorkout = {
+            ...workoutData,
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString(),
+            date: this.getLocalDateKey()
+        };
+        workouts.push(newWorkout);
+        
+        const success = this.storage.set('customWorkouts', workouts);
+        if (!success) {
+            this._customWorkoutsPendingCache = workouts;
+            console.warn('[DataManager] saveCustomWorkout: persistence failed; workout kept in memory.');
+            return { success: false, error: 'persistence_failed' };
+        }
+        this._customWorkoutsPendingCache = null;
+        const result = this.completeDailyCheckIn(new Date());
+        return { success: true, celebration: result.celebration || null };
     },
     
     getCustomWorkouts() {
+        if (this._customWorkoutsPendingCache !== null) return this._customWorkoutsPendingCache;
         const r = this.storage.get('customWorkouts');
         if (r.status === 'ok') return r.value;
         // missing or error: return safe default
@@ -595,9 +750,11 @@ const DataManager = {
             .slice(0, limit);
     },
     
-    // Check-ins
+    // Check-ins (in-memory cache when persistence fails)
+    _checkInsPendingCache: null,
+
     saveCheckIn(checkInData) {
-        const checkIns = this.getCheckIns();
+        const checkIns = this.getCheckIns().slice();
         const today = this.getLocalDateKey();
         const now = Date.now();
         
@@ -644,6 +801,7 @@ const DataManager = {
         
         const success = this.storage.set('checkIns', checkIns);
         if (success) {
+            this._checkInsPendingCache = null; // Clear cache on successful save
             // Verify the save by getting all check-ins for today again
             const verifyCheckIns = this.getCheckInsForDate(today);
             console.log('✅ New check-in saved for', today, 'KCI:', kciScore);
@@ -657,10 +815,14 @@ const DataManager = {
             })));
             return enrichedData;
         }
-        return null;
+        // Persistence failed - keep in memory so UI still shows the check-in
+        this._checkInsPendingCache = checkIns;
+        console.warn('[DataManager] saveCheckIn: persistence failed; check-in kept in memory.');
+        return enrichedData; // Still return the data so UI can show it
     },
     
     getCheckIns() {
+        if (this._checkInsPendingCache !== null) return this._checkInsPendingCache;
         const r = this.storage.get('checkIns');
         if (r.status === 'ok') return r.value;
         // missing or error: return safe default
@@ -1258,9 +1420,11 @@ const DataManager = {
         return descriptions[lane] || '';
     },
     
-    // Significant Events
+    // Significant Events (in-memory cache when persistence fails)
+    _significantEventsPendingCache: null,
+
     saveSignificantEvent(eventData) {
-        const events = this.getSignificantEvents(null);
+        const events = this._getAllSignificantEvents().slice();
         const event = {
             ...eventData,
             id: Date.now().toString(),
@@ -1268,18 +1432,26 @@ const DataManager = {
             date: eventData.date || this.getLocalDateKey()
         };
         events.push(event);
-        return this.storage.set('significantEvents', events);
+        const success = this.storage.set('significantEvents', events);
+        if (!success) {
+            this._significantEventsPendingCache = events;
+            console.warn('[DataManager] saveSignificantEvent: persistence failed; event kept in memory.');
+        } else {
+            this._significantEventsPendingCache = null;
+        }
+        return success;
     },
     
-    getSignificantEvents(days = 90) {
+    // Internal: get all events without date filtering
+    _getAllSignificantEvents() {
+        if (this._significantEventsPendingCache !== null) return this._significantEventsPendingCache;
         const r = this.storage.get('significantEvents');
-        let events;
-        if (r.status === 'ok') {
-            events = r.value;
-        } else {
-            // missing or error: return safe default
-            events = [];
-        }
+        if (r.status === 'ok') return r.value;
+        return [];
+    },
+
+    getSignificantEvents(days = 90) {
+        const events = this._getAllSignificantEvents();
         if (!days) return events;
         
         const cutoff = new Date();
@@ -1291,22 +1463,36 @@ const DataManager = {
     },
     
     getEventById(id) {
-        return this.getSignificantEvents(null).find(e => e.id === id);
+        return this._getAllSignificantEvents().find(e => e.id === id);
     },
     
     updateEvent(id, updates) {
-        const events = this.getSignificantEvents(null);
+        const events = this._getAllSignificantEvents().slice();
         const index = events.findIndex(e => e.id === id);
         if (index === -1) return false;
         
         events[index] = { ...events[index], ...updates };
-        return this.storage.set('significantEvents', events);
+        const success = this.storage.set('significantEvents', events);
+        if (!success) {
+            this._significantEventsPendingCache = events;
+            console.warn('[DataManager] updateEvent: persistence failed; update kept in memory.');
+        } else {
+            this._significantEventsPendingCache = null;
+        }
+        return success;
     },
     
     deleteEvent(id) {
-        const events = this.getSignificantEvents(null);
+        const events = this._getAllSignificantEvents().slice();
         const filtered = events.filter(e => e.id !== id);
-        return this.storage.set('significantEvents', filtered);
+        const success = this.storage.set('significantEvents', filtered);
+        if (!success) {
+            this._significantEventsPendingCache = filtered;
+            console.warn('[DataManager] deleteEvent: persistence failed; deletion kept in memory.');
+        } else {
+            this._significantEventsPendingCache = null;
+        }
+        return success;
     },
     
     generateSpecialistSummary() {

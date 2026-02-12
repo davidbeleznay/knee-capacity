@@ -197,13 +197,13 @@ function renderExerciseTiles() {
                         <div style="margin-bottom: 12px;">
                             <strong style="font-size: 12px; text-transform: uppercase; color: var(--gray-600);">Setup:</strong>
                             <ul style="margin: 4px 0 0 16px; padding: 0; font-size: 13px; line-height: 1.4;">
-                                ${ex.setup.map(s => `<li>${s}</li>`).join('')}
+                                ${(ex.setup || []).map(s => `<li>${s}</li>`).join('')}
                             </ul>
                         </div>
                         <div style="margin-bottom: 12px;">
                             <strong style="font-size: 12px; text-transform: uppercase; color: var(--gray-600);">Execution:</strong>
                             <ul style="margin: 4px 0 0 16px; padding: 0; font-size: 13px; line-height: 1.4;">
-                                ${ex.execution.map(e => `<li>${e}</li>`).join('')}
+                                ${(ex.execution || []).map(e => `<li>${e}</li>`).join('')}
                             </ul>
                         </div>
                         <div style="font-size: 13px; margin-bottom: 8px;">
@@ -529,7 +529,7 @@ function renderExerciseLibrary() {
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                                 <h4 style="margin: 0; color: var(--primary);">${ex.name}</h4>
                                 <div style="display: flex; gap: 4px;">
-                                    ${ex.phase.map(p => `<span class="tile-phase-badge badge-${p.toLowerCase()}">${p}</span>`).join('')}
+                                    ${(ex.phase || []).map(p => `<span class="tile-phase-badge badge-${p.toLowerCase()}">${p}</span>`).join('')}
                                     ${ex.availability === 'GREEN-only' ? '<span class="tile-phase-badge" style="background: #E8F5E9; color: #2E7D32; border: 1px solid #2E7D32;">GREEN ONLY</span>' : ''}
                                 </div>
                             </div>

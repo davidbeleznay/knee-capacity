@@ -79,8 +79,9 @@ function renderWorkoutFrequency(days) {
     
     const dateMap = {};
     [...exercises, ...custom].forEach(item => {
-        const date = item.date || item.timestamp.split('T')[0];
-        dateMap[date] = (dateMap[date] || 0) + 1;
+        if (!item) return;
+        const date = item.date || (item.timestamp ? item.timestamp.split('T')[0] : null);
+        if (date) dateMap[date] = (dateMap[date] || 0) + 1;
     });
     
     const daysArray = [];

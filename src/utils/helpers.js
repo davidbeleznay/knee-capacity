@@ -78,9 +78,9 @@ function renderStreakProgress(containerId) {
 }
 
 function updateStreakDisplay() {
-    const streak = DataManager.getCurrentStreak();
-    const badges = DataManager.getBadges();
-    const totalWorkouts = DataManager.getTotalWorkouts();
+    const streak = typeof DataManager !== 'undefined' ? DataManager.getCurrentStreak() : 0;
+    const badges = typeof DataManager !== 'undefined' ? DataManager.getBadges() : [];
+    const totalWorkouts = typeof DataManager !== 'undefined' ? DataManager.getTotalWorkouts() : 0;
     
     // Update Home Streak Card
     const homeStreakCount = document.getElementById('home-streak-count');
@@ -91,9 +91,9 @@ function updateStreakDisplay() {
     
     const homeBadges = document.getElementById('home-milestone-badges');
     if (homeBadges) {
-        homeBadges.innerHTML = badges.map(b => 
-            `<span class="milestone-badge-home" data-label="${b.label}">${b.emoji}</span>`
-        ).join('') || '<span style="font-size: 12px; opacity: 0.8;">WORKOUT TO EARN BADGES</span>';
+        homeBadges.innerHTML = (badges && badges.length > 0) 
+            ? badges.map(b => `<span class="milestone-badge-home" data-label="${b.label}">${b.emoji}</span>`).join('')
+            : '<span style="font-size: 12px; opacity: 0.8;">WORKOUT TO EARN BADGES</span>';
     }
 
     renderStreakProgress('home-streak-progress');
