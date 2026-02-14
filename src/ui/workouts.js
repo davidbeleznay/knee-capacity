@@ -74,6 +74,46 @@ function setupWorkoutHandlers() {
             icon.textContent = isVisible ? '▶' : '▼';
         };
     }
+
+    // Like / Dislike buttons in exercise detail modal (Phase 1 safe-write via DataManager.storage.set)
+    const likeBtn = document.getElementById('exercise-like');
+    const dislikeBtn = document.getElementById('exercise-dislike');
+    if (likeBtn) {
+        const h = () => {
+            const ex = AppState.selectedExercise;
+            if (!ex) return;
+            const newLiked = !DataManager.isExerciseLiked(ex.id);
+            DataManager.setExerciseLike(ex.id, newLiked);
+            if (newLiked) DataManager.setExerciseDislike(ex.id, false);
+            updateLikeDislikeButtons(ex.id);
+            if (typeof renderExerciseTiles === 'function') renderExerciseTiles();
+        };
+        likeBtn.ontouchstart = h;
+        likeBtn.onclick = h;
+    }
+    if (dislikeBtn) {
+        const h = () => {
+            const ex = AppState.selectedExercise;
+            if (!ex) return;
+            const newDisliked = !DataManager.isExerciseDisliked(ex.id);
+            DataManager.setExerciseDislike(ex.id, newDisliked);
+            if (newDisliked) DataManager.setExerciseLike(ex.id, false);
+            updateLikeDislikeButtons(ex.id);
+            if (typeof renderExerciseTiles === 'function') renderExerciseTiles();
+        };
+        dislikeBtn.ontouchstart = h;
+        dislikeBtn.onclick = h;
+    }
+}
+
+function updateLikeDislikeButtons(exerciseId) {
+    const likeBtn = document.getElementById('exercise-like');
+    const dislikeBtn = document.getElementById('exercise-dislike');
+    if (!likeBtn || !dislikeBtn) return;
+    const isLiked = DataManager.isExerciseLiked(exerciseId);
+    const isDisliked = DataManager.isExerciseDisliked(exerciseId);
+    likeBtn.classList.toggle('active', isLiked);
+    dislikeBtn.classList.toggle('active', isDisliked);
 }
 
 function renderExerciseTiles() {
@@ -108,8 +148,11 @@ function renderExerciseTiles() {
         ];
     }
 
-    // Filter exercises into groups
-    const favoriteIds = DataManager.getFavoriteExerciseIds(5);
+    // Ensure we always get arrays (Phase 1 storage may return status objects in some code paths)
+    const ensureIdArray = (v) => Array.isArray(v) ? v : (v && v.value && Array.isArray(v.value)) ? v.value : [];
+    const likedIds = ensureIdArray(DataManager.getLikedExerciseIds());
+    const dislikedIds = ensureIdArray(DataManager.getDislikedExerciseIds());
+    const favoriteIds = ensureIdArray(DataManager.getFavoriteExerciseIds(5));
     
     const sections = groups.map(group => {
         const exercises = (window.EXERCISES || []).filter(ex => {
@@ -119,14 +162,15 @@ function renderExerciseTiles() {
             return true;
         });
 
-        // Sort: Favorites first, then by name
+        // Sort: LIKED exercises first (top of recommended list), then by name
         exercises.sort((a, b) => {
-            const aFav = favoriteIds.indexOf(a.id);
-            const bFav = favoriteIds.indexOf(b.id);
-            
-            if (aFav !== -1 && bFav !== -1) return aFav - bFav;
-            if (aFav !== -1) return -1;
-            if (bFav !== -1) return 1;
+            const aLiked = likedIds.indexOf(a.id);
+            const bLiked = likedIds.indexOf(b.id);
+            const aIsLiked = aLiked !== -1;
+            const bIsLiked = bLiked !== -1;
+            if (aIsLiked && !bIsLiked) return -1;
+            if (!aIsLiked && bIsLiked) return 1;
+            if (aIsLiked && bIsLiked) return aLiked - bLiked;
             return a.name.localeCompare(b.name);
         });
 
@@ -161,11 +205,13 @@ function renderExerciseTiles() {
         });
         
         sectionExercises.sort((a, b) => {
-            const aFav = favoriteIds.indexOf(a.id);
-            const bFav = favoriteIds.indexOf(b.id);
-            if (aFav !== -1 && bFav !== -1) return aFav - bFav;
-            if (aFav !== -1) return -1;
-            if (bFav !== -1) return 1;
+            const aLiked = likedIds.indexOf(a.id);
+            const bLiked = likedIds.indexOf(b.id);
+            const aIsLiked = aLiked !== -1;
+            const bIsLiked = bLiked !== -1;
+            if (aIsLiked && !bIsLiked) return -1;
+            if (!aIsLiked && bIsLiked) return 1;
+            if (aIsLiked && bIsLiked) return aLiked - bLiked;
             return a.name.localeCompare(b.name);
         });
 
@@ -174,15 +220,21 @@ function renderExerciseTiles() {
             const name = ex.name.replace(' (Isometric)', '').replace(' (Eccentric)', '');
             const isNotRecommended = section.type === 'not-recommended';
             const isFavorite = favoriteIds.includes(ex.id);
+            const isLiked = likedIds.includes(ex.id);
+            const isDisliked = dislikedIds.includes(ex.id);
+            const isNew = ex.isNew === true;
+            const heartIcon = isLiked ? '<span style="color: #E53935; font-size: 14px;">❤️</span>' : isDisliked ? '<span style="color: #1565C0; font-size: 14px;">💔</span>' : '';
             
             html += `
-                <div id="tile-${ex.id}" class="exercise-tile ${isNotRecommended ? 'not-recommended' : ''} ${isFavorite ? 'favorite-tile' : ''}" 
-                     onclick="toggleExerciseDetails('${ex.id}')">
+                <div id="tile-${ex.id}" class="exercise-tile ${isNotRecommended ? 'not-recommended' : ''} ${isFavorite ? 'favorite-tile' : ''} ${isDisliked ? 'disliked-tile' : ''} ${isNew ? 'exercise-tile-new' : ''}" onclick="toggleExerciseDetails('${ex.id}')">
+                    ${isNew ? '<div class="tile-new-strip">NEW</div>' : ''}
                     <div class="tile-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                         <div style="flex: 1;">
                             <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
                                 <div class="tile-category" style="font-size: 9px; text-transform: uppercase; color: var(--primary); font-weight: 800;">${ex.category}</div>
                                 ${isFavorite ? '<span style="color: #FFD700; font-size: 14px;">⭐</span>' : ''}
+                                ${heartIcon}
+                                ${isNew ? '<span class="tile-new-badge">NEW</span>' : ''}
                             </div>
                             <div class="tile-name" style="font-size: 14px; font-weight: 700;">${name}</div>
                             <div class="tile-meta" style="font-size: 12px; color: var(--gray-600);">${ex.dosage}</div>
@@ -281,7 +333,22 @@ function selectExerciseForLogging(id) {
     } else {
         document.getElementById('instructions-tempo').style.display = 'none';
     }
-    
+
+    // Show "Consider (slant board / upgrade)" section when exercise has enhancement tips
+    const enhEl = document.getElementById('instructions-enhancement');
+    const enhText = document.getElementById('enhancement-text');
+    if (enhEl && enhText) {
+        if (ex.enhancement) {
+            enhText.textContent = ex.enhancement;
+            enhEl.style.display = 'block';
+        } else {
+            enhEl.style.display = 'none';
+        }
+    }
+
+    // Update Like/Dislike button states
+    updateLikeDislikeButtons(id);
+
     // Start with instructions collapsed on ALL devices
     const instructionsContent = document.getElementById('instructions-content');
     instructionsContent.style.display = 'none';
