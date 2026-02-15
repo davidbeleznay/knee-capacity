@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exercise Tile Layout Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Test page layout - 3 tiles side by side */
+        body { padding: 24px; }
+        h1 { margin-bottom: 24px; font-size: 20px; }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            min-width: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Exercise Tile Layout Test — Normal | NEW | Liked</h1>
+    <p style="margin-bottom: 24px; color: var(--gray-600);">Exact same HTML structure as renderExerciseTiles(). Check layout in browser.</p>
+    
+    <div class="test-grid">
+        <!-- TILE 1: Normal (no extras) -->
+        <div id="tile-spanish-squat" class="exercise-tile  " onclick="console.log('click normal')">
+            <div class="tile-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+                <div style="flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                        <div class="tile-category" style="font-size: 9px; text-transform: uppercase; color: var(--primary); font-weight: 800;">Knee-Tendon + Control</div>
+                    </div>
+                    <div class="tile-name" style="font-size: 14px; font-weight: 700;">Spanish Squat</div>
+                    <div class="tile-meta" style="font-size: 12px; color: var(--gray-600);">4 sets x 45s hold</div>
+                </div>
+                <button class="plus-log-btn" style="width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--primary); color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">+</button>
+            </div>
+            <div class="tile-details" style="display: none; width: 100%; margin-top: 16px; border-top: 1px solid var(--gray-200); padding-top: 16px;">
+                <p style="font-size: 13px; color: var(--gray-600);">Setup, Execution, etc.</p>
+            </div>
+        </div>
+
+        <!-- TILE 2: NEW (exercise-tile-new, tile-new-strip, tile-new-badge) -->
+        <div id="tile-wall-sit" class="exercise-tile   exercise-tile-new" onclick="console.log('click new')">
+            <div class="tile-new-strip">NEW</div>
+            <div class="tile-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+                <div style="flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                        <div class="tile-category" style="font-size: 9px; text-transform: uppercase; color: var(--primary); font-weight: 800;">Knee-Tendon + Control</div>
+                        <span class="tile-new-badge">NEW</span>
+                    </div>
+                    <div class="tile-name" style="font-size: 14px; font-weight: 700;">Wall Sit</div>
+                    <div class="tile-meta" style="font-size: 12px; color: var(--gray-600);">3 sets x 45s hold</div>
+                </div>
+                <button class="plus-log-btn" style="width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--primary); color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">+</button>
+            </div>
+            <div class="tile-details" style="display: none; width: 100%; margin-top: 16px; border-top: 1px solid var(--gray-200); padding-top: 16px;">
+                <p style="font-size: 13px; color: var(--gray-600);">Setup, Execution, etc.</p>
+            </div>
+        </div>
+
+        <!-- TILE 3: Liked (favorite-tile, star, heart) -->
+        <div id="tile-step-downs" class="exercise-tile  favorite-tile " onclick="console.log('click liked')">
+            <div class="tile-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+                <div style="flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                        <div class="tile-category" style="font-size: 9px; text-transform: uppercase; color: var(--primary); font-weight: 800;">Knee-Tendon + Control</div>
+                        <span style="color: #FFD700; font-size: 14px;">⭐</span>
+                        <span style="color: #E53935; font-size: 14px;">❤️</span>
+                    </div>
+                    <div class="tile-name" style="font-size: 14px; font-weight: 700;">Slow Step-Downs</div>
+                    <div class="tile-meta" style="font-size: 12px; color: var(--gray-600);">3 sets x 8-10 reps</div>
+                </div>
+                <button class="plus-log-btn" style="width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--primary); color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">+</button>
+            </div>
+            <div class="tile-details" style="display: none; width: 100%; margin-top: 16px; border-top: 1px solid var(--gray-200); padding-top: 16px;">
+                <p style="font-size: 13px; color: var(--gray-600);">Setup, Execution, etc.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
