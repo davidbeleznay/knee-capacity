@@ -114,6 +114,8 @@ function updateLikeDislikeButtons(exerciseId) {
     const isDisliked = DataManager.isExerciseDisliked(exerciseId);
     likeBtn.classList.toggle('active', isLiked);
     dislikeBtn.classList.toggle('active', isDisliked);
+    likeBtn.setAttribute('aria-pressed', isLiked);
+    dislikeBtn.setAttribute('aria-pressed', isDisliked);
 }
 
 function renderExerciseTiles() {
@@ -227,25 +229,23 @@ function renderExerciseTiles() {
             
             html += `
                 <div id="tile-${ex.id}" class="exercise-tile ${isNotRecommended ? 'not-recommended' : ''} ${isFavorite ? 'favorite-tile' : ''} ${isDisliked ? 'disliked-tile' : ''} ${isNew ? 'exercise-tile-new' : ''}" onclick="toggleExerciseDetails('${ex.id}')">
-                    ${isNew ? '<div class="tile-new-strip">NEW</div>' : ''}
-                    <div class="tile-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
-                        <div style="flex: 1;">
-                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
-                                <div class="tile-category" style="font-size: 9px; text-transform: uppercase; color: var(--primary); font-weight: 800;">${ex.category}</div>
+                    <div class="tile-header">
+                        <div class="tile-info">
+                            <div class="tile-category">
+                                ${ex.category}
                                 ${isFavorite ? '<span style="color: #FFD700; font-size: 14px;">⭐</span>' : ''}
                                 ${heartIcon}
                                 ${isNew ? '<span class="tile-new-badge">NEW</span>' : ''}
                             </div>
-                            <div class="tile-name" style="font-size: 14px; font-weight: 700;">${name}</div>
-                            <div class="tile-meta" style="font-size: 12px; color: var(--gray-600);">${ex.dosage}</div>
+                            <div class="tile-name">${name}</div>
+                            <div class="tile-meta">${ex.dosage}</div>
                         </div>
-                        <button class="plus-log-btn" onclick="event.stopPropagation(); selectExerciseForLogging('${ex.id}')" 
-                                style="width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--primary); color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-                            +
+                        <button class="log-action-btn" onclick="event.stopPropagation(); selectExerciseForLogging('${ex.id}')">
+                            Log
                         </button>
                     </div>
                     
-                    <div class="tile-details" style="display: none; width: 100%; margin-top: 16px; border-top: 1px solid var(--gray-200); padding-top: 16px;">
+                    <div class="tile-details">
                         <div style="margin-bottom: 12px;">
                             <strong style="font-size: 12px; text-transform: uppercase; color: var(--gray-600);">Setup:</strong>
                             <ul style="margin: 4px 0 0 16px; padding: 0; font-size: 13px; line-height: 1.4;">

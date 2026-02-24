@@ -451,13 +451,154 @@ textarea:focus {
     box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
 }
 
-/* Exercise Tiles */
+/* Exercise Tiles - List View (Option C) */
 .exercise-tiles {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 12px;
     margin-bottom: 20px;
     min-width: 0;
+}
+
+@media (min-width: 768px) {
+    .exercise-tiles {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.exercise-tile {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    min-height: auto; /* Remove fixed height */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow: hidden;
+    border-left: 4px solid var(--primary);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.exercise-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.exercise-tile.expanded {
+    border-color: var(--gray-300);
+    border-left-color: var(--primary);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    background: white;
+}
+
+/* Category specific border colors if needed, or stick to primary */
+.relevance-recommended .exercise-tile { border-left-color: var(--primary); }
+.relevance-available .exercise-tile { border-left-color: var(--orange); }
+.relevance-other .exercise-tile { border-left-color: var(--gray-400); }
+.relevance-not-recommended .exercise-tile { border-left-color: var(--gray-300); opacity: 0.7; }
+
+.tile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* Center align for the button */
+    width: 100%;
+    gap: 12px;
+}
+
+.tile-info {
+    flex: 1;
+    min-width: 0; /* Allow text truncate */
+}
+
+.tile-category {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.tile-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1.3;
+    margin-bottom: 2px;
+}
+
+.tile-meta {
+    font-size: 12px;
+    color: var(--gray-600);
+    font-weight: 500;
+}
+
+.log-action-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0 20px; /* Use flex alignment for vertical centering */
+    border-radius: 24px; /* More rounded */
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(46, 125, 50, 0.2);
+    height: 44px; /* Fixed height for consistent tap target */
+    min-width: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.log-action-btn:hover {
+    background: var(--primary-dark);
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(46, 125, 50, 0.3);
+}
+
+.log-action-btn:active {
+    transform: scale(0.95);
+}
+
+/* New Badge */
+.tile-new-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #1565C0;
+    color: white;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+/* Expanded Details */
+.tile-details {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.exercise-tile.expanded .tile-details {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--gray-200);
+    max-height: 1000px;
+    opacity: 1;
 }
 
 #log-sections {
@@ -521,10 +662,10 @@ textarea:focus {
 }
 
 .like-controls {
-    margin-bottom: 16px;
+    margin-bottom: 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
 }
 
 .like-label {
@@ -534,21 +675,48 @@ textarea:focus {
 }
 
 .like-buttons {
-    display: flex;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
 }
 
 .like-button {
-    width: auto;
-    margin-top: 0;
-    padding: 8px 12px;
-    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 52px;
+    padding: 12px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    border: 3px solid var(--gray-300);
+    border-radius: 12px;
+    background: white;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
-.like-button.active {
+.like-button:active {
+    transform: scale(0.96);
+}
+
+.like-btn.active {
     background: var(--primary);
     color: white;
     border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+    animation: bubblePop 0.3s forwards;
+}
+
+.dislike-btn.active {
+    background: var(--gray-300);
+    color: var(--gray-700);
+    border-color: var(--gray-600);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    animation: bubblePop 0.3s forwards;
 }
 
 .like-toggle,
@@ -575,32 +743,9 @@ textarea:focus {
     opacity: 1;
 }
 
-.exercise-tile {
-    background: white;
-    border: 2px solid var(--gray-300);
-    border-radius: 16px;
-    padding: 16px;
-    cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    min-height: 130px;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    overflow: hidden;
-}
+/* Removed old .exercise-tile styles that are now overridden */
+/* .exercise-tile { ... } handled above */
 
-.exercise-tile:hover {
-    border-color: var(--primary);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0,0,0,0.12);
-}
-
-.exercise-tile.expanded {
-    grid-column: 1 / -1;
-    border-color: var(--primary);
-    box-shadow: 0 8px 20px rgba(46, 125, 50, 0.2);
-}
 
 .exercise-tile.not-recommended {
     opacity: 1;
@@ -650,19 +795,8 @@ textarea:focus {
     opacity: 1;
 }
 
-.tile-header {
-    width: 100%;
-    min-width: 0;
-}
-.tile-header > div {
-    min-width: 0;
-    overflow-wrap: break-word;
-    word-break: break-word;
-}
-.tile-name, .tile-category, .tile-meta {
-    overflow-wrap: break-word;
-    word-break: break-word;
-}
+/* Removed old .tile-header styles */
+
 
 .tile-details {
     max-height: 0;
@@ -677,19 +811,8 @@ textarea:focus {
     opacity: 1;
 }
 
-.plus-log-btn {
-    transition: all 0.2s;
-    cursor: pointer;
-}
+/* Removed old .plus-log-btn styles */
 
-.plus-log-btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.4);
-}
-
-.plus-log-btn:active {
-    transform: scale(0.95);
-}
 
 .tile-icon {
     font-size: 36px;
@@ -806,8 +929,14 @@ textarea:focus {
     -webkit-tap-highlight-color: transparent;
 }
 
-.primary-button:active, .secondary-button:active, .swelling-btn:active, .exercise-tile:active {
+.primary-button:active, .secondary-button:active, .swelling-btn:active {
     animation: bubblePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.exercise-tile:active {
+    background-color: var(--gray-50);
+    transform: scale(0.99);
+    transition: transform 0.1s;
 }
 
 /* Thumb-friendly Navigation */
@@ -1310,7 +1439,7 @@ details[open] {
     }
 }
 
-/* Log view: no horizontal scroll at 375px (iPhone SE) */
+/* Removed mobile overrides for exercise tiles */
 @media (max-width: 375px) {
     #log-view .card,
     #log-sections .card {
@@ -1324,28 +1453,7 @@ details[open] {
     #log-view h2 {
         font-size: 20px;
     }
-    .exercise-tiles {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        gap: 8px;
-    }
-    .exercise-tile {
-        padding: 10px;
-        min-height: 100px;
-    }
-    .tile-name {
-        font-size: 12px;
-    }
-    .tile-meta {
-        font-size: 11px;
-    }
-    .tile-icon {
-        font-size: 28px;
-    }
-    .plus-log-btn {
-        width: 36px;
-        height: 36px;
-        font-size: 20px;
-    }
+    /* Removed grid overrides */
     /* Impact buttons (custom workout form): wrap, fit width */
     #log-view .impact-btn {
         flex: 1 1 calc(50% - 6px);
@@ -1353,12 +1461,14 @@ details[open] {
         padding: 8px 4px;
         font-size: 12px;
     }
+    /* Like / Not for me: keep large tap targets on mobile */
     #log-view .like-buttons {
-        flex-wrap: wrap;
+        gap: 10px;
     }
     #log-view .like-button {
-        padding: 6px 10px;
-        font-size: 13px;
+        min-height: 48px;
+        padding: 12px 10px;
+        font-size: 14px;
     }
 }
 
