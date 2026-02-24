@@ -761,6 +761,16 @@ const DataManager = {
         console.log('💾 saveCheckIn called for date:', today);
         console.log('📅 Current time:', new Date().toISOString());
         
+        // Handle Rest Day Logic
+        if (checkInData.isRestDay) {
+            console.log('🛌 Rest Day selected - preserving streak');
+            // Update lastStreakDate to today to bridge the gap, but do NOT increment streak
+            localStorage.setItem('lastStreakDate', today);
+            if (this.backup) {
+                this.backup.set('lastStreakDate', today);
+            }
+        }
+
         // Get existing check-ins for today
         const todayCheckIns = checkIns.filter(c => {
             if (c.date === today) {
@@ -985,11 +995,13 @@ const DataManager = {
         const yesterdayDate = new Date(today);
         yesterdayDate.setDate(yesterdayDate.getDate() - 1);
         const yesterdayKey = this.getLocalDateKey(yesterdayDate);
+        
+        const dayBeforeYesterdayDate = new Date(today);
+        dayBeforeYesterdayDate.setDate(dayBeforeYesterdayDate.getDate() - 2);
+        const dayBeforeYesterdayKey = this.getLocalDateKey(dayBeforeYesterdayDate);
 
         const lastDateResult = this.storage.getString('lastStreakDate');
         const lastStreakDate = lastDateResult.status === 'ok' ? lastDateResult.value : null;
-        const graceResult = this.storage.getString('graceTokens');
-        let graceTokens = parseInt(graceResult.status === 'ok' ? graceResult.value : '0', 10);
 
         if (lastStreakDate === todayKey) {
             return { status: 'already_counted' };
@@ -999,18 +1011,13 @@ const DataManager = {
             return { status: 'streak_preserved' };
         }
 
-        // More than one day missed (last streak day is before yesterday)
-        if (lastStreakDate < yesterdayKey) {
-            if (graceTokens > 0) {
-                graceTokens -= 1;
-                localStorage.setItem('graceTokens', String(graceTokens));
-                localStorage.setItem('lastStreakDate', yesterdayKey);
-                if (this.backup) {
-                    this.backup.set('graceTokens', String(graceTokens));
-                    this.backup.set('lastStreakDate', yesterdayKey);
-                }
-                return { status: 'grace_token_used' };
-            }
+        // One day gap (missed yesterday) - Auto-apply grace
+        if (lastStreakDate === dayBeforeYesterdayKey) {
+            return { status: 'streak_preserved' };
+        }
+
+        // Gap >= 2 days (last streak day is before dayBeforeYesterday)
+        if (lastStreakDate < dayBeforeYesterdayKey) {
             localStorage.setItem('streak', '0');
             localStorage.removeItem('lastStreakDate');
             if (this.backup) {
@@ -1076,27 +1083,14 @@ const DataManager = {
 
         const rewards = milestone.rewards || {};
         const badges = rewards.badges || [];
-        const addTokens = rewards.graceTokens != null ? rewards.graceTokens : 0;
-        const capResult = this.storage.getString('graceTokenCap');
-        let cap = parseInt(capResult.status === 'ok' ? capResult.value : '0', 10);
-        if (rewards.graceTokenCap != null) {
-            cap = Math.max(cap, rewards.graceTokenCap);
-            localStorage.setItem('graceTokenCap', String(cap));
-            if (this.backup) this.backup.set('graceTokenCap', String(cap));
-        }
-        const graceTokensResult = this.storage.getString('graceTokens');
-        let graceTokens = parseInt(graceTokensResult.status === 'ok' ? graceTokensResult.value : '0', 10);
-        const graceTokensAwarded = addTokens;
-        graceTokens = cap > 0 ? Math.min(graceTokens + addTokens, cap) : graceTokens + addTokens;
-        localStorage.setItem('graceTokens', String(graceTokens));
-        if (this.backup) this.backup.set('graceTokens', String(graceTokens));
+        // Grace tokens logic removed
 
         const celebration = {
             day: newStreak,
             title: (milestone.celebration && milestone.celebration.title) || '',
             subtitle: (milestone.celebration && milestone.celebration.subtitle) || '',
             badges,
-            graceTokensAwarded
+            graceTokensAwarded: 0
         };
 
         return { alreadyCounted: false, celebration };

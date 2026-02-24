@@ -51,6 +51,7 @@ function saveCheckIn() {
         pain: AppState.pain,
         activityLevel: AppState.activityLevel,
         timeOfDay: AppState.timeOfDay,
+        isRestDay: document.getElementById('checkin-rest-day').checked,
         notes: document.getElementById('checkin-notes').value
     };
     
@@ -128,9 +129,12 @@ function renderKCIResult(score) {
     const recommendations = DataManager.getRecommendedExercises(info.lane.split(' ')[0]) || [];
     recommendationsList.innerHTML = recommendations.length > 0 
         ? recommendations.map(ex => `
-            <div class="kci-recommendation-tile" onclick="switchView('log'); selectExerciseForLogging('${ex.id}')">
-                <span class="tile-icon">${getExerciseIcon(ex.id)}</span>
-                <span class="tile-name">${ex.name}</span>
+            <div class="kci-recommendation-tile" onclick="switchView('log'); selectExerciseForLogging('${ex.exercise.id}')">
+                <span class="tile-icon">${getExerciseIcon(ex.exercise.id)}</span>
+                <div style="flex: 1; display: flex; flex-direction: column;">
+                    <span style="font-size: 10px; font-weight: 700; color: var(--gray-600); text-transform: uppercase;">${ex.categoryLabel}</span>
+                    <span class="tile-name">${ex.exercise.name}</span>
+                </div>
                 <span class="plus-log-btn">+</span>
             </div>
         `).join('')
@@ -140,7 +144,7 @@ function renderKCIResult(score) {
     document.getElementById('kci-start-workout').onclick = () => {
         if (recommendations.length > 0) {
             switchView('log');
-            selectExerciseForLogging(recommendations[0].id);
+            selectExerciseForLogging(recommendations[0].exercise.id);
         }
     };
     document.getElementById('kci-view-all').onclick = () => {
