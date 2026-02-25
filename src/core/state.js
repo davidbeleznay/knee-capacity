@@ -11,7 +11,8 @@ const AppState = {
     kneeImpact: 'none',
     posture: 'relaxed',
     analyticsDays: 7,
-    selectedLane: null
+    selectedLane: null,
+    libraryFilter: 'All'
 };
 
 function updateState(key, value) {

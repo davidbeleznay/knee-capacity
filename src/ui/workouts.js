@@ -582,37 +582,104 @@ function renderExerciseLibrary() {
     const container = document.getElementById('exercise-library');
     if (!container) return;
 
-    // Group exercises by category
-    const categories = [...new Set((window.EXERCISES || []).map(ex => ex.category))].sort();
-    
-    container.innerHTML = categories.map(cat => {
-        const catExercises = (window.EXERCISES || []).filter(ex => ex.category === cat);
-        return `
-            <div class="category-section" style="margin-bottom: 24px;">
-                <h3 style="background: var(--primary); color: white; padding: 8px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 16px;">${cat}</h3>
-                <div class="exercise-cards-grid">
-                    ${catExercises.map(ex => `
-                        <div class="exercise-card" style="margin-bottom: 12px;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                                <h4 style="margin: 0; color: var(--primary);">${ex.name}</h4>
-                                <div style="display: flex; gap: 4px;">
-                                    ${(ex.phase || []).map(p => `<span class="tile-phase-badge badge-${p.toLowerCase()}">${p}</span>`).join('')}
-                                    ${ex.availability === 'GREEN-only' ? '<span class="tile-phase-badge" style="background: #E8F5E9; color: #2E7D32; border: 1px solid #2E7D32;">GREEN ONLY</span>' : ''}
-                                </div>
-                            </div>
-                            <p style="font-size: 14px; margin-bottom: 8px; line-height: 1.4;">${ex.description}</p>
-                            <div style="font-size: 13px; color: var(--gray-600); margin-bottom: 8px;">
-                                <strong>Target:</strong> ${ex.targetMuscles}
-                            </div>
-                            <div style="background: #f5f5f5; padding: 8px; border-radius: 6px; font-size: 13px;">
-                                <strong>Why:</strong> ${ex.why}
-                            </div>
+    const activeFilter = AppState.libraryFilter || 'All';
+    const filters = [
+        { label: 'All', id: 'All' },
+        { label: '⭐ Favorites', id: 'Favorites' },
+        { label: 'Quads', id: 'Quads' },
+        { label: 'Hamstrings', id: 'Hamstrings' },
+        { label: 'Hips & Glutes', id: 'Hips' },
+        { label: 'Calves', id: 'Calves' },
+        { label: 'Isometrics', id: 'Isometrics' }
+    ];
+
+    // 1. Render Filter Bar
+    let html = `
+        <div class="filter-bar" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 16px; -webkit-overflow-scrolling: touch;">
+            ${filters.map(f => `
+                <button 
+                    class="library-filter-btn ${activeFilter === f.id ? 'active' : ''}" 
+                    onclick="setLibraryFilter('${f.id}')"
+                    style="white-space: nowrap; flex-shrink: 0;"
+                >
+                    ${f.label}
+                </button>
+            `).join('')}
+        </div>
+        <div class="exercise-cards-grid">
+    `;
+
+    // 2. Filter Exercises
+    const likedIds = DataManager.getLikedExerciseIds() || [];
+    let exercises = window.EXERCISES || [];
+
+    if (activeFilter === 'Favorites') {
+        exercises = exercises.filter(ex => likedIds.includes(ex.id));
+    } else if (activeFilter === 'Quads') {
+        exercises = exercises.filter(ex => ex.targetMuscles && ex.targetMuscles.includes('Quad'));
+    } else if (activeFilter === 'Hamstrings') {
+        exercises = exercises.filter(ex => ex.targetMuscles && ex.targetMuscles.includes('Hamstring'));
+    } else if (activeFilter === 'Hips') {
+        exercises = exercises.filter(ex => ex.targetMuscles && (ex.targetMuscles.includes('Glute') || ex.targetMuscles.includes('Hip')));
+    } else if (activeFilter === 'Calves') {
+        exercises = exercises.filter(ex => ex.targetMuscles && (ex.targetMuscles.includes('Calf') || ex.targetMuscles.includes('Ankle') || ex.targetMuscles.includes('Soleus') || ex.targetMuscles.includes('Gastrocnemius')));
+    } else if (activeFilter === 'Isometrics') {
+        exercises = exercises.filter(ex => ex.trackingFocus === 'hold');
+    }
+
+    // 3. Sort: Favorites first, then alphabetical
+    exercises.sort((a, b) => {
+        const aLiked = likedIds.includes(a.id);
+        const bLiked = likedIds.includes(b.id);
+        if (aLiked && !bLiked) return -1;
+        if (!aLiked && bLiked) return 1;
+        return a.name.localeCompare(b.name);
+    });
+
+    // 4. Render Cards
+    if (exercises.length === 0) {
+        html += `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--gray-600);">No exercises found for this filter.</div>`;
+    } else {
+        html += exercises.map(ex => {
+            const isLiked = likedIds.includes(ex.id);
+            const heartIcon = isLiked ? '<span style="color: #E53935; font-size: 14px; margin-left: 4px;">❤️</span>' : '';
+            
+            return `
+                <div class="exercise-card" style="margin-bottom: 0; height: 100%; display: flex; flex-direction: column;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                        <h4 style="margin: 0; color: var(--primary); font-size: 16px; line-height: 1.3;">
+                            ${ex.name} ${heartIcon}
+                        </h4>
+                        <div style="display: flex; gap: 4px; flex-shrink: 0;">
+                            ${(ex.phase || []).map(p => `<span class="tile-phase-badge badge-${p.toLowerCase()}">${p}</span>`).join('')}
                         </div>
-                    `).join('')}
+                    </div>
+                    
+                    <div style="font-size: 11px; font-weight: 700; color: var(--gray-600); text-transform: uppercase; margin-bottom: 8px;">
+                        ${ex.category}
+                    </div>
+
+                    <p style="font-size: 14px; margin-bottom: 12px; line-height: 1.4; flex-grow: 1;">${ex.description}</p>
+                    
+                    <div style="font-size: 13px; color: var(--gray-600); margin-bottom: 8px;">
+                        <strong>Target:</strong> ${ex.targetMuscles}
+                    </div>
+                    
+                    <div style="background: #f5f5f5; padding: 8px; border-radius: 6px; font-size: 13px; margin-top: auto;">
+                        <strong>Why:</strong> ${ex.why}
+                    </div>
                 </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+    }
+
+    html += `</div>`; // Close grid
+    container.innerHTML = html;
+}
+
+function setLibraryFilter(filter) {
+    AppState.libraryFilter = filter;
+    renderExerciseLibrary();
 }
 
 // Expose for cross-file calls (router.js, init.js)
@@ -621,6 +688,7 @@ if (typeof window !== 'undefined') {
     window.renderExerciseTiles = renderExerciseTiles;
     window.renderTodaysSummary = renderTodaysSummary;
     window.renderExerciseLibrary = renderExerciseLibrary;
+    window.setLibraryFilter = setLibraryFilter;
     window.toggleExerciseDetails = toggleExerciseDetails;
     window.selectExerciseForLogging = selectExerciseForLogging;
     window.closeExerciseForm = closeExerciseForm;
