@@ -334,6 +334,15 @@
 
                 <section class="card" id="exercise-log-section">
                     <h3>Exercises</h3>
+                    <div id="exercise-filter-bar" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 12px; -webkit-overflow-scrolling: touch;">
+                        <button class="library-filter-btn active" onclick="setLogFilter('Recommended')" style="white-space: nowrap; flex-shrink: 0;">Recommended</button>
+                        <button class="library-filter-btn" onclick="setLogFilter('Favorites')" style="white-space: nowrap; flex-shrink: 0;">⭐ Favorites</button>
+                        <button class="library-filter-btn" onclick="setLogFilter('Quads')" style="white-space: nowrap; flex-shrink: 0;">Quads</button>
+                        <button class="library-filter-btn" onclick="setLogFilter('Hamstrings')" style="white-space: nowrap; flex-shrink: 0;">Hamstrings</button>
+                        <button class="library-filter-btn" onclick="setLogFilter('Hips')" style="white-space: nowrap; flex-shrink: 0;">Hips</button>
+                        <button class="library-filter-btn" onclick="setLogFilter('Isometrics')" style="white-space: nowrap; flex-shrink: 0;">Isometrics</button>
+                        <button class="library-filter-btn" onclick="setLogFilter('Stretches')" style="white-space: nowrap; flex-shrink: 0;">Stretches</button>
+                    </div>
                     <div class="exercise-tiles" id="exercise-tiles"></div>
                 </section>
             </div>

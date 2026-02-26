@@ -12,7 +12,7 @@ const AppState = {
     posture: 'relaxed',
     analyticsDays: 7,
     selectedLane: null,
-    libraryFilter: 'All'
+    logFilter: 'Recommended'
 };
 
 function updateState(key, value) {

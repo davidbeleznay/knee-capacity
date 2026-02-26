@@ -121,33 +121,22 @@ function updateLikeDislikeButtons(exerciseId) {
 function renderExerciseTiles() {
     const container = document.getElementById('exercise-tiles');
     if (!container) return;
+    
+    // Update filter buttons UI
+    const activeFilter = AppState.logFilter || 'Recommended';
+    const filterBtns = document.querySelectorAll('#exercise-filter-bar .library-filter-btn');
+    filterBtns.forEach(btn => {
+        if (btn.textContent.includes(activeFilter) || (activeFilter === 'Recommended' && btn.textContent === 'Recommended')) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
     const exercises = window.EXERCISES || [];
     if (!exercises.length) {
         container.innerHTML = '<p style="padding:16px;color:var(--gray-600);">Exercises did not load. Refresh the page (Ctrl+F5 to clear cache). If it persists, open DevTools (F12) and check the Console for errors.</p>';
         return;
-    }
-
-    const kneeStatus = DataManager.getKneeStatus();
-    
-    // Define Relevance Groups based on Status
-    let groups = [];
-    if (kneeStatus === 'green') {
-        groups = [
-            { label: 'Recommended for Today (BUILD)', phases: ['BUILD'], type: 'recommended' },
-            { label: 'Also Available (PRIME)', phases: ['PRIME'], type: 'available' },
-            { label: 'Recovery & Maintenance (CALM)', phases: ['CALM'], type: 'other' }
-        ];
-    } else if (kneeStatus === 'yellow') {
-        groups = [
-            { label: 'Recommended for Today (CALM)', phases: ['CALM'], type: 'recommended' },
-            { label: 'Available (Light BUILD)', phases: ['BUILD'], type: 'available' },
-            { label: 'Other Exercises (PRIME)', phases: ['PRIME'], type: 'other' }
-        ];
-    } else { // RED or unknown
-        groups = [
-            { label: 'Recommended for Today (CALM)', phases: ['CALM'], type: 'recommended' },
-            { label: 'Not Recommended Today (BUILD/PRIME)', phases: ['BUILD', 'PRIME'], type: 'not-recommended' }
-        ];
     }
 
     // Ensure we always get arrays (Phase 1 storage may return status objects in some code paths)
@@ -155,125 +144,189 @@ function renderExerciseTiles() {
     const likedIds = ensureIdArray(DataManager.getLikedExerciseIds());
     const dislikedIds = ensureIdArray(DataManager.getDislikedExerciseIds());
     const favoriteIds = ensureIdArray(DataManager.getFavoriteExerciseIds(5));
-    
-    const sections = groups.map(group => {
-        const exercises = (window.EXERCISES || []).filter(ex => {
-            const phaseMatch = ex.phase.some(p => group.phases.includes(p.toUpperCase()));
-            if (!phaseMatch) return false;
-            if (ex.availability === 'GREEN-only' && kneeStatus !== 'green') return false;
-            return true;
-        });
-
-        // Sort: LIKED exercises first (top of recommended list), then by name
-        exercises.sort((a, b) => {
-            const aLiked = likedIds.indexOf(a.id);
-            const bLiked = likedIds.indexOf(b.id);
-            const aIsLiked = aLiked !== -1;
-            const bIsLiked = bLiked !== -1;
-            if (aIsLiked && !bIsLiked) return -1;
-            if (!aIsLiked && bIsLiked) return 1;
-            if (aIsLiked && bIsLiked) return aLiked - bLiked;
-            return a.name.localeCompare(b.name);
-        });
-
-        const categorized = {};
-        exercises.forEach(ex => {
-            if (!categorized[ex.category]) categorized[ex.category] = [];
-            categorized[ex.category].push(ex);
-        });
-
-        return { ...group, categorized };
-    }).filter(s => Object.keys(s.categorized).length > 0);
 
     let html = '';
-    sections.forEach(section => {
-        html += `<div class="relevance-section relevance-${section.type}" style="grid-column: 1/-1; margin-top: 20px; margin-bottom: 8px;">
-            <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--gray-600); border-bottom: 2px solid var(--gray-200); padding-bottom: 4px; margin-bottom: 12px;">
-                ${section.label}
-            </h3>
-        </div>`;
 
-        // Instead of sorting categories, we preserve the exercise order within the section
-        // but we still group them by category visually if we want, or just list them.
-        // The requirement says "Sort to top of each section (CALM/BUILD/PRIME)".
-        // Let's keep the category grouping but sort the exercises within each section 
-        // across categories or within categories? 
-        // "Appear first in their phase section" implies top of the whole section.
+    if (activeFilter === 'Recommended') {
+        // --- EXISTING LOGIC FOR RECOMMENDED VIEW ---
+        const kneeStatus = DataManager.getKneeStatus();
         
-        // Let's flatten the exercises for the section to show favorites at the very top of the section
-        const sectionExercises = [];
-        Object.keys(section.categorized).forEach(cat => {
-            section.categorized[cat].forEach(ex => sectionExercises.push(ex));
+        // Define Relevance Groups based on Status
+        let groups = [];
+        if (kneeStatus === 'green') {
+            groups = [
+                { label: 'Recommended for Today (BUILD)', phases: ['BUILD'], type: 'recommended' },
+                { label: 'Also Available (PRIME)', phases: ['PRIME'], type: 'available' },
+                { label: 'Recovery & Maintenance (CALM)', phases: ['CALM'], type: 'other' }
+            ];
+        } else if (kneeStatus === 'yellow') {
+            groups = [
+                { label: 'Recommended for Today (CALM)', phases: ['CALM'], type: 'recommended' },
+                { label: 'Available (Light BUILD)', phases: ['BUILD'], type: 'available' },
+                { label: 'Other Exercises (PRIME)', phases: ['PRIME'], type: 'other' }
+            ];
+        } else { // RED or unknown
+            groups = [
+                { label: 'Recommended for Today (CALM)', phases: ['CALM'], type: 'recommended' },
+                { label: 'Not Recommended Today (BUILD/PRIME)', phases: ['BUILD', 'PRIME'], type: 'not-recommended' }
+            ];
+        }
+
+        const sections = groups.map(group => {
+            const groupExercises = exercises.filter(ex => {
+                const phaseMatch = ex.phase.some(p => group.phases.includes(p.toUpperCase()));
+                if (!phaseMatch) return false;
+                if (ex.availability === 'GREEN-only' && kneeStatus !== 'green') return false;
+                return true;
+            });
+
+            // Sort: LIKED exercises first (top of recommended list), then by name
+            groupExercises.sort((a, b) => {
+                const aLiked = likedIds.indexOf(a.id);
+                const bLiked = likedIds.indexOf(b.id);
+                const aIsLiked = aLiked !== -1;
+                const bIsLiked = bLiked !== -1;
+                if (aIsLiked && !bIsLiked) return -1;
+                if (!aIsLiked && bIsLiked) return 1;
+                if (aIsLiked && bIsLiked) return aLiked - bLiked;
+                return a.name.localeCompare(b.name);
+            });
+
+            const categorized = {};
+            groupExercises.forEach(ex => {
+                if (!categorized[ex.category]) categorized[ex.category] = [];
+                categorized[ex.category].push(ex);
+            });
+
+            return { ...group, categorized };
+        }).filter(s => Object.keys(s.categorized).length > 0);
+
+        sections.forEach(section => {
+            html += `<div class="relevance-section relevance-${section.type}" style="grid-column: 1/-1; margin-top: 20px; margin-bottom: 8px;">
+                <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--gray-600); border-bottom: 2px solid var(--gray-200); padding-bottom: 4px; margin-bottom: 12px;">
+                    ${section.label}
+                </h3>
+            </div>`;
+
+            const sectionExercises = [];
+            Object.keys(section.categorized).forEach(cat => {
+                section.categorized[cat].forEach(ex => sectionExercises.push(ex));
+            });
+            
+            sectionExercises.sort((a, b) => {
+                const aLiked = likedIds.indexOf(a.id);
+                const bLiked = likedIds.indexOf(b.id);
+                const aIsLiked = aLiked !== -1;
+                const bIsLiked = bLiked !== -1;
+                if (aIsLiked && !bIsLiked) return -1;
+                if (!aIsLiked && bIsLiked) return 1;
+                if (aIsLiked && bIsLiked) return aLiked - bLiked;
+                return a.name.localeCompare(b.name);
+            });
+
+            sectionExercises.forEach(ex => {
+                html += renderExerciseCard(ex, section.type, favoriteIds, likedIds, dislikedIds);
+            });
         });
-        
-        sectionExercises.sort((a, b) => {
-            const aLiked = likedIds.indexOf(a.id);
-            const bLiked = likedIds.indexOf(b.id);
-            const aIsLiked = aLiked !== -1;
-            const bIsLiked = bLiked !== -1;
-            if (aIsLiked && !bIsLiked) return -1;
-            if (!aIsLiked && bIsLiked) return 1;
-            if (aIsLiked && bIsLiked) return aLiked - bLiked;
+
+    } else {
+        // --- NEW FLAT LIST LOGIC FOR FILTERS ---
+        let filteredExercises = exercises;
+
+        if (activeFilter === 'Favorites') {
+            // Explicitly show ALL favorites regardless of lane/phase
+            filteredExercises = exercises.filter(ex => likedIds.includes(ex.id));
+        } else if (activeFilter === 'Quads') {
+            filteredExercises = exercises.filter(ex => ex.targetMuscles && ex.targetMuscles.includes('Quad'));
+        } else if (activeFilter === 'Hamstrings') {
+            filteredExercises = exercises.filter(ex => ex.targetMuscles && ex.targetMuscles.includes('Hamstring'));
+        } else if (activeFilter === 'Hips') {
+            filteredExercises = exercises.filter(ex => ex.targetMuscles && (ex.targetMuscles.includes('Glute') || ex.targetMuscles.includes('Hip')));
+        } else if (activeFilter === 'Isometrics') {
+            filteredExercises = exercises.filter(ex => ex.trackingFocus === 'hold');
+        } else if (activeFilter === 'Stretches') {
+            filteredExercises = exercises.filter(ex => ex.category.includes('Mobility') || ex.name.toLowerCase().includes('stretch'));
+        }
+
+        // Sort: Favorites first, then alphabetical
+        filteredExercises.sort((a, b) => {
+            const aLiked = likedIds.includes(a.id);
+            const bLiked = likedIds.includes(b.id);
+            if (aLiked && !bLiked) return -1;
+            if (!aLiked && bLiked) return 1;
             return a.name.localeCompare(b.name);
         });
 
-        sectionExercises.forEach(ex => {
-            const icon = getExerciseIcon(ex.id);
-            const name = ex.name.replace(' (Isometric)', '').replace(' (Eccentric)', '');
-            const isNotRecommended = section.type === 'not-recommended';
-            const isFavorite = favoriteIds.includes(ex.id);
-            const isLiked = likedIds.includes(ex.id);
-            const isDisliked = dislikedIds.includes(ex.id);
-            const isNew = ex.isNew === true;
-            const heartIcon = isLiked ? '<span style="color: #E53935; font-size: 14px;">❤️</span>' : isDisliked ? '<span style="color: #1565C0; font-size: 14px;">💔</span>' : '';
-            
-            html += `
-                <div id="tile-${ex.id}" class="exercise-tile ${isNotRecommended ? 'not-recommended' : ''} ${isFavorite ? 'favorite-tile' : ''} ${isDisliked ? 'disliked-tile' : ''} ${isNew ? 'exercise-tile-new' : ''}" onclick="toggleExerciseDetails('${ex.id}')">
-                    <div class="tile-header">
-                        <div class="tile-info">
-                            <div class="tile-category">
-                                ${ex.category}
-                                ${isFavorite ? '<span style="color: #FFD700; font-size: 14px;">⭐</span>' : ''}
-                                ${heartIcon}
-                                ${isNew ? '<span class="tile-new-badge">NEW</span>' : ''}
-                            </div>
-                            <div class="tile-name">${name}</div>
-                            <div class="tile-meta">${ex.dosage}</div>
-                        </div>
-                        <button class="log-action-btn" onclick="event.stopPropagation(); selectExerciseForLogging('${ex.id}')">
-                            Log
-                        </button>
-                    </div>
-                    
-                    <div class="tile-details">
-                        <div style="margin-bottom: 12px;">
-                            <strong style="font-size: 12px; text-transform: uppercase; color: var(--gray-600);">Setup:</strong>
-                            <ul style="margin: 4px 0 0 16px; padding: 0; font-size: 13px; line-height: 1.4;">
-                                ${(ex.setup || []).map(s => `<li>${s}</li>`).join('')}
-                            </ul>
-                        </div>
-                        <div style="margin-bottom: 12px;">
-                            <strong style="font-size: 12px; text-transform: uppercase; color: var(--gray-600);">Execution:</strong>
-                            <ul style="margin: 4px 0 0 16px; padding: 0; font-size: 13px; line-height: 1.4;">
-                                ${(ex.execution || []).map(e => `<li>${e}</li>`).join('')}
-                            </ul>
-                        </div>
-                        <div style="font-size: 13px; margin-bottom: 8px;">
-                            <strong>Target:</strong> ${ex.targetMuscles}
-                        </div>
-                        <div style="font-size: 13px; margin-bottom: 16px;">
-                            <strong>Tempo:</strong> ${ex.tempo}
-                        </div>
-                        <button class="primary-button" onclick="event.stopPropagation(); selectExerciseForLogging('${ex.id}')" style="margin-top: 0;">
-                            Log This Exercise
-                        </button>
-                    </div>
-                </div>
-            `;
-        });
-    });
+        if (filteredExercises.length === 0) {
+            html += `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--gray-600);">No exercises found.</div>`;
+        } else {
+            filteredExercises.forEach(ex => {
+                html += renderExerciseCard(ex, 'flat', favoriteIds, likedIds, dislikedIds);
+            });
+        }
+    }
 
     container.innerHTML = html;
+}
+
+function renderExerciseCard(ex, sectionType, favoriteIds, likedIds, dislikedIds) {
+    const icon = getExerciseIcon(ex.id);
+    const name = ex.name.replace(' (Isometric)', '').replace(' (Eccentric)', '');
+    const isNotRecommended = sectionType === 'not-recommended';
+    const isFavorite = favoriteIds.includes(ex.id);
+    const isLiked = likedIds.includes(ex.id);
+    const isDisliked = dislikedIds.includes(ex.id);
+    const isNew = ex.isNew === true;
+    const heartIcon = isLiked ? '<span style="color: #E53935; font-size: 14px;">❤️</span>' : isDisliked ? '<span style="color: #1565C0; font-size: 14px;">💔</span>' : '';
+    
+    return `
+        <div id="tile-${ex.id}" class="exercise-tile ${isNotRecommended ? 'not-recommended' : ''} ${isFavorite ? 'favorite-tile' : ''} ${isDisliked ? 'disliked-tile' : ''} ${isNew ? 'exercise-tile-new' : ''}" onclick="toggleExerciseDetails('${ex.id}')">
+            <div class="tile-header">
+                <div class="tile-info">
+                    <div class="tile-category">
+                        ${ex.category}
+                        ${isFavorite ? '<span style="color: #FFD700; font-size: 14px;">⭐</span>' : ''}
+                        ${heartIcon}
+                        ${isNew ? '<span class="tile-new-badge">NEW</span>' : ''}
+                    </div>
+                    <div class="tile-name">${name}</div>
+                    <div class="tile-meta">${ex.dosage}</div>
+                </div>
+                <button class="log-action-btn" onclick="event.stopPropagation(); selectExerciseForLogging('${ex.id}')">
+                    Log
+                </button>
+            </div>
+            
+            <div class="tile-details">
+                <div style="margin-bottom: 12px;">
+                    <strong style="font-size: 12px; text-transform: uppercase; color: var(--gray-600);">Setup:</strong>
+                    <ul style="margin: 4px 0 0 16px; padding: 0; font-size: 13px; line-height: 1.4;">
+                        ${(ex.setup || []).map(s => `<li>${s}</li>`).join('')}
+                    </ul>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <strong style="font-size: 12px; text-transform: uppercase; color: var(--gray-600);">Execution:</strong>
+                    <ul style="margin: 4px 0 0 16px; padding: 0; font-size: 13px; line-height: 1.4;">
+                        ${(ex.execution || []).map(e => `<li>${e}</li>`).join('')}
+                    </ul>
+                </div>
+                <div style="font-size: 13px; margin-bottom: 8px;">
+                    <strong>Target:</strong> ${ex.targetMuscles}
+                </div>
+                <div style="font-size: 13px; margin-bottom: 16px;">
+                    <strong>Tempo:</strong> ${ex.tempo}
+                </div>
+                <button class="primary-button" onclick="event.stopPropagation(); selectExerciseForLogging('${ex.id}')" style="margin-top: 0;">
+                    Log This Exercise
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function setLogFilter(filter) {
+    AppState.logFilter = filter;
+    renderExerciseTiles();
 }
 
 function toggleExerciseDetails(id) {
@@ -579,7 +632,7 @@ function renderExerciseTrends(id) {
 }
 
 function renderExerciseLibrary() {
-    const container = document.getElementById('exercise-library');
+    const container = document.getElementById('exercise-tiles');
     if (!container) return;
 
     const activeFilter = AppState.libraryFilter || 'All';
@@ -689,6 +742,7 @@ if (typeof window !== 'undefined') {
     window.renderTodaysSummary = renderTodaysSummary;
     window.renderExerciseLibrary = renderExerciseLibrary;
     window.setLibraryFilter = setLibraryFilter;
+    window.setLogFilter = setLogFilter;
     window.toggleExerciseDetails = toggleExerciseDetails;
     window.selectExerciseForLogging = selectExerciseForLogging;
     window.closeExerciseForm = closeExerciseForm;
