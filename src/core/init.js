@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.setupAnalyticsHandlers === 'function') window.setupAnalyticsHandlers();
     if (typeof window.setupMeasurementHandlers === 'function') window.setupMeasurementHandlers();
     if (typeof window.setupEventHandlers === 'function') window.setupEventHandlers();
+    if (typeof window.setupCalibrationHandlers === 'function') window.setupCalibrationHandlers();
     if (typeof window.setupNavigation === 'function') window.setupNavigation();
     if (typeof Stopwatch !== 'undefined' && Stopwatch.init) Stopwatch.init();
     if (typeof window.populateAnalyticsExerciseSelect === 'function') window.populateAnalyticsExerciseSelect();
@@ -23,4 +24,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.renderEventsTimeline === 'function') window.renderEventsTimeline();
     if (typeof window.loadTodayCheckIn === 'function') window.loadTodayCheckIn();
     
+    // Auto-trigger calibration for new users
+    if (DataManager && typeof DataManager.hasKneeProfile === 'function' && !DataManager.hasKneeProfile()) {
+        if (typeof window.openCalibrationModal === 'function') {
+            setTimeout(() => window.openCalibrationModal(), 500);
+        }
+    }
 });
